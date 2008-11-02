@@ -1,0 +1,164 @@
+
+ifndef SAGA_MK_INC_CONF_C
+       SAGA_MK_INC_CONF_C = yes
+
+###########################################################
+#
+# paths
+#
+SAGA_LOCATION              = @prefix@
+
+SAGA_BIN_ROOT = $(SAGA_LOCATION)/bin
+SAGA_LIB_ROOT = $(SAGA_LOCATION)/lib
+SAGA_INI_ROOT = $(SAGA_LOCATION)/share/saga
+SAGA_HDR_ROOT = $(SAGA_LOCATION)/include
+SAGA_MAK_ROOT = $(SAGA_LOCATION)/share/saga/make
+SAGA_EXT_ROOT = $(SAGA_ROOT)/external
+#
+###########################################################
+
+###########################################################
+#
+# Tools
+#
+CP                         = @SAGA_CP@ -f
+LN                         = @SAGA_LN@ -s
+LS                         = @SAGA_LS@
+MV                         = @SAGA_MV@ -f
+RM                         = @SAGA_RM@ -f
+TR                         = @SAGA_TR@
+AWK                        = @SAGA_AWK@
+CAT                        = @SAGA_CAT@
+CUT                        = @SAGA_CUT@
+ENV                        = @SAGA_ENV@
+RPM                        = @SAGA_RPM@
+PWD                        = @SAGA_PWD@
+SED                        = @SAGA_SED@
+TAR                        = @SAGA_TAR@
+DATE                       = @SAGA_DATE@
+GREP                       = @SAGA_GREP@
+ECHO                       = @SAGA_ECHO@
+FIND                       = @SAGA_FIND@
+GZIP                       = @SAGA_GZIP@
+TEST                       = @SAGA_TEST@
+TRUE                       = @SAGA_TRUE@
+MKDIR                      = @SAGA_MKDIR@ -p
+TOUCH                      = @SAGA_TOUCH@
+FALSE                      = @SAGA_FALSE@
+
+MAKE                      += --no-print-directory
+#
+############################################################
+
+###########################################################
+#
+# Compiler
+#
+SAGA_CPP                   = @SAGA_CPP@
+SAGA_CC                    = @SAGA_CC@
+SAGA_CXX                   = @SAGA_CXX@
+SAGA_LD                    = @SAGA_CXX@
+SAGA_LD_BIN                = @SAGA_CXX@
+SAGA_LD_LIB                = @SAGA_CXX@
+
+SAGA_CPPFLAGS              = @SAGA_CPPFLAGS@
+SAGA_CCFLAGS               = @SAGA_CCFLAGS@
+SAGA_CXXFLAGS              = @SAGA_CXXFLAGS@
+SAGA_LDFLAGS_EXT           = @SAGA_LDFLAGS_EXT@
+
+SAGA_CXXFLAGS             += -I$(BOOST_LOCATION)/include
+
+SAGE_LEXT                  = so
+
+SAGA_CCFLAGS              += $(SAGA_INC_FLAGS)
+SAGA_CXXFLAGS             += $(SAGA_INC_FLAGS)
+SAGA_LDFLAGS_EXT          += $(SAGA_LIB_FLAGS)
+#
+###########################################################
+
+
+SAGA_OSTYPE                = $(shell uname | $(TR) 'a-z' 'A-Z')
+
+###########################################################
+#
+# MacOS X specific compiler settings
+#
+ifeq "$(SAGA_OSTYPE)" "DARWIN"
+
+  SAGA_CXXFLAGS           += -x c++ -pipe -Os 
+  SAGA_CXXFLAGS           += -Wno-trigraphs -fvisibility-inlines-hidden
+  SAGA_LD_LIB             += -dynamiclib
+  SAGA_LEXT                = dylib
+
+  SAGA_CCFLAGS            += -D__DARWIN__
+  SAGA_CXXFLAGS           += -D__DARWIN__
+
+endif
+#
+###########################################################
+
+###########################################################
+#
+# IBM AIX 5 specific compiler settings
+#
+ifeq "$(SAGA_OSTYPE)" "AIX"
+
+  SAGA_LEXT                = so  
+  SAGA_LD_LIB             += -shared
+  SAGA_LDFLAGS            += -pthread -shared -Wl,-G -Wl,-brtl
+
+  SAGA_CCFLAGS            += -D__AIX__ 
+  SAGA_CXXFLAGS           += -D__AIX__ 
+
+endif
+#
+###########################################################
+
+###########################################################
+# 
+# Linux specific compiler settings
+#
+ifeq "$(SAGA_OSTYPE)" "LINUX"
+
+  SAGA_LEXT                = so
+  SAGA_LD_LIB             += -shared
+
+  SAGA_CCFLAGS            += -D__LINUX__ 
+  SAGA_CXXFLAGS           += -D__LINUX__ 
+
+  ifeq "$(SAGA_CC)" "gcc"
+    SAGA_CCFLAGS          += -pipe -pthread -fPIC -fvisibility=default
+  endif
+  ifeq "$(SAGA_CC)" "icc"
+    SAGA_CCFLAGS          += -cxxlib-icc -openmp 
+  endif
+
+  SAGA_CCFLAGS            += -Wall -Wno-unknown-pragmas
+
+  ifeq "$(SAGA_CXX)" "g++"
+    SAGA_CXXFLAGS         += $(SAGA_CCFLAGS)
+  endif
+  ifeq "$(SAGA_CXX)" "icc"
+    SAGA_CXXFLAGS         += $(SAGA_CCFLAGS)
+  endif
+
+endif
+#
+###########################################################
+
+###########################################################
+#
+# we also load any configuration checks we may know about
+#
+ifeq "$(filter clean distclean confclean,$(MAKECMDGOALS))" ""
+  ifdef SAGA_ROOT
+    include $(SAGA_ROOT)/make/saga.config.check.c.mk
+  else
+    include $(SAGA_LOCATION)/share/saga/make/saga.config.check.c.mk
+  endif
+endif
+#
+###########################################################
+
+endif # guard
+

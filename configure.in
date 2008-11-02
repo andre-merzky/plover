@@ -1,0 +1,53 @@
+
+m4_include([config/saga_base.m4])
+m4_include([config/saga_ldl.m4])
+
+AC_INIT([saga-a], [0.5])
+
+AC_CONFIG_AUX_DIR([config])
+
+
+AX_SAGA_CHECK_BASE()
+AX_SAGA_CHECK_PACKAGES()
+
+
+# write general make configs
+
+AC_CONFIG_FILES([config/saga.config.c.mk],
+                [cp config/saga.config.c.mk       ./make/])
+
+AC_CONFIG_FILES([config/saga.config.check.c.mk],
+                [cp config/saga.config.check.c.mk ./make/])
+
+
+AC_OUTPUT()
+
+AC_CONFIG_COMMANDS_POST([touch Makefile.ok])
+
+
+AC_MSG_NOTICE(                                                        )
+AC_MSG_NOTICE( ===============================================        )
+AC_MSG_NOTICE( SAGA Configuration Summary                             )
+AC_MSG_NOTICE( ===============================================        )
+AC_MSG_NOTICE(                                                        )
+AC_MSG_NOTICE( SAGA ROOT                : $SAGA_ROOT                  )
+AC_MSG_NOTICE( SAGA LOCATION (prefix)   : $prefix                     )
+AC_MSG_NOTICE(                                                        )
+AC_MSG_NOTICE( ===============================================        )
+AC_MSG_NOTICE( SAGA Packages                                          )
+AC_MSG_NOTICE( ===============================================        )
+AC_MSG_NOTICE(                                                        )
+AC_MSG_NOTICE( SAGA PACKAGE JOB         : $SAGA_PACKAGE_JOB           )
+AC_MSG_NOTICE( SAGA PACKAGE NAMESPACE   : $SAGA_PACKAGE_NAME_SPACE    )
+AC_MSG_NOTICE( SAGA PACKAGE FILE        : $SAGA_PACKAGE_FILE          )
+AC_MSG_NOTICE( SAGA PACKAGE LOGICALFILE : $SAGA_PACKAGE_LOGICALFILE   )
+AC_MSG_NOTICE( SAGA PACKAGE STREAM      : $SAGA_PACKAGE_STREAM        )
+AC_MSG_NOTICE( SAGA PACKAGE RPC         : $SAGA_PACKAGE_RPC           )
+AC_MSG_NOTICE( SAGA PACKAGE ADVERT      : $SAGA_PACKAGE_ADVERT        )
+AC_MSG_NOTICE( SAGA PACKAGE MESSAGEBUS  : $SAGA_PACKAGE_MESSAGEBUS    )
+AC_MSG_NOTICE(                                                        )
+AC_MSG_NOTICE( ===============================================        )
+AC_MSG_NOTICE( Now type "make" to build SAGA-A. Have fun!             )
+AC_MSG_NOTICE( ===============================================        )
+AC_MSG_NOTICE(                                                        )
+

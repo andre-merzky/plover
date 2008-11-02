@@ -1,0 +1,19 @@
+
+  - keep parts of the instance_data read_only, so that one
+    adaptor cannot temper with instance data, and spoil init for
+    other adaptors.  Only state related instance data (file
+    pointer, job id, etc) should be mutable.  Define those, also
+    for advert publishing.
+
+  - provide adaptor programmers with status check and monitoring
+    threads automatically, and take care of thread resource
+    management.
+
+  - all objects should have a mutex, and lock it in non-const
+    functions.  kind of.
+
+  - allow an adaptor to statically bind, i.e. to bypass adaptor
+    selection on following calls.  That improves performance
+    for, for example, the message API, where the same channel
+    has to be used anyway
+

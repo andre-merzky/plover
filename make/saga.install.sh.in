@@ -1,0 +1,50 @@
+#!/bin/sh
+#!@SAGA_SH@
+
+usage="\
+
+  $0 source [...] target_dir
+
+"
+
+EXPR="@SAGA_EXPR@"
+COPY="@SAGA_CP@"
+MKDIR="@SAGA_MKDIR@ -p"
+RM="@SAGA_RM@ -f"
+RMDIR="@SAGA_RMDIR@"
+ROOT="@SAGA_ROOT@"
+
+LOG="$SAGA_ROOT/install.log"
+
+
+while test $# != 1; do
+  src="$src $1"
+  shift
+done
+
+tgt=$1;
+
+echo "src: $src";
+echo "tgt: $tgt";
+
+
+if test "$src" = ""; then
+  echo "usage"
+  exit -1
+fi
+
+if test "$tgt" = ""; then
+  echo "usage"
+  exit -1
+fi
+
+if ! test -d $tgt; then
+  echo $MKDIR "$tgt"
+  echo " ==> $RMDIR $tgt/$s" >> $LOG
+fi
+
+echo $COPY $src "$tgt/"
+
+for s in $src; do
+  echo " --> $RM $tgt/$s" >> $LOG
+done
