@@ -8,6 +8,14 @@
 
 namespace saga
 {
+  namespace impl
+  {
+    class object;
+    class session;
+  }
+
+  class session;
+
   class object
   {
     friend class impl::object;

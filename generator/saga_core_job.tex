@@ -1,0 +1,1495 @@
+ 
+  Nearly all of the SAGA use cases (except for the GridRPC use
+  cases) had either explicit or implicit requirements for
+  submitting jobs to grid resources, and most needed 
+  also to monitor and control these submitted jobs.
+ 
+  This section describes the SAGA API for submitting jobs to a
+  grid resource, either in batch mode, or in an interactive
+  mode. It also describes how to control these submitted jobs
+  (e.g.  to |cancel()|, |suspend()|, or |signal()| a running
+  job), and how to retrieve status information for both running
+  and completed jobs.
+  
+  This API is also intended to incorporate the work of the
+  DRMAA-WG~\cite{drmaa-wg}.  Much of this specification was
+  taken directly from DRMAA specification~\cite{drmaa-spec},
+  with many of the differences arising from an attempt to make
+  the job API consistent with the overall SAGA API
+  Look-\&-Feel\footnote{We expect that SAGA-API
+  implementations may be implemented using DRMAA, or may produce
+  JSDL documents to be passed to underlying scheduling
+  systems.}.
+  
+  The API covers four classes: |saga::job_description|,
+  |saga::job_service|, |saga::job| and |saga::job_self|.  The
+  job description class is nothing more than a container for
+  a well defined set of attributes which, using
+  JSDL~\cite{jsdl-wg} based keys, defines the job to be started,
+  and its runtime and resource requirements.  The job
+  server represents a resource management endpoint which allows
+  the starting and injection of jobs. 
+  
+  The job class itself is central to the API, and represents an
+  application instance running under the management of
+  a resource manager.  The \T{job\_self} class |IS-A| job, but
+  additionally implements the steering interface.  The purpose
+  of this class is to represent the current SAGA application,
+  which allows for a number of use cases with
+  applications which actively interact with the grid
+  infrastructure, for example to provide steering capabilities,
+  to migrate itself, or to set new job attributes.
+  
+  The job class inherits the |saga::task|
+  class~\ref{ssec:tasks}, and uses its methods to |run()|,
+  |wait()| for, and to |cancel()| jobs.  The inheritance feature
+  also allows for the management of large numbers of jobs in
+  task containers.  Additional methods provided by the
+  |saga::job| class relate to the |Suspended| state (which is
+  not available on tasks), and provide access to the job's
+  standard I/O streams, and to more detailed status information.
+  In this specification, the standard I/O streams are specified
+  to have |opaque| types.  The SAGA language bindings MUST
+  specify a native type for I/O streams.  That type SHOULD be
+  the one used as the file descriptor to the POSIX |read()| call
+  in that language.
+ 
+  \subsubsection{Job State Model}
+  
+    The SAGA job state diagram is shown in
+    Figure~\ref{fig:job_states}.  It is an extension of the
+    |saga::task| state diagram (Figure~\ref{fig:task_states}),
+    and extends the state diagram  with a |'Suspended'| state, which the
+    job can enter/leave using the |suspend()/resume()| calls.  
+ 
+    \myfig{job_states}{\footnotesize The SAGA job state model extends
+    the SAGA task state model with a 'Suspended' state, and additional
+    transitions (See Figure~\ref{fig:states} for a legend).}
+ 
+    SAGA implementations need to map the native backend state
+    model onto the SAGA state model.  The SAGA state model
+    should be simple enough to allow a straight forward mapping
+    in most cases.  For some applications, access to the native
+    backend state model is useful.  For that reason, an
+    additional metric named |'StateDetail'| allows to query the
+    native job state.  That schema follows the current state
+    model of the OGSA-BES specification~\cite{bes}, which also
+    has a simplified top level state model, and allows for
+    additional, backend specific state details.
+ 
+    State details in SAGA SHOULD be formatted as follows:
+ 
+    \shift |'<model>:<state>'|
+ 
+    with valid models being "BES", "DRMAA", or other
+    implementation specific models.  For example, a state detail
+    for the BES state 'StagingIn' would be rendered as
+    |'BES:StagingIn'|), and would be a substate of
+    \T{Running}.  If no state details are available, the metric
+    is still available, but it has always an empty string value.
+ 
+ 
+  \subsubsection{Job Description Attributes}
+ 
+    SAGA implementations MUST support the |Executable|
+    attribute, as that is the only required attribute for a
+    |job_description|.  An implementation MUST document which
+    other attributes are supported, and which are not.
+    In general, a |job_description| containing an unsupported
+    attribute does \I{not} cause an error on job creation or
+    submission, unless noted otherwise in the attribute
+    description.
+    
+    Attributes marked as |'not supported by JSDL'| might
+    disappear in future versions of the SAGA API -- all other
+    attributes are likely to be kept, at least for backward
+    compatibility.  The attribute description additionally
+    mentions if the attributes are supported by DRMAA
+    (see~\cite{drmaa-spec}) -- that is for information purposes
+    only, and supposed to support implementations on top of
+    DRMAA.
+ 
+    Several \XSpell{metrics} on the |saga::job| class (the class
+    implements the \T{saga::moni\-torable} interface) reflect
+    attributes from the job description.  This redundancy is
+    intentional, and aims at providing information about (a)
+    attributes which may change at runtime, and (b) attributes
+    for jobs for which no job description is available (e.g.
+    |saga::job| instances obtained by calling |get.job()|.
+ 
+    Although JSDL~\cite{jsdl-spec} and JSDL SPMD
+    extension~\cite{jsdl-spmd} based attribute names are used
+    for job description, the API supports no explicit
+    representation of JSDL (i.e.  JSDL compliant XML).  XML is
+    deemed to be too low level to be included into the SAGA API.
+    Also, the JSDL parameter sweep
+    extension~\cite{jsdl-paramsweep} is not used in SAGA at the
+    moment, as bulk job submission, and related the creation of
+    multiple related job descriptions, is performed on
+    application level in SAGA, as described in
+    Section~\ref{ssec:optimization}.
+    
+  \subsubsection{File Transfer Specifications}
+  
+  The syntax of a file transfer directive for the job
+  description is modeled on the LSF syntax (LSF stands for
+  \I{Load Sharing Facility}, a commercial job scheduler by
+  Platform Computing), and has the general syntax:
+ 
+    \shift |local_file operator remote_file|
+ 
+    Both the |local_file| and the |remote_file| can be URLs. If
+    they are not URLs, but full or relative pathnames, then the
+    |local_file| is relative to the host where the submission is
+    executed, and the |remote_file| is evaluated on the
+    execution host of the job.
+ 
+    The operator is one of the following four:
+ 
+    \begin{tabular}{lp{0.75\textwidth}}
+ 
+      \shift |'>'| &  copies the local file to the remote file
+      before the job starts. Overwrites the remote file if it
+      exists.\\
+ 
+      \shift |'>>'| & copies the local file to the remote file
+      before the job starts. Appends to the remote file if it
+      exists.\\
+ 
+      \shift |'<'| & copies the remote file to the local file
+      after the job finishes. Overwrites the local file if it
+      exists.\\
+ 
+      \shift |'<<'| & copies the remote file to the local file
+      after the job finishes. Appends to the local file if it
+      exists.\\
+ 
+    \end{tabular}
+ 
+  
+  \subsubsection{Command Line Specification}
+ 
+    The |run_job()| method of the |saga::job_service| class
+    accepts a string parameter which constitutes a command line
+    to be executed on a remote resource.  The parsing of that
+    command lines follows the following rules:
+ 
+    \begin{itemize}
+      \item Elements are delimited by white space, which 
+            is either a space or a tab.
+      \item A string surrounded by double quotation marks is 
+            interpreted as a single element, regardless of white 
+            space contained within. A quoted string can be embedded 
+            in an element. 
+      \item A double quotation mark preceded by a backslash, |\"|, is 
+            interpreted as a literal double quotation mark (|"|).
+      \item Backslashes are interpreted literally, unless they 
+            immediately precede a double quotation mark.
+      \item The first element is used as executable name;
+            all other elements are treated as job arguments.
+    \end{itemize}
+ 
+ 
+  
+  \subsubsection{Job Identifiers}
+  
+    The \T{JobID} is treated as an opaque string in the
+    SAGA API.  However, for the sake of interoperability of
+    different SAGA implementations, and for potential extended
+    use of the \T{JobID} information, the |JobID|
+    SHOULD be implemented as:
+ 
+      \shift |'[backend url]-[native id]'|
+ 
+    For example, a job submitted to the host |remote.host.net|
+    via |ssh| (whose daemon runs on port |22|), and having the
+    POSIX PID |1234|, should get the job id:
+ 
+      \shift |'[ssh://remote.host.net:22/]-[1234]'|
+ 
+    The implementation MAY free the resources used for the job,
+    and hence MAY invalidate a \T{JobID}, after a
+    successful wait on the job, or after the application
+    received the job status information, and job status
+    details if available, at least once.
+ 
+    A JobID may be unknown until the job enters the
+    \T{Running} state, as the backend will often not assign IDs to
+    jobs which are not yet running.  In such cases, the value of
+    the \T{JobID} attribute SHOULD be empty.  The job MUST,
+    however, retain its JobID after it enters in a final state.
+
+    \XAdd[5]{The job attribute \T{"ServiceURL"} exposes the URL of the
+    \T{job::service} instance which spawned the job.  Any new
+    \T{job::service} instance created with that URL SHOULD be able to
+    handle the job's jobid, and in particular SHOULD be able to
+    reconnect to that job.  The tuple \T{JobID, ServiceURL} thus
+    allows to create both the job service and the job instances for
+    any SAGA job.}
+      
+ 
+ \subsubsection{Specification}
+ 
+ \begin{myspec}
+  package saga.job
+  {
+    enum state
+    {
+      New        =  1,  // same as in saga::task::state
+      Running    =  2,  // same as in saga::task::state
+      Done       =  3,  // same as in saga::task::state
+      Canceled   =  4,  // same as in saga::task::state
+      Failed     =  5,  // same as in saga::task::state
+      Suspended  =  6
+    }
+ 
+ 
+    class job_description : implements   saga::object
+                            implements   saga::attributes
+                         // from object: saga::error_handler
+    {
+      CONSTRUCTOR          (out job_description obj);
+      DESTRUCTOR           (in  job_description obj);
+ 
+      // Attributes:
+      //
+      //   name:  Executable
+      //   desc:  command to execute. 
+      //   type:  String
+      //   mode:  ReadWrite
+      //   value: ''
+      //   notes: - this is the only required attribute.  
+!     //          - can be a full pathname, a pathname 
+      //            relative to the 'WorkingDirectory' as 
+!     //            evaluated on the execution host, or
++     //            a executable name to be searched in the
++     //            target host's PATH environment (if 
++     //            available).
+      //          - available in JSDL, DRMAA
+      //          - semantics as defined in JSDL
+      //
+      //   name:  Arguments
+      //   desc:  positional parameters for the command. 
+      //   mode:  ReadWrite, optional
+      //   type:  Vector String
+      //   value: -
+      //   notes: - available in JSDL, DRMAA
+      //            semantics as specified by JSDL
+      // 
+      //   name:  SPMDVariation
+      //   desc:  SPMD job type and startup mechanism
+      //   mode:  ReadWrite, optional
+      //   type:  String
+      //   value: -
+      //   notes: - as defined in the SPMD extension of JSDL
+      //   notes: - available in JSDL, SPMD extension
+      //          - semantics as defined in JSDL
+      //          - the SPMD JSDL extension defines the value
+      //            to be an URI.  For simplicity, SAGA allows
+      //            the following strings, which map into the 
+      //            respective URIs: MPI, GridMPI, IntelMPI,
+      //            LAM-MPI, MPICH1, MPICH2, MPICH-GM, MPICH-MX,
+      //            MVAPICH, MVAPICH2, OpenMP, POE, PVM, None
+      //          - the value '' (no value, default) indicates
+      //            that the application is not a SPMD 
+      //            application.
+      //          - as JSDL, SAGA allows other arbitrary values.
+      //            The implementation must clearly document
+      //            which values are supported.
+      //
+      //   name:  TotalCPUCount
+      //   desc:  total number of cpus requested for this job
+      //   mode:  ReadWrite, optional
+      //   type:  Int
+      //   value: '1'
+      //   notes: - available in JSDL, DRMAA
+      //          - semantics as defined in JSDL
+      // 
+      //   name:  NumberOfProcesses
+      //   desc:  total number of processes to be started
+      //   mode:  ReadWrite, optional
+      //   type:  Int
+      //   value: '1'
+      //   notes: - available in JSDL, SPMD extension
+      //          - semantics as defined in JSDL
+      // 
+      //   name:  ProcessesPerHost
+      //   desc:  number of processes to be started per host
+      //   mode:  ReadWrite, optional
+      //   type:  Int
+      //   value: '1'
+      //   notes: - available in JSDL, SPMD extension
+      //          - semantics as defined in JSDL
+      // 
+      //   name:  ThreadsPerProcess
+      //   desc:  number of threads to start per process
+      //   mode:  ReadWrite, optional
+      //   type:  Int
+      //   value: '1'
+      //   notes: - available in JSDL, SPMD extension
+      //          - semantics as defined in JSDL
+      // 
+      //   name:  Environment
+      //   desc:  set of environment variables for the job
+      //   mode:  ReadWrite, optional
+      //   type:  Vector String
+      //   value: -
+      //   notes: - exported into the job environment
+      //          - format: 'key=value'
+      //          - available in JSDL, DRMAA
+      //          - semantics as specified by JSDL
+      // 
+      //   name:  WorkingDirectory
+      //   desc:  working directory for the job
+      //   mode:  ReadWrite, optional
+      //   type:  String
+      //   value: '.'
++     //   notes: - gets created if it does not exist
+      //          - available in JSDL, DRMAA
+      //          - semantics as specified by JSDL
+      // 
+      //   name:  Interactive
+      //   desc:  run the job in interactive mode
+      //   mode:  ReadWrite, optional
+      //   type:  Bool
+      //   value: 'False'
+      //   notes: - this implies that stdio streams will stay 
+      //            connected to the submitter after job 
+      //            submission, and during job execution. 
+      //          - if an implementation cannot handle
+      //            interactive jobs, and this attribute is
+      //            present, and 'True', the job creation MUST
+      //            throw an 'IncorrectParameter' error with a
+      //            descriptive error message.
+      //          - not supported by JSDL, DRMAA
+      // 
+      //   name:  Input
+      //   desc:  pathname of the standard input file
+      //   mode:  ReadWrite, optional
+      //   type:  String
+      //   value: -
+      //   notes: - available in JSDL, DRMAA
+      //          - semantics as specified by JSDL
+      //          - will not be used if 'Interactive' is 'True'
+      // 
+      //   name:  Output
+      //   desc:  pathname of the standard output file
+      //   mode:  ReadWrite, optional
+      //   type:  String
+      //   value: -
+      //   notes: - available in JSDL, DRMAA
+      //          - semantics as specified by JSDL
+      //          - will not be used if 'Interactive' is 'True'
+      // 
+      //   name:  Error
+      //   desc:  pathname of the standard error file
+      //   mode:  ReadWrite, optional
+      //   type:  String
+      //   value: -
+      //   notes: - available in JSDL, DRMAA
+      //          - semantics as specified by JSDL
+      //          - will not be used if 'Interactive' is 'True'
+      // 
+      //   name:  FileTransfer
+      //   desc:  a list of file transfer directives
+      //   mode:  ReadWrite, optional
+      //   type:  Vector String
+      //   value: -
+      //   notes: - translates into jsdl:DataStaging
+      //          - used to specify pre- and post-staging
+      //          - staging is part of the 'Running' state
+      //          - syntax similar to LSF (see earlier notes)
+      //          - available in JSDL, DRMAA
+      //          - semantics as specified in JSDL 
+      // 
+      //   name:  Cleanup
+      //   desc:  defines if output files get removed after the 
+      //          job finishes
+      //   mode:  ReadWrite, optional
+      //   type:  String
+      //   value: 'Default'
+      //   notes: - can have the Values 'True', 'False', and 
+      //            'Default'
+      //          - On 'False', output files MUST be kept 
+      //            after job the finishes
+      //          - On 'True', output files MUST be deleted
+      //            after job the finishes
+      //          - On 'Default', the behavior is defined by
+      //            the implementation or the backend.
+      //          - translates into 'DeleteOnTermination' elements
+      //            in JSDL
+      // 
+      //   name:  JobStartTime
+      //   desc:  time at which a job should be scheduled
+      //   mode:  ReadWrite, optional
+      //   type:  Int
+      //   value: -
+      //   notes: - Could be viewed as a desired job start 
+      //            time, but that is up to the resource 
+      //            manager. 
+      //          - format: number of seconds since epoch
+      //          - available in DRMAA
+      //          - not supported by JSDL
+      // 
++     //   name:  WallTimeLimit
++     //   desc:  hard limit for the total job runtime.
++     //   mode:  ReadWrite, optional
++     //   type:  Int
++     //   value: -
++     //   notes: - intended to provide hints to the scheduler. 
++     //          - available in JSDL, DRMAA
++     //          - semantics as defined in JSDL
++     // 
+      //   name:  TotalCPUTime
+      //   desc:  estimate total number of CPU seconds which
+      //          the job will require. 
+      //   mode:  ReadWrite, optional
+      //   type:  Int
+      //   value: -
+      //   notes: - intended to provide hints to the scheduler. 
+-     //            scheduling policies.
+      //          - available in JSDL, DRMAA
+      //          - semantics as defined in JSDL
+      // 
+      //   name:  TotalPhysicalMemory
+      //   desc:  Estimated amount of memory the job requires
+      //   mode:  ReadWrite, optional
+      //   type:  Float
+      //   value: -
+      //   notes: - unit is in MegaByte
+      //          - memory usage of the job is aggregated 
+      //            across all processes of the job
+      //          - available in JSDL
+      //          - semantics as defined by JSDL
+      // 
+      //   name:  CPUArchitecture
+      //   desc:  compatible processor for job submission
+      //   mode:  ReadWrite, optional
+!     //   type:  String
+      //   value: -
+      //   notes: - allowed values as specified in JSDL
+      //          - available in JSDL
+      //          - semantics as defined by JSDL
+      // 
+      //   name:  OperatingSystemType
+      //   desc:  compatible operating system for job submission
+      //   mode:  ReadWrite, optional
+!     //   type:  String
+      //   value: -
+      //   notes: - allowed values as specified in JSDL
+      //          - available in JSDL
+      //          - semantics as defined by JSDL
+      // 
+      //   name:  CandidateHosts
+      //   desc:  list of host names which are to be considered
+      //          by the resource manager as candidate targets
+      //   mode:  ReadWrite, optional
+      //   type:  Vector String
+      //   value: -
+      //   notes: - available in JSDL
+      //          - semantics as defined by JSDL
+      //
+      //   name:  Queue
+      //   desc:  name of a queue to place the job into
+      //   mode:  ReadWrite, optional
+      //   type:  String
+      //   value: -
+      //   notes: - While SAGA itself does not define the 
+      //            semantics of a "queue", many backend systems
+      //            can make use of this attribute. 
+      //          - not supported by JSDL
+      // 
++     //   name:  JobProject
++     //   desc:  name of a account or project name
++     //   mode:  ReadWrite, optional
++     //   type:  String
++     //   value: -
++     //   notes: - While SAGA itself does not define the 
++     //            semantics of an "account" or "project", 
++     //            many backend systems can make use of
++     //            this attribute for the purpose of 
++     //            accounting.
++     //          - available in JSDL
++     //          - semantics as defined by JSDL
++     // 
+      //   name:  JobContact
+      //   desc:  set of endpoints describing where to report 
+      //          job state transitions.
+      //   mode:  ReadWrite, optional
+      //   type:  Vector String
+      //   value: -
+      //   notes: - format: URI (e.g. fax:+123456789, 
+      //            sms:+123456789, mailto:joe@doe.net). 
+      //          - available in DRMAA
+      //          - not supported by JSDL
+    }
+ 
+ 
+    class job_service : implements   saga::object
+                        implements   saga::async
+                     // from object  saga::error_handler
+    {
+      CONSTRUCTOR          (in  session         s,
+                            in  url             rm = "",
+                            out job_service     obj);
+      DESTRUCTOR           (in  job_service     obj);
+ 
+      create_job           (in  job_description jd,
+                            out job             job);
+      run_job              (in  string          commandline,
+                            in  string          host = "",
+                            out job             job, 
+                            out opaque          stdin,
+                            out opaque          stdout,
+                            out opaque          stderr);
+      list                 (out array<string>   job_ids);
+      get_job              (in  string          job_id,
+                            out job             job);
+      get_self             (out job_self        job);
+    }
+ 
+ 
+    class job : extends      saga::task
+                implements   saga::async
+                implements   saga::attributes
+                implements   saga::permissions
+             // from task    saga::object
+             // from task    saga::monitorable
+             // from object  saga::error_handler
+    {
+      // no CONSTRUCTOR
+      DESTRUCTOR           (in  job             obj);
+ 
+      // job inspection
+      get_job_description  (out job_description jd);
+      get_stdin            (out opaque          stdin);
+      get_stdout           (out opaque          stdout);
+      get_stderr           (out opaque          stderr);
+ 
+      // job management
+      suspend              (void);
+      resume               (void);
+      checkpoint           (void);
+      migrate              (in job_description   jd);
+      signal               (in int               signum);
+ 
+      // Attributes:
+      //
+      //   name:  JobID
+      //   desc:  SAGA representation of the job identifier
+      //   mode:  ReadOnly
+      //   type:  String
+      //   value: -
+      //   notes: - format: as described earlier
+      // 
++     //   name:  ServiceURL
++     //   desc:  URL representation of the job::service instance
++     //          managing this job
++     //   mode:  ReadOnly
++     //   type:  String
++     //   value: -
++     //   notes: - can be used for a job::service CONSTRUCTOR.
++     // 
+      //   name:  ExecutionHosts
+      //   desc:  list of host names or IP addresses allocated 
+      //          to run this job
+      //   mode:  ReadOnly, optional
+      //   type:  Vector String
+      //   value: -
+      //   notes: - 
+      // 
+      //   name:  Created
+      //   desc:  time stamp of the job creation in the 
+      //          resource manager
+      //   mode:  ReadOnly, optional
+      //   type:  Time
+      //   value: -
+      //   notes: - can be interpreted as submission time
+      // 
+      //   name:  Started
+      //   desc:  time stamp indicating when the job started 
+      //          running
+      //   mode:  ReadOnly, optional
+      //   type:  Time
+      //   value: -
+      // 
+      //   name:  Finished
+      //   desc:  time stamp indicating when the job completed
+      //   mode:  ReadOnly, optional
+      //   type:  Time
+      //   value: -
+      // 
+      //   name:  WorkingDirectory
+      //   desc:  working directory on the execution host 
+      //   mode:  ReadOnly, optional
+      //   type:  String
+      //   value: -
+      //   notes: - can be used to determine the location of 
+      //            files staged using relative file paths
+      // 
+      //   name:  ExitCode
+      //   desc:  process exit code as collected by the wait(2)
+      //          series of system calls. 
+      //   mode:  ReadOnly, optional
+      //   type:  Int
+      //   value: -
+      //   notes: - exit code is collected from the process 
+      //            which was started from the 'Executable' 
+      //            attribute of the job_description object.  
+      //          - only available in final states, if at all
+      // 
+      //   name:  Termsig
+      //   desc:  signal number which caused the job to exit
+      //   mode:  ReadOnly, optional
+      //   type:  Int
+      //   value: -
+      //   notes: - only available in final states, if at all
+ 
+ 
+      // Metrics:
+      //   name:  job.state
+      //   desc:  fires on state changes of the job, and has 
+      //          the literal value of the job state enum.
+      //   mode:  ReadOnly
+      //   unit:  1
+      //   type:  Enum
+      //   value: New
+      //   notes: - the state metric is inherited from
+      //            saga::task, but has a different set
+      //            of possible values
+      //          - see description of job states above
+      // 
+      //   name:  job.state_detail
+      //   desc:  fires as a job changes its state detail
+      //   mode:  ReadOnly, optional
+      //   unit:  1
+      //   type:  String
+      //   value: -
+      // 
+      //   name:  job.signal
+      //   desc:  fires as a job receives a signal, and has a
+      //          value indicating the signal number
+      //   mode:  ReadOnly, optional
+      //   unit:  1
+      //   type:  Int
+      //   value: -
+      //   notes: - no guarantees are made that any or all
+      //            signals can be notified by this metric
+      // 
+      //   name:  job.cpu_time
+      //   desc:  number of CPU seconds consumed by the job
+      //   mode:  ReadOnly, optional
+      //   unit:  seconds
+      //   type:  Int
+      //   value: -
+      //   notes: - aggregated across all processes/threads
+      // 
+      //   name:  job.memory_use
+      //   desc:  current aggregate memory usage
+      //   mode:  ReadOnly, optional
+      //   unit:  megabyte
+      //   type:  Float
+      //   value: 0.0
+      //   notes: - metric becomes 'Final' after job 
+      //            completion, and then shows the memory 
+      //            high water mark
+      // 
+      //   name:  job.vmemory_use
+      //   desc:  current aggregate virtual memory usage
+      //   mode:  ReadOnly, optional
+      //   unit:  megabyte
+      //   type:  Float
+      //   value: 0.0
+      //   notes: - metric becomes 'Final' after job 
+      //            completion, and then shows the virtual 
+      //            memory high water mark
+      // 
+      //   name:  job.performance
+      //   desc:  current performance
+      //   mode:  ReadOnly, optional
+      //   unit:  FLOPS
+      //   type:  Float
+      //   value: 0.0
+      //   notes: - metric becomes 'Final' after job 
+      //            completion, and then shows the performance
+      //            high water mark
+    }
+ 
+ 
+    class job_self : extends     saga::job
+                     implements  saga::steerable
+                  // from job    saga::async
+                  // from job    saga::attributes
+                  // from job    saga::task
+                  // from job    saga::object
+                  // from job    saga::monitorable
+                  // from job    saga::permissions
+                  // from job    saga::error_handler
+    {
+      // no CONSTRUCTOR
+      DESTRUCTOR           (in  job_self        obj);
+    }
+  }
+ \end{myspec}
+ 
+ 
+ \subsubsection{Specification Details}
+ 
+  \subsubsection*{Enum \T{state}}
+ 
+    The \T{state} is equivalent to the inherited
+    \T{saga::task::state}, but adds the \T{Suspended} state:
+ 
+    |Suspended|\\[1.5mm]
+    \begin{tabular}{cp{110mm}}
+       ~~ & This state identifies a job  instance which 
+            has been suspended.  This state corresponds to the 
+            BES state \T{'Suspend'}.
+    \end{tabular}
+ 
+ 
+  \subsubsection*{Class \T{job\_description}}
+ 
+    This object encapsulates all the attributes which define a
+    job to be run. It has no methods of its own, but implements
+    the |saga::attributes| interface in order to provide access
+    to the job properties, which are expressed as JSDL keywords. 
+    
+    The only required attribute in order to perform a valid job
+    submission is the |Executable|. Given the |Executable|, a
+    job can be instantiated in many existing backend
+    systems without any further specification.
+ 
+    There should be significant overlap between the
+    attributes defined within SAGA and within the JSDL
+    specification. This list, however, will not be complete in
+    cases where the JSDL was deemed more complicated than was
+    required for a simple API (e.g. the notion of JSDL
+    profiles), or where an attribute was needed to
+    interact with a scheduler, which was not within the stated
+    scope of the JSDL working group (e.g.  |Queue|, which is
+    considered a \I{site attribute}, and thus not relevant to
+    the pure description of a job).
+ 
+ 
+ \begin{myspec}
+    - CONSTRUCTOR
+      Purpose:  create the object
+      Format:   CONSTRUCTOR       (out job_description obj)
+      Inputs:   -
+      InOuts:   -
+      Outputs:  obj:               the newly created object
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+      Throws:   NotImplemented
+                NoSuccess
+      Notes:    - a job_description is not associated with a
+                  session, but can be used for job services
+                  from different sessions.
+ 
+ 
+    - DESTRUCTOR
+      Purpose:  destroy the object
+      Format:   DESTRUCTOR        (in  job_description obj)
+      Inputs:   obj:               the object to destroy
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+      Throws:   -
+      Notes:    -
+ \end{myspec}
+ 
+ 
+  \subsubsection*{Class \T{job\_service}}
+ 
+    The |job_service| represents a resource management backend,
+    and as such allows the creation and submision of jobs, and
+    to discover jobs.  The job management methods are on the job
+    object itself -- this probably implies that implementations
+    need to internally track what resource manager (or
+    |job_service| instance) created the job.
+ 
+ \begin{myspec}
+    - CONSTRUCTOR
+      Purpose:  create the object
+      Format:   CONSTRUCTOR       (in  session       s,
+                                   in  url           rm = "",
+                                   out job_service   obj)
+      Inputs:   s:                 session to associate with
+                                   the object
+                rm:                contact url for resource 
+                                   manager
+      InOuts:   -
+      Outputs:  obj:               the newly created object
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+      Throws:   NotImplemented
++               BadParameter
+                IncorrectURL
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - 'rm' defaults to an empty string - in that
+                  case, the implementation must perform a
+                  resource discovery, or fall back to a fixed 
+                  value, or find a valid  rm contact in any 
+                  other way.  If that is not possible, a 
+                  'BadParameter' exception MUST be thrown, and 
+                  MUST indicate that a rm contact string is 
+                  needed.  The expected behavior MUST be 
+                  documented (i.e. if a default is available).
+                - if the rm identified by the rm URL cannot be
+                  contacted (i.e. does not exist), a
+                  'BadParameter' exception is thrown.
+ 
+ 
+    - DESTRUCTOR
+      Purpose:  destroy the object
+      Format:   DESTRUCTOR        (in  job_service   obj)
+      Inputs:   obj:               the object to destroy
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - jobs created by that job_service instance 
+                  are not affected by the destruction, and are
+                  in particular not canceled.
+      Perms:    -
+      Throws:   - 
+      Notes:    - 
+ 
+ 
+    - create_job
+      Purpose:  create a job instance
+      Format:   create_job        (in  job_description jd,
+                                   out job             job);
+      Inputs:   jd:                description of job to be
+                                   submitted
+      InOuts:   -
+      Outputs:  job:               a job object representing
+                                   the submitted job instance
+      PreCond:  - jd has an 'Executable' attribute.
+      PostCond: - job is in 'New' state
+                - jd is deep copied (no state is shared
+                  after method invocation)
+                - 'Owner' of the job is the id of the context
+                  used for creating the job.
+      Perms:    -
+      Throws:   NotImplemented
+                BadParameter
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - calling run() on the job will submit it to
+                  the resource, and advance its state.
+                - if the job description does not have a valid
+                  'Executable' attribute, a 'BadParameter' 
+                  exception is thrown.
+                - if the job description contains values which
+                  are outside of the allowed range, or cannot be
+                  parsed, or are otherwise invalid and not
+                  usable for creating a job instance, a
+                  'BadParameter' exception is thrown, which MUST
+                  indicate which attribute(s) caused this
+                  exception, and why.
+               
+               
+    - run_job  
+      Purpose:  Run a command synchronously.
+      Format:   run_job           (in  string  commandline,
+                                   in  string  host = "",
+                                   out job     job, 
+                                   out opaque  stdin,
+                                   out opaque  stdout,
+                                   out opaque  stderr);
+      Inputs:   commandline:       the command and arguments
+                                   to be run
+                host:              hostname to be used by rm for
+                                   submission
+      InOuts:   -
+      Outputs:  stdin:             IO handle for the running
+                                   job's standard input stream
+                stdout:            IO handle for the running
+                                   job's standard output
+                stderr:            IO handle for the running
+                                   job's standard error
+                job:               a job object representing
+                                   the submitted job instance
+      PreCond:  -
+      PostCond: - job is in 'Running', 'Done' or 'Failed' state.
+                - 'Owner' of the job is the id of the context
+                  used for creating the job.
+      Perms:    - 
+      Throws:   NotImplemented
+                BadParameter
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - This is a convenience routine built on the
+                  create_job method, and is intended to simplify
+                  the steps of creating a job_description,
+                  creating and running the job, and then
+                  querying the standard I/O streams.
+                - the I/O handles have to be passed to the call
+                  as references, in most languages, as calls
+                  often allow only one return value (Perl or
+                  python being notable exceptions).  If these
+                  parameters are omitted, the job is to be
+                  started non-interactively, and the output I/O
+                  streams may be discarded.
+                - the job is guaranteed to run on the given
+                  host, or not at all.
+                - the method is exactly equivalent to the
+                  sequence of (1) creation of a job_description
+                  with 'Executable' set to the values from the
+                  commandline, 'Interactive' set if I/O is
+                  requested, 'CandidateHost' set to host; (2)
+                  create_job() with that description; (3)
+                  calling run() on that job.  This method can
+                  throw any of the exceptions which can occur in
+                  this sequence, with the semantics defined in
+                  the detailed description of the methods used
+                  in this sequence.  No other exception are to
+                  be expected.
+                - if 'host' is an empty string (the default),
+                  the implementation MUST choose an arbitrary
+                  host for execution.
+                - stdin, stdout and stderr are guaranteed to
+                  contain/provide the complete standard I/O
+                  streams, beginning at the start of the remote
+                  process.
+ 
+ 
+    - list
+      Purpose:  Get a list of jobs which are currently known by
+                the resource manager.
+      Format:   list              (out array<string>   job_ids);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  job_ids:           an array of job identifiers
+      PreCond:  -
+      PostCond: -
+      Perms:    Query on jobs identified by the returned ids
+      Throws:   NotImplemented
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - which jobs are viewable by the calling user 
+                  context, and how long a resource manager keeps 
+                  job information, are both implementation 
+                  dependent.
+                - a returned job_id may translate into a job 
+                  (via get_job()) which is not controllable by 
+                  the requesting application (e.g. it could 
+                  cause an 'AuthorizationFailed' exception).
+ 
+ 
+    - get_job
+      Purpose:  Given a job identifier, this method returns a
+                job object representing this job.
+      Format:   get_job             (in  string job_id,
+                                     out job    job)
+      Inputs:   job_id:              job identifier as returned
+                                     by the resource manager
+      InOuts:   -
+      Outputs:  job:                 a job object representing
+                                     the job identified by
+                                     job_id
+      PreCond:  - job identified by job_id is managed by the
+                  job_service.
+      PostCond: - 
+      Perms:    Query on the job.
+      Throws:   NotImplemented
+                BadParameter
+                DoesNotExist
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - in general, only a job_service representing the
+                  resource manager which submitted the job may be
+                  able to handle the job_id, and to identify the
+                  job -- however, other job_services may succeed
+                  as well.
+                - if the resource manager can handle the job_id,
+                  but the referenced job is not alive, a 
+                  'DoesNotExist' exception is thrown.
+                - if the resource manager cannot parse the job_id
+                  at all, a 'BadParameter' exception is thrown.
+ 
+ 
+    - get_self
+      Purpose:  This method returns a job object representing
+                _this_ job, i.e. the calling application.
+      Format:   get_self            (out job_self  self)
+      Inputs:   -
+      InOuts:   -
+      Outputs:  self:                a job_self object 
+                                     representing _this_ job.
+      PreCond:  - the application is managed by the job_service.
+      PostCond: - job_self is, by definition, in 'Running' 
+                  state.
+      Perms:    Query on the job.
+      Throws:   NotImplemented
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - in general, only a job_service representing the
+                  resource manager which started the application
+                  which now calls get_self() can successfully
+                  return a job_self instance.  However, other
+                  job_services may succeed as well.
+                - if a job_service cannot handle the calling job
+                  as a job_self instance, a 'NoSuccess' exception
+                  is thrown, with a descriptive error message.
+ \end{myspec}
+ 
+ 
+  \subsubsection*{Class \T{job}}
+ 
+    The |job| provides the manageability interface to a job
+    instance submitted to a resource manager. There are two
+    general types of methods: those for retrieving job state and
+    information, and those for manipulating the job.  The
+    methods intended to manipulate jobs cannot make any
+    guarantees about \I{how} the resource manager will
+    affect an action to be taken.  The API
+    implementation is designed to be agnostic of the backend
+    implementation, such that any backend could be
+    implemented to perform an action. For example, the
+    checkpoint routine might cause an application level
+    checkpoint, or might use the services of GridCPR.
+ 
+    Job implements the |saga::attributes| interface.  If not noted
+    otherwise, none of these attributes is available before the
+    job is running, and none is guaranteed to have a non-empty
+    value while the job is running or after the job finishes.
+ 
+    Job also implements the monitorable interface, and thus
+    allows monitoring and notification for changes of
+    runtime attributes.
+ 
+ 
+ \begin{myspec}
+    - DESTRUCTOR
+      Purpose:  destroy the object
+      Format:   DESTRUCTOR        (in  job  obj)
+      Inputs:   obj:               the object to destroy
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+      Throws:   -
+      Notes:    - the object destruction does not imply a 
+                  call to cancel() for the job instance.
+ 
+ 
+    - get_job_description
+      Purpose:  Retrieve the job_description which was used to
+                submit this job instance.
+      Format:   get_job_description (out job_description jd);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  jd:                  a job_description object
+      PreCond:  -
+      PostCond: - jd is deep copied (no state is shared
+                  after method invocation)
+      Perms:    Query
+      Throws:   NotImplemented
+                DoesNotExist
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - There are cases when the job_description is not
+                  available.  This may include cases when
+                  the job was not submitted through
+                  SAGA and get_job() was used to retrieve the
+                  job, or when this state information has been
+                  lost (e.g. the client application restarts and
+                  the particular SAGA implementation did not
+                  persist the information).  In that case, a
+                  'DoesNotExist' exception is thrown, with a
+                  descriptive error message.
+ 
+ 
+    - get_stdin 
+      Purpose:  retrieve input stream for a job.
+      Format:   get_stdin          (out opaque stdin)
+      Inputs:   -
+      InOuts:   -
+      Outputs:  stdin:              standard input stream for
+                                    the job
+      PreCond:  - the job is interactive.
+      PostCond: - the jobs standard input stream is available 
+                  at stdin.
+      Perms:    Write (application can write to the jobs stdin).
+      Throws:   NotImplemented
+                BadParameter
+                DoesNotExist
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - if the preconditions are met, but the standard
+                  input stream is not available for some 
+                  reason, a 'DoesNotExist' exception is thrown.
+                - the stream MUST be valid until the job reaches
+                  a final state.  If it is, for some reason,
+                  disconnected earlier, a language typical error
+                  message is thrown (e.g. EBADF could be 
+                  returned on writes on that stream in C).
+                - if the job is not interactive, e.g. it was
+                  submitted with the 'Interactive' attribute set
+                  to 'False', an 'IncorrectState' exception is
+                  thrown.
+                - if the job is not in 'New' state, it is not
+                  guaranteed that the job did not receive other
+                  data on its standard input stream before.
+ 
+ 
+    - get_stdout
+      Purpose:  retrieve output stream of job
+      Format:   get_stdout         (out opaque stdout)
+      Inputs:   -
+      InOuts:   -
+      Outputs:  stdout:             standard output stream for
+                                    the job
+      PreCond:  - the job is interactive.
+      PostCond: - the jobs standard output stream is available 
+                  from stdout.
+      Perms:    Read (application can read the jobs stdout).
+      Throws:   NotImplemented
+                BadParameter
+                DoesNotExist
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - if the preconditions are met, but the standard
+                  output stream is not available for some 
+                  reason, a 'DoesNotExist' exception is thrown.
+                - the stream MUST be valid until the job reaches
+                  a final state.  If it is, for some reason,
+                  disconnected earlier, a language typical error
+                  message is thrown (e.g. EBADF could be 
+                  returned on reads on that stream in C).
+                - if the job is not interactive, e.g. it was
+                  submitted with the 'Interactive' attribute set
+                  to 'False', an 'IncorrectState' exception is
+                  thrown.
+                - if the job is not in 'New' state, it is not
+                  guaranteed that the job did write data on
+                  its standard output stream before, which are
+                  then not returned on the returned stream.
+ 
+ 
+    - get_stderr
+      Purpose:  retrieve error stream of job
+      Format:   get_stderr         (out opaque stderr)
+      Inputs:   -
+      InOuts:   -
+      Outputs:  stderr:             standard error stream for
+                                    the job
+      PreCond:  - the job is interactive.
+      PostCond: - the jobs standard error stream is available 
+                  from stderr.
+      Perms:    Read (application can read the jobs stderr).
+      Throws:   NotImplemented
+                BadParameter
+                DoesNotExist
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - if the preconditions are met, but the standard
+                  error stream is not available for some 
+                  reason, a 'DoesNotExist' exception is thrown.
+                - the stream MUST be valid until the job reaches
+                  a final state.  If it is, for some reason,
+                  disconnected earlier, a language typical error
+                  message is thrown (e.g. EBADF could be 
+                  returned on reads on that stream in C).
+                - if the job is not interactive, e.g. it was
+                  submitted with the 'Interactive' attribute set
+                  to 'False', an 'IncorrectState' exception is
+                  thrown.
+                - if the job is not in 'New' state, it is not
+                  guaranteed that the job did write data on
+                  its standard error stream before, which are
+                  then not returned on the returned stream.
+ 
+ 
+    Job Management Methods:
+    -----------------------
+ 
+    - suspend
+      Purpose:  Ask the resource manager to perform a suspend
+                operation on the running job.
+      Format:   suspend       (void);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  -
+      PreCond:  - the job is in 'Running' state.
+      PostCond: - the job is in 'Suspended' state.
+      Perms:    Exec (job can be controlled).
+      Throws:   NotImplemented
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - if the job is not in 'Running' state, an
+                  'IncorrectState' exception is thrown.
+ 
+ 
+    - resume
+      Purpose:  Ask the resource manager to perform a resume
+                operation on a suspended job.
+      Format:   resume             (void);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  -
+      PreCond:  - the job is in 'Suspended' state.
+      PostCond: - the job is in 'Running' state.
+      Perms:    Exec (job can be controlled).
+      Throws:   NotImplemented
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - if the job is not in 'Suspended' state, an
+                  'IncorrectState' exception is thrown.
+ 
+ 
+    - checkpoint
+      Purpose:  Ask the resource manager to initiate a checkpoint
+                operation on a running job.
+      Format:   checkpoint         (void);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  -
+      PreCond:  - the job is in 'Running' state.
+      PostCond: - the job is in 'Running' state.
+                - the job was checkpointed.
+      Perms:    Exec (job can be controlled).
+      Throws:   NotImplemented
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - The semantics of checkpoint(), and the actions
+                  taken to initiate a checkpoint, are resource
+                  manager specific.  In particular, the
+                  implementation or backend can trigger either 
+                  a system level or an application level
+                - if the job is not in 'Running' state, 
+                  an 'IncorrectState' exception is thrown.
+ 
+ 
+    - migrate
+      Purpose:  Ask the resource manager to migrate a job.
+      Format:   migrate            (in job_description jd);
+      Inputs:   jd:                 new job parameters to apply
+                                    when the job is migrated
+      InOuts:   -
+      Outputs:  -
+      PreCond:  - the job is in 'Running' or 'Suspended' state.
+      PostCond: - the job keeps its state.
+                - jd is deep copied (no state is shared
+                  after method invocation)
+                - the job reflects the attributes specified in
+                  the job_description.
+      Perms:    Exec (job can be controlled).
+      Throws:   NotImplemented
+                BadParameter
+                IncorrectState
+                AuthorizationFailed
+                AuthenticationFailed
+                PermissionDenied
+                Timeout
+                NoSuccess
+      Notes:    - jd might indicate new resource 
+                  requirements, for example.
+                - the action of migration might change the job 
+                  identifier within the resource manager.
+                - ideally, the submitted job description was
+                  obtained by get_job_description(), and then
+                  changed by the application.  This is not a
+                  requirement though.
+                - if the job is not in 'Running' or 'Suspended' 
+                  state, an 'IncorrectState' exception is thrown.
+                - the method can call the same exceptions as
+                  the submit_job() and run() methods, in
+                  particular in respect to an incorrect
+                  job_description.
+ 
+ 
+    - signal
+      Purpose:  Ask the resource manager to deliver an arbitrary
+                signal to a dispatched job.
+      Format:   signal               (in int signum);	
+      Inputs:   signum:               signal number to be
+                                      delivered
+      InOuts:   -
+      Outputs:  -
+      PreCond:  - job is in 'Running' or 'Suspended' state.
+      PostCond: - the signal was delivered to the job.
+      Perms:    Exec (job can be controlled).
+      Throws:   NotImplemented
+                BadParameter
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - there is no guarantee that the signal number 
+                  specified is valid for the operating system 
+                  on the execution host where the job is 
+                  running, or that the signal can be delivered.
+                - if the signal number is not supported by the
+                  backend, a 'BadParameter' exception is thrown.
+                - if the job is not in 'Running' or 'Suspended'
+                  state, an 'IncorrectState' exception is 
+                  thrown.
+ \end{myspec}
+ 
+ 
+ \subsubsection*{Class \T{job\_self}}
+ 
+    The |job_self| class |IS-A| job which represents the current
+    application (i.e. the very application which owns that
+    |job_self| instance).  It can only by created by calling
+    |get_self()| on a job service (that call can fail though).
+ 
+    The motivation to introduce this class is twofold: (1) it
+    allows to actively handle the current application as a grid
+    job (e.g. to migrate it, or to obtain its job description
+    for cloning/spawning); (2) as the class implements the
+    steerable interface, it is possible to add |ReadWrite|
+    metrics to its instance -- that way it is possible to expose
+    these metrics to other external applications, which in fact
+    allows to steer the current application.
+ 
+    A drawback of this approach is that, in order to make an
+    application steerable, a |job_service| instance is needed
+    which can in fact return a |job_self| instance, which means
+    there must be a resource manager available which can manage
+    the current application -- that however has nothing to do
+    with the concept of remote steering.  Future versions of the
+    SAGA API may change that, and may make |job_self| a
+    singleton, independent from the |job_service| behavior.  As
+    a result, that class might disappear, and might not be
+    maintained for backward compatibility.
+ 
+ \begin{myspec}
+    - DESTRUCTOR
+      Purpose:  destroy the object
+      Format:   DESTRUCTOR        (in  job_self  obj)
+      Inputs:   obj:               the object to destroy
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+      Throws:   -
+      Notes:    - the object destruction does not imply a 
+                  call to cancel() for the job_self instance.
+ \end{myspec}
+ 
+ 
+ \subsubsection{Examples}
+ 
+ \begin{mycode}
+  Example : simple job submission and polling for finish.
+ 
+  // -----------------------------------------------
+  // c++ example
+  std::list <std::string>    transfers;
+  saga::job_description jobdef;
+  saga::job_service     js;
+ 
+  transfers.push_back ("infile > infile");
+  transfers.push_back ("ftp://host.net/path/out << outfile");
+ 
+  jobdef.set_attribute        ("CandidateHost", "hostname");
+  jobdef.set_attribute        ("Executable",    "job.sh");
+  jobdef.set_attribute        ("TotalCPUCount", "16");
+  jobdef.set_vector_attribute ("FileTransfer",  transfers);
+ 
+  saga::job job = js.create_job (jobdef);
+ 
+  job.run ();
+ 
+  while ( 1 )
+  {
+    // get job state
+    saga::job::state state = job.get_state ();
+ 
+    // get list of hosts the job is/where running on
+    std::list <std::string> hostlist = job.get_attribute
+                                       ("ExecutionHosts");
+ 
+    if ( saga::job::Running == state )
+    {
+      std::cout << "Job is running." << std::endl;
+    }
+    else if ( saga::job::Suspended == state )
+    {
+      std::cout << "Job is suspended." << std::endl;
+    }
+    else if ( saga::job::Done == state )
+    {
+      std::cout << "Job completed successfully." << std::endl;
+      exit (0);
+    }
+    else if ( saga::job::Canceled == state )
+    {
+      std::cout << "Job canceled." << std::endl;
+      exit (1); 
+    }
+    else
+    {
+      // state can only be 'Failed'
+      assert (saga::job::Failed == state); 
+ 
+      std::string exitcode = job.get_attribute ("ExitCode");
+ 
+      std::cout << "Job failed with exitcode:" 
+                << exitcode 
+                << std::endl;
+      exit ( atoi(exitcode) );
+    }
+ 
+    sleep (1); // idle
+  }
+ \end{mycode}
+ 

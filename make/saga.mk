@@ -1,9 +1,3 @@
-#  Copyright (c) 2005-2007 Andre Merzky (andre@merzky.net)
-# 
-#  Distributed under the Boost Software License, Version 1.0. (See accompanying
-#  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
-
-# vim: ft=make
 
 ifndef SAGA_MK_INC_INC
        SAGA_MK_INC_INC = yes
@@ -98,11 +92,6 @@ endif
 
 ifneq "$(SAGA_REL_PWD)" ""
   SAGA_REL_PWD := $(SAGA_REL_PWD)/
-endif
-
-ifndef SAGA_HDR_DIR
-  SAGA_HDR_DIR := $(shell $(ECHO) $(SAGA_REL_PWD) \
-								 			 | $(SED) -e 's/^external\/boost\//boost\//')
 endif
 #
 ###########################################################

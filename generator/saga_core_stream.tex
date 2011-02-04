@@ -1,0 +1,1010 @@
+ 
+   A number of use cases involve launching  remotely located
+   components in order to create distributed applications. These
+   use cases require simple remote socket connections to be
+   established between these components and their control
+   interfaces.
+ 
+   The target of the streams API is to establish the simplest
+   possible authenticated socket connection with hooks to
+   support application level authorization.  The stream API has
+   the following characteristics
+ 
+   \begin{enumerate}
+ 
+     \item It is not performance oriented:  If performance is
+     required, then it is better to program directly against the
+     APIs of existing performance oriented protocols like
+     GridFTP or XIO.  The API design should allow, however, for
+     high performance implementations.
+ 
+     \item It is focused on TCP/IP socket connections.  There
+     has been no attempt to generalize this to arbitrary
+     streaming interfaces (although it does not prevent such
+     things as connectionless protocols from being supported).
+ 
+     \item It does not attempt to create a programming paradigm
+     that diverges very far from baseline BSD sockets, Winsock,
+     or Java Sockets.
+ 
+   \end{enumerate}
+   
+   This API greatly reduces the complexity of establishing
+   authenticated socket connections in order to communicate with
+   remotely located components.  It however, provides very
+   limited functionality and is thus suitable for applications
+   that do not have very sophisticated requirements (as per
+   80-20 rule).  It is envisaged that as applications become
+   progressively more sophisticated, they will gradually move to
+   more  sophisticated, native APIs in order to support those
+   needs.
+ 
+   Several SAGA use cases require a more abstract communication
+   API, which exchanges opaque messages instead of byte streams.
+   That behavior can be modeled on top of this stream API, but
+   future versions of the SAGA API may introduce higher level
+   communication APIs.
+ 
+   \subsubsection{Endpoint URLs}
+ 
+    The SAGA stream API uses URLs to specify connection
+    endpoints.  These URLs are supposed to allow SAGA
+    implementations to be interoperable.  For example, the URL
+ 
+    \shift |tcp://remote.host.net:1234/|
+ 
+    is supposed to signal that a standard |tcp| connection can
+    be established with host |remote.host.net| on port |1234|.
+    No matter what the specified URL scheme is, the SAGA stream
+    API implementation MUST have the same semantics on API
+    level, i.e. behave like a reliable byte-oriented data
+    stream.
+ 
+   \subsubsection{Endpoint Permissions}
+ 
+    The SAGA API allows for application level authorization of
+    stream communications: an application is able to set
+    permissions on \T{saga::stream\_server} and \T{saga::stream}
+    instances.  These permissions control what remote party can
+    perform what action on those streams, e.g.  control what
+    remote parties are able to connect to an endpoint, or to
+    write to them etc.
+ 
+    Not all implementations will be able to fully implement that
+    security model -- the implementation MUST carefully document
+    which permissions are supported, and which are not.
+ 
+ \subsubsection{Specification}
+ 
+ \begin{myspec}
+  package saga.stream
+  {
+    enum state
+    {
+      New          =  1
+      Open         =  2,
+      Closed       =  3,
+      Dropped      =  4,
+      Error        =  5
+    }
+ 
+    enum activity
+    {
+      Read         =  1,
+      Write        =  2,
+      Exception    =  4
+    }
+ 
+ 
+    class stream_server  : implements   saga::object
+                           implements   saga::async
+                           implements   saga::monitorable
+                           implements   saga::permissions
+                        // from object  saga::error_handler
+    {
+      CONSTRUCTOR       (in    session         s,
+                         in    saga::url       url,
+                         out   stream_server   obj);
+      DESTRUCTOR        (in    stream_server   obj);
+ 
+      get_url           (out   saga::url       url);
+
+      serve             (in    float           timeout = -1.0,
+                         out   stream          stream);
+ 
++     connect           (in    float           timeout = -1.0,
++                        out   stream          stream);
++
+      close             (in    float           timeout = 0.0);
+ 
+      // Metrics:
+      //   name:  stream_server.client_connect
+      //   desc:  fires if a client connects
+      //   mode:  ReadOnly
+      //   unit:  1
+      //   type:  Trigger
+      //   value: 1
+    }
+ 
+ 
+    class stream : extends      saga::object
+                   implements   saga::async
+                   implements   saga::attributes
+                   implements   saga::monitorable
+                // from object  saga::error_handler
+    {
+      // constructor / destructor
+      CONSTRUCTOR  (in    session          s,
+                    in    saga::url        url = "",
+                    out   stream           obj);
+      DESTRUCTOR   (in    stream           obj);
+ 
+      // inspection methods
+      get_url      (out   saga::url        url);
+      get_context  (out   context          ctx);
+ 
+      // management methods
+-     connect      (void);
++     connect      (in    float            timeout = -1.0);
+      wait         (in    int              what,
+                    in    float            timeout = -1.0,
+                    out   int              cause);
+      close        (in    float            timeout = 0.0);
+ 
+      // I/O methods
+      read         (inout buffer           buf, 
+                    in    int              len_in = -1,
+                    out   int              len_out);
+      write        (in    buffer           buf,
+                    in    int              len_in = -1,
+                    out   int              len_out);
+ 
+      // Attributes:
+      //
+      //   name:  BufSize
+      //   desc:  determines the size of the send buffer, 
+      //          in bytes
+      //   mode:  ReadWrite, optional
+      //   type:  Int
+      //   value: system dependent
+      //   notes: - the implementation MUST document the
+      //            default value, and its meaning (e.g. on what
+      //            layer that buffer is maintained, or if it
+      //            disables zero copy).
+      //
+      //   name:  Timeout
+      //   desc:  determines the amount of idle time
+      //          before dropping the line, in seconds
+      //   mode:  ReadWrite, optional
+      //   type:  Int
+      //   value: system dependent
+      //   notes: - the implementation MUST document the
+      //            default value
+      //          - if this attribute is supported, the
+      //            connection MUST be closed by the
+      //            implementation if for that many seconds
+      //            nothing has been read from or written to 
+      //            the stream.
+      //
+      //   name:  Blocking
+      //   desc:  determines if read/writes are blocking
+      //          or not
+      //   mode:  ReadWrite, optional
+      //   type:  Bool
+      //   value: True
+      //   notes: - if the attribute is not supported, the
+      //            implementation MUST be blocking
+      //          - if the attribute is set to 'True', a read or
+      //            write operation MAY return immediately if
+      //            no data can be read or written - that does
+      //            not constitute an error (see EAGAIN in
+      //            POSIX).
+      //
+      //   name:  Compression
+      //   desc:  determines if data are compressed
+      //          before/after transfer
+      //   mode:  ReadWrite, optional
+      //   type:  Bool
+      //   value: schema dependent
+      //   notes: - the implementation MUST document the
+      //            default values for the available schemas
+      //
+      //   name:  Nodelay
+      //   desc:  determines if packets are sent
+      //          immediately, i.e. without delay
+      //   mode:  ReadWrite, optional
+      //   type:  Bool
+      //   value: True
+      //   notes: - similar to the TCP_NODELAY option
+      //
+      //   name:  Reliable
+      //   desc:  determines if all sent data MUST arrive
+      //   mode:  ReadWrite, optional
+      //   type:  Bool
+      //   value: True
+      //   notes: - if the attribute is not supported, the
+      //            implementation MUST be reliable
+ 
+ 
+      // Metrics:
+      //   name:  stream.state
+      //   desc:  fires if the state of the stream changes,
+      //          and has the value of the new state
+      //          enum
+      //   mode:  ReadOnly
+      //   unit:  1
+      //   type:  Enum
+      //   value: New
+      //
+      //   name:  stream.read
+      //   desc:  fires if a stream gets readable
+      //   mode:  ReadOnly
+      //   unit:  1
+      //   type:  Trigger
+      //   value: 1
+      //   notes: - a stream is considered readable if a
+      //            subsequent read() can successfully read 
+      //            1 or more bytes of data.
+      //
+      //   name:  stream.write
+      //   desc:  fires if a stream gets writable
+      //   mode:  ReadOnly
+      //   unit:  1
+      //   type:  Trigger
+      //   value: 1
+      //   notes: - a stream is considered writable if a
+      //            subsequent write() can successfully write
+      //            1 or more bytes of data.
+      //
+      //   name:  stream.exception
+      //   desc:  fires if a stream has an error condition
+      //   mode:  ReadOnly
+      //   unit:  1
+      //   type:  Trigger
+      //   value: 1
+      //   notes: - 
+      //
+      //   name:  stream.dropped
+      //   desc:  fires if the stream gets dropped by the
+      //          remote party
+      //   mode:  ReadOnly
+      //   unit:  1
+      //   type:  Trigger
+      //   value: 1
+    }
+  }
+ \end{myspec}
+ 
+ 
+ \subsubsection{Specification Details}
+ 
+  \subsubsection*{Enum \T{state}}
+  \label{t}
+ 
+  \begin{figure}[!ht]
+    \begin{center}
+      \includegraphics[width=0.95\textwidth]{stream_states}
+      \caption{\label{fig:stream_states} \footnotesize The SAGA stream state model
+      (See Figure~\ref{fig:states} for a legend).}
+    \end{center}
+  \end{figure}
+ 
+   A SAGA  stream can be in several states -- the complete state
+   diagram is shown in Figure~\ref{fig:stream_states}\ref{t}.  The
+   stream states are:
+ 
+   |New|\\[1.5mm]
+   \begin{tabular}{cp{110mm}}
+     ~~ & A newly constructed stream enters the initial |New| state.
+          It is not connected yet, and no I/O operations can be
+          performed on it.   |connect()| must be called to advance
+          the state to |Open| (on success) or |Error| (on failure).
+   \end{tabular}
+ 
+   |Open|\\[1.5mm]
+   \begin{tabular}{cp{110mm}}
+     ~~ & The stream is connected to the remote endpoint, and I/O
+          operations can be called.  If any error occurs on the
+          stream, it will move into the |Error| state.  If the remote
+          party closes the connection, the stream will move into the
+          |Dropped| state.  If |close()| is called on the stream, the
+          stream will enter the |Closed| state.
+   
+   \end{tabular}
+ 
+   |Closed|\\[1.5mm]
+   \begin{tabular}{cp{110mm}}
+     ~~ & The |close()| method was called on the stream -- I/O is no
+          longer possible.  This is a final state.
+   \end{tabular}
+ 
+   |Dropped|\\[1.5mm]
+   \begin{tabular}{cp{110mm}}
+     ~~ & The remote party closed the connection -- I/O is no longer
+          possible.  This is a final state.
+   \end{tabular}
+ 
+   |Error|\\[1.5mm]
+   \begin{tabular}{cp{110mm}}
+     ~~ & An error occurred on the stream -- I/O is no longer
+          possible.  This is a final state.  The exact reason for
+          reaching this state MUST be available through the
+          |error_handler| interface.
+   \end{tabular}
+ 
+   All method calls, apart from the \T{DESTRUCTOR}, will cause
+   an \T{IncorrectState} exception if the stream is in a final
+   state.
+ 
+ 
+  \subsubsection*{Enum \T{activity\_type}}
+ 
+   The SAGA stream API allows for event driven communication.  A
+   stream can flag activities, i.e. |Read|, |Write| and
+   |Exception|, and the application can react on these
+   activities.  It is possible to poll for these events (using
+   |wait()| with a potential timeout), or to get asynchronous
+   notification of these events, by using the respective
+   metrics.
+ 
+   |Read|\\[1.5mm]
+   \begin{tabular}{cp{110mm}}
+     ~~ & Data are available on the stream, and a subsequent
+          \T{read()} will succeed.
+   \end{tabular}
+ 
+   |Write|\\[1.5mm]
+   \begin{tabular}{cp{110mm}}
+     ~~ & The stream is accepting data, and a subsequent 
+          \T{write()} will succeed.
+   \end{tabular}
+ 
+   |Exception|\\[1.5mm]
+   \begin{tabular}{cp{110mm}}
+     ~~ & An error occurred on the stream, and a following I/O
+          operation may fail.
+   \end{tabular}
+ 
+ 
+  \subsubsection*{Class \T{stream\_server}}
+ 
+    The |stream_server| object \XAddn{represents a connection
+    endpoint.  If it represents aconnection endpoint managed by
+    the application, it} establishes a listening/server object
+    that waits for client connections.  \XAdd[5]{If it
+    represents a remote connection point, calling \T{connect()}
+    on it will create a client \T{stream} instance connected to
+    that remote endpoint.}
+    
+    The |stream_server| can \XAddn{thus} \I{only} be used as a
+    factory for client sockets.  It doesn't \XCorr[2]{support}
+    any read/write I/O.  
+    
+ 
+ \begin{myspec}
+    - CONSTRUCTOR
+      Purpose:  create a new stream_server object
+      Format:   CONSTRUCTOR          (in  session   s,
+                                      in  saga::url url = "",
+                                      out stream_server obj);
+      Inputs:   s:                    session to be used for
+                                      object creation
+                url:                  channel name or url,
+                                      defines the source side
+                                      binding for the stream
+      InOuts:   -
+      Outputs:  obj:                  new stream_server object
+      PreCond:  -
+      PostCond: - stream_server can wait for incoming
+                  connections.
+                - 'Owner' of name is the id of the context
+                  used to create the stream_server.
+                - the stream_server has 'Exec', 'Query', 'Read' 
+                  and 'Write' permissions for '*'.
+      Perms:    -
+      Throws:   NotImplemented
+                IncorrectURL
+                BadParameter
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - if the given url is an empty string (the 
+                  default), the implementation will choose an
+                  appropriate default value.
+                - the implementation MUST ensure that the given
+                  URL is usable, and a later call to 'serve' 
+                  will not fail because of the information given
+                  by the URL - otherwise, a 'BadParameter'
+                  exception MUST be thrown.
+ 
+ 
+    - DESTRUCTOR
+      Purpose:  Destructor for stream_server object.
+      Format:   DESTRUCTOR           (in stream_server obj)
+      Inputs:   obj:                  object to be destroyed
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - the stream_server is closed.
+      Perms:    -
+      Throws:   -
+      Notes:    - if the instance was not closed before, the 
+                  destructor performs a close() on the instance,
+                  and all notes to close() apply.
+ 
+    // inspection
+    - get_url
+      Purpose:  get URL to be used to connect to this server
+      Format:   get_url              (out saga::url url);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  url:                  the URL of the connection.
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+      Throws:   NotImplemented
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - returns a URL which can be passed to
+                  the stream constructor to create a connection
+                  to this stream_server.
+      
+ 
+    // stream management
+    - serve
+      Purpose:  wait for incoming client connections
+      Format:   serve                (in  float   timeout,
+                                      out stream  client);
+      Inputs:   timeout:              number of seconds to wait
+                                      for a client
+      InOuts:   -
+      Outputs:  client:               new Connected stream object
+      PreCond:  -
+      PostCond: - the returned client is in 'Open' state.
+                - the session of the returned client is that of 
+                  the stream_server.
+      Perms:    - Exec.
+                - Exec for the connecting remote party.
+      Throws:   NotImplemented
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                NoSuccess
+                Timeout
+      Notes:    - if successful, it returns a new stream object
+                  that is connected to the client.
+                - if no client connects within the specified 
+                  timeout, a 'Timeout' exception is thrown.
+                - if connection setup failed (not on timeout!),
+                  the returned client is in the 'Error' state.
+                  Its error_handler interface should give
+                  detailed information about the reason.
+                - for timeout semantics, see Section 2.
+
++
++   - connect
++     Purpose:  Establishes a connection to the remote
++               connection endpoint represented by this instance
++     Format:   connect              (in float timeout = -1.0);
++     Inputs:   timeout:              connection timeout
++     InOuts:   -
++     Outputs:  -
++     PreCond:  - 
++     PostCond: - the returned stream is in 'Open' state.
++     Perms:    Exec
++     Throws:   NotImplemented
++               PermissionDenied
++               AuthorizationFailed
++               AuthenticationFailed
++               Timeout
++               NoSuccess
++     Notes:    - on failure, the stream state is changed to
++                 'Error'
++               - this call is equivalent to creating a
++                 stream instance with the URL used to
++                 create this stream_server instance, and 
++                 calling connect() on that stream.
++               - if the stream instance is not in 'New' state,
++                 an 'IncorrectState' exception is thrown.
++               - for timeout semantics, see Section 2.
++
+
+    - close
+      Purpose:  closes a stream server
+      Format:   close                (in float timeout)
+      Inputs:   timeout               seconds to wait
+      InOuts:   -
+      Outputs:  -
+      PreCond:  - 
+      PostCond: - no clients are accepted anymore.
+                - no callbacks registered for the
+                  'ClientConnect' metric are invoked.
+      Perms:    -
+      Throws:   NotImplemented
+-               IncorrectState
+                NoSuccess
+      Notes:    - any subsequent method call on the object
+                  MUST raise an 'IncorrectState' exception
+                  (apart from DESTRUCTOR and close()).
+                - if close() is implicitly called in the
+                  DESTRUCTOR, it will never throw an exception.
+                - close() can be called multiple times, with no
+                  side effects.
+                - for resource deallocation semantics, see 
+                  Section 2.
+                - for timeout semantics, see Section 2.
+ \end{myspec}
+ 
+ 
+  \subsubsection*{Class \T{stream}}
+ 
+    This is the object that encapsulates all client stream
+    objects.
+ 
+ \begin{myspec}
+    Constructor / Destructor:
+    -------------------------
+ 
+    - CONSTRUCTOR
+      Purpose:  Constructor, initializes a client stream,
+                for later connection to a server.
+      Format:   CONSTRUCTOR          (in  session    s,
+                                      in  saga::url  url,
+                                      out stream  obj);
+      Inputs:   s:                    saga session handle
+                url:                  server location as URL
+      InOuts:   -
+      Outputs:  obj:                  new, unconnected stream
+                                      instance
+      PreCond:  -
+      PostCond: - the state of the socket is 'New'.
+      Perms:    - Query for the stream_server represented by
+                  url.
+      Throws:   NotImplemented
+                IncorrectURL
+                BadParameter
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - server location and possibly protocol are
+                  described by the input URL - see description
+                  above.
+                - the 'url' can be empty (which is the default).
+                  A stream so constructed is only to be used
+                  as parameter to an asynchronous
+                  stream_server::serve() call.  For such a
+                  stream, a later call to connect() will fail.  
+                - the implementation MUST ensure that the
+                  information given in the URL are usable -
+                  otherwise a 'BadParameter' exception MUST be
+                  thrown.
+                - the socket is only connected after the
+                  connect() method is called.
+ 
+ 
+    - DESTRUCTOR
+      Purpose:  destroy a stream object
+      Format:   DESTRUCTOR           (in stream obj)
+      Inputs:   obj:                  stream to destroy
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - the socket is closed.
+      Perms:    -
+      Throws:   -
+      Notes:    - if the instance was not closed before, the 
+                  destructor performs a close() on the instance,
+                  and all notes to close() apply.
+ 
+ 
+    Inspection methods:
+    -------------------
+ 
+    - get_url
+      Purpose:  get URL used for creating the stream
+      Format:   get_url               (out saga::url url);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  url:                  the URL of the connection.
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+      Throws:   NotImplemented
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - returns a URL which can be passed to a
+                  stream constructor to create another
+                  connection to the same stream_server.
+                - the returned url may be empty, indicating that
+                  this instance has been created with an empty
+                  url as parameter to the stream CONSTRUCTOR().
+ 
+ 
+    - get_context
+      Purpose:  return remote authorization info
+      Format:   get_context           (out context ctx);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  ctx:                   remote context
+      PreCond:  - the stream is, or has been, in the 'Open' 
+                  state.
+      PostCond: - the returned context is deep copied, and does
+                  not share state with any other object.
+      Perms:    -
+      Throws:   NotImplemented
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - the context returned contains the security
+                  information from the REMOTE party, and can be 
+                  used for authorization.
+                - if the stream is in a final state, but has
+                  been in 'Open' state before, the returned
+                  context represents the remote party the stream
+                  has been connected to while it was in 'Open'
+                  state.
+                - if the stream is not in 'Open' state, and is
+                  not in a final state after having been in
+                  'Open' state, an 'IncorrectState' exception is
+                  thrown.
+                - if no security information are available, the
+                  returned context has the type 'Unknown' and no
+                  attributes are attached.
+                - the returned context MUST be authenticated, or
+                  must be of type 'Unknown' as described above.
+ 
+ 
+    Management methods:
+    -------------------
+ 
+    - connect
+      Purpose:  Establishes a connection to the target defined
+                during the construction of the stream.
+-     Format:   connect              (void);
++     Format:   connect              (in float timeout = -1.0);
+!     Inputs:   timeout:              connection timeout
+      InOuts:   -
+      Outputs:  -
+      PreCond:  - the stream is in 'New' state.
+      PostCond: - the stream is in 'Open' state.
+      Perms:    Exec for the stream_server represented by the
+                url used for creating this stream instance.
+      Throws:   NotImplemented
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - on failure, the stream state is changed to
+                  'Error'
++               - this call is equivalent to creating a
++                 stream_server instance with the URL used ot
++                 create this stream instance, and calling
++                 connect() on that stream_server.
+                - if the stream instance is not in 'New' state,
+                  an 'IncorrectState' exception is thrown.
++               - for timeout semantics, see Section 2.
+ 
+ 
+    - close
+      Purpose:  closes an active connection
+      Format:   close                (in float timeout)
+      Inputs:   timeout               seconds to wait
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - stream is in 'Closed' state
+      Perms:    -
+      Throws:   NotImplemented
+                IncorrectState
+                NoSuccess
+      Notes:    - any subsequent method call on the object
+                  MUST raise an 'IncorrectState' exception
+                  (apart from DESTRUCTOR and close()).
+                - if close() is implicitly called in the
+                  DESTRUCTOR, it will never throw an exception.
+                - close() can be called multiple times, with no
+                  side effects.
+                - for resource deallocation semantics, see 
+                  Section 2.
+                - for timeout semantics, see Section 2.
+ 
+ 
+    Stream I/O methods:
+    -------------------
+ 
+    - read
+      Purpose:  Read a data buffer from stream.
+      Format:   read                 (inout buffer      buf,
+                                      in    int         len_in = -1,
+                                      out   int         len_out);
+      Inputs:   len_in:               Maximum number of bytes
+                                      that can be copied into
+                                      the buffer.
+      InOuts:   buf:                  buffer to store read data 
+                                      into
+      Outputs:  len_out:              number of bytes read, if
+                                      successful. 
+      PreCond:  - the stream is in 'Open' state.
+      PostCond: - data from the stream are available in the
+                  buffer.
+      Perms:    Read for the stream_server represented by the
+                url used for creating this stream instance.
+      Throws:   NotImplemented
+                BadParameter
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - if the stream is blocking, the call waits
+                  until data become available.
+                - if the stream is non-blocking, the call
+                  returns immediately, even if no data are
+                  available -- that is not an error condition.
+                - the actually number of bytes read into buffer
+                  is returned in len_out.  It is not an error
+                  to read less bytes than requested, or in fact
+                  zero bytes.
+                - errors are indicated by returning negative
+                  values for len_out, which correspond to
+                  negatives of the respective ERRNO error code
+                - the given buffer must be large enough to
+                  store up to len_in bytes, or managed by the
+                  implementation - otherwise a 'BadParameter'
+                  exception is thrown.
+                - the notes about memory management from the
+                  buffer class apply.
+                - if len_in is smaller than 0, or not given, 
+                  the buffer size is used for len_in.
+                  If that is also not available, a
+                  'BadParameter' exception is thrown.
+                - if the stream is not in 'Open' state, an
+                  'IncorrectState' exception is thrown.
+                - similar to read (2) as specified by POSIX
+ 
+ 
+    - write
+      Purpose:  Write a data buffer to stream.
+      Format:   write                (in  buffer        buf,
+                                      in  int           len_in = -1,
+                                      out int           len_out);
+      Inputs:   len_in:               number of bytes of data in
+                                      the buffer
+                buffer:               buffer containing data
+                                      that will be sent out via
+                                      socket
+      InOuts:   -
+      Outputs:  len_out:              bytes written if successful
+      PreCond:  - the stream is in 'Open' state.
+      PostCond: - the buffer data are written to the stream.
+      Perms:    Write for the stream_server represented by the
+                url used for creating this stream instance.
+      Throws:   NotImplemented
+                BadParameter
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - if the stream is blocking, the call waits
+                  until the data can be written.
+                - if the stream is non-blocking, the call
+                  returns immediately, even if no data are
+                  written -- that is not an error condition.
+                - it is not an error to write less than len_in
+                  bytes.
+                - errors are indicated by returning negative
+                  values for len_out, which correspond to
+                  negatives of the respective ERRNO error code
+                - the given buffer must be large enough to
+                  store up to len_in bytes, or managed by the
+                  implementation - otherwise a 'BadParameter'
+                  exception is thrown.
+                - the notes about memory management from the
+                  buffer class apply.
+                - if len_in is smaller than 0, or not given, 
+                  the buffer size is used for len_in.
+                  If that is also not available, a
+                  'BadParameter' exception is thrown.
+                - if the stream is not in 'Open' state, an
+                  'IncorrectState' exception is thrown.
+                - similar to write (2) as specified by POSIX
+ 
+ 
+    - wait
+      Purpose:  check if stream is ready for reading/writing, or 
+                if it has entered an error state.
+      Format:   wait                 (in  int      what,
+                                      in  float    timeout,
+                                      out int      cause);
+      Inputs:   what:                 activity types to wait for
+                timeout:              number of seconds to wait
+      InOuts:   -
+      Outputs:  cause:                activity type causing the
+                                      call to return
+      PreCond:  - the stream is in 'Open' state.
+      PostCond: - the stream can be read from, or written to, or
+                  it is in 'Error' state.
+      Perms:    -
+      Throws:   NotImplemented
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                NoSuccess
+      Notes:    - wait will only check on the conditions 
+                  specified by 'what'
+                - 'what' is an integer representing 
+                   OR'ed 'Read', 'Write', or 'Exception' flags.
+                - 'cause' describes the availability of the 
+                  socket (e.g. OR'ed 'Read', 'Write', or 
+                  'Exception')
+                - for timeout semantics, see Section 2.
+                - if the stream is not in 'Open' state, an
+                  'IncorrectState' exception is thrown.
+ \end{myspec}
+ 
+ 
+ \subsubsection{Examples}
+ 
+ \begin{mycode}
+  Sample SSL/Secure Client:
+  -------------------------
+ 
+    Opens a stream connection using native security: the 
+    context is passed in implicitly via the default SAGA
+    session's contexts.
+ 
+    // C++/JAVA Style
+       ssize_t recvlen;
+       saga::buffer b;
+       saga::stream s ("localhost:5000");
+ 
+       s.connect ();
+       s.write   (saga::buffer ("Hello World!"));
+ 
+       // blocking read, read up to 128 bytes
+       recvlen = s.read (b, 128);
+ 
+ 
+    /* C Style */
+       ssize_t recvlen;
+ 
+       SAGA_stream sock  = SAGA_Stream_open ("localhost:5000");
+       SAGA_buffer b_in  = SAGA_Buffer_create ("Hello World");
+       SAGA_buffer b_out = SAGA_Buffer_create ("Hello World");
+ 
+       SAGA_Stream_connect (sock);
+       SAGA_Stream_write   (sock, b_in);
+ 
+       /* blocking read, read up to 128 bytes */
+       recvlen = SAGA_Stream_read (sock, b_ou, 128);
+ 
+ 
+     c  Fortran Style */
+        INTEGER   err,SAGAStrRead,SAGAStrWrite,err
+        INTEGER*8 SAGAStrOpen,streamhandle
+        CHARACTER buffer(128)
+        SAGAStrOpen("localhost:5000",streamhandle)
+        call SAGAStrConnect(streamhandle)
+        err = SAGAStrWrite(streamhandle,"localhost:5000",12)
+        err = SAGAStrRead(streamhandle,buffer,128)
+ 
+ 
+  Sample Secure Server:
+  ---------------------
+ 
+    Once a connection is made, the server can use information
+    about the authenticated client to make an authorization
+    decision
+ 
+     // c++ example
+        saga::stream_server server ("tcp://localhost/5000");
+ 
+        saga::stream client;
+ 
+        // now wait for a connection
+        while ( saga::stream::Open != client.get_state () )
+        {
+          // wait forever for connection
+          client = server.serve ();
+ 
+          // get remote security details
+          saga::context ctx = client.get_context ();
+ 
+          // check if context type is X509, and if DN is the
+          // authorized one
+          if ( ctx.type ()              == "X509"       &&
+               ctx.get_attribute ("DN") == some_auth_dn )
+          {
+            // allowed - keep open and leave loop
+            client.write (saga::buffer ("Hello!"));
+          }
+          else
+          {
+            client.close (); // not allowed
+          }
+        } 
+ 
+        // start activity on client socket...
+ 
+ 
+  Example for async stream server
+  -------------------------------
+ 
+    // c++ example
+    class my_cb : public saga::callback
+    {
+      privat:
+        saga::stream_server ss;
+        saga::stream        s;
+ 
+      public:
+ 
+        my_cb (saga::stream_server ss_,
+               saga::stream        s_)
+        {
+          ss = ss_;
+          s   = s_;
+        }
+ 
+        bool cb (saga::monitorable mt,
+                 saga::metric      m,
+                 saga::context     c)
+        {
+          s = ss.serve ();
+          return (false); // want to be called only once
+        }
+     }
+ 
+     int main ()
+     {
+       saga::stream_server ss;
+       saga::stream        s;
+
+       my_cb cb (ss, s);
+ 
+       ss.add_callback ("client_connect", cb);
+ 
+       while ( true )
+       {
+         if ( s.state != saga::stream::Open )
+         {
+           // no client, yet
+           sleep (1);
+         }
+         else
+         {
+           // handle open socket
+           s.write ("Hello Client\r\n", 14);
+           s.close ();
+ 
+           // restart listening
+           ss.add_callback ("client_connect", cb);
+         }
+       }
+ 
+       return (-1); // unreachable
+     }
+ \end{mycode}
+ 

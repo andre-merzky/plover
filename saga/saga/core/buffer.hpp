@@ -8,16 +8,34 @@
 
 namespace saga
 {
+  namespace impl
+  {
+    class buffer;
+  }
+
   class buffer : public object
   {
+    typedef saga::impl::buffer impl_type;
+
+    friend class saga::impl::buffer;
+
+
     protected:
-      // get impl from base class
-      saga::util::shared_ptr <saga::impl::buffer> get_obj_impl (void) const;
+      // create context from impl
+      buffer (                        impl_type * impl);
+      buffer (saga::util::shared_ptr <impl_type>  impl);
+
+      // get impl from base classes
+      template <class base_type>
+      saga::util::shared_ptr <impl_type> get_impl (void) const;
+
+
 
     public:
-      buffer           (ssize_t size = -1);
-      buffer           (char*   data, 
-                        ssize_t size = -1);
+      buffer           (ssize_t      size = -1);
+      buffer           (char *       data, 
+                        ssize_t      size = -1);
+      buffer           (char * const data );
 
       ~buffer          (void);
 

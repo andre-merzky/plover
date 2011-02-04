@@ -142,10 +142,26 @@ namespace saga
           return ptr_;
         }
 
+        T * get ()  const 
+        {
+          return ptr_;
+        }
+
         // allow to compare shared pointers, by comparing the contained pointer
         bool compare (const shared_ptr <T> & p) const
         {
           return (ptr_ == p.ptr_);
+        }
+
+        template <class U> U * dynamic_ptr_cast (void)
+        {
+          return dynamic_cast <U *> (ptr_);
+        }
+
+        template <class U> shared_ptr <U> dynamic_shared_ptr_cast (void)
+        {
+          U * tmp = dynamic_cast <U *> (ptr_);
+          return shared_ptr <U> (tmp);
         }
     };
 

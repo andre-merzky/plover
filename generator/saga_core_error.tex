@@ -1,0 +1,940 @@
+ 
+  \XComm[2]{Note that these changes to the SAGA error handling
+  should be backward compatible to the original specification,
+  as far as they do not correct errors.}
+ 
+  All objects in SAGA implement the |error_handler| interface,
+  which allows a user of the API to query for the latest error
+  associated with a SAGA object (pull).  In languages with
+  exception-handling mechanisms, such as Java, C++ and Perl, the
+  language binding MAY allow exceptions to be thrown
+  \XAdd[2]{instead}.  If an exception handling mechanism is
+  included in a language binding, the \T{error\_handler} MUST
+  NOT be included in the same binding.  Bindings for languages
+  without exception handling capabilities MUST stick to the
+  |error_handler| interface described here, but MAY define
+  additional language-native means for error reporting.
+  \XAdd[2]{This document describes error conditions in terms of
+  exceptions.}
+ 
+  For objects implementing the |error_handler| interface, each
+  \XAdd{synchronous} method invocation on that object resets any
+  error caused by a previous method invocation on that object.
+  For asynchronous operations, the error handler interface is
+  provided by the task instance performing the operation, and
+  not by the object which created the task.  If an error occurs
+  during object creation, then the error handler interface of
+  the session the object was to be created in will report the
+  error.
+  
+  In languages bindings where this is appropriate, some API
+  methods \XAdd{MAY} return POSIX |errno| codes for errors.
+  This is the case in particular for |read()|, |write()| and
+  |seek()|, for |saga::file| and |saga::stream|.  The respective
+  method descriptions provide explicit details of how |errno|
+  error codes are utilized.  In any case, whenever numerical
+  |errno| codes are used, they have to be conforming to
+  POSIX.1~\cite{posix1}.
+ 
+  \XRem[2]{Any other details of the error handling mechanisms
+  will be defined in the respective language bindings, if
+  required.}
+ 
+  Each SAGA API call has an associated list of exceptions it may
+  throw.  These exceptions all extend the |saga::exception|
+  class described below.  \XAdd[2]{The SAGA implementation MUST NOT
+  throw any other SAGA exception on that call.}
+
+  \XAdd[1]{SAGA exceptions can be hierarchical -- for details,
+  see below.}
+
+ 
+ \newpage
+ 
+ \subsubsection{Specification}
+ 
+ \begin{myspec}
+  package saga.error
+  {
+    enum exception_type
+    {
+      IncorrectURL         =  1,
+      BadParameter         =  2,
+      AlreadyExists        =  3,
+      DoesNotExist         =  4,
+      IncorrectState       =  5,
++     IncorrectType        =  6,
+      PermissionDenied     =  7,
+      AuthorizationFailed  =  8,
+      AuthenticationFailed =  9,
+      Timeout              = 10,
+      NoSuccess            = 11,
+      NotImplemented       = 12
+    }
+
+    class exception
+    {
+      CONSTRUCTOR          (in  object           obj,
+                            in  string           message,
+                            out exception        e);
+      CONSTRUCTOR          (in  string           message,
+                            out exception        e);
+      DESTRUCTOR           (void);
+ 
++     // top level exception information
+      get_message          (out string           message);
+      get_object           (out object           obj);
++     get_type             (out exception_type   t);
++
++     // recursive exception information
++     get_all_exceptions   (out array<exception> elist);
++     get_all_messages     (out array<string>    mlist);
+    }
+ 
+ 
+    class incorrect_url         : extends saga::exception { }
+    class bad_parameter         : extends saga::exception { }
+    class already_exists        : extends saga::exception { }
+    class does_not_exist        : extends saga::exception { }
+    class incorrect_state       : extends saga::exception { }
++   class incorrect_type        : extends saga::exception { }
+    class permission_denied     : extends saga::exception { }
+    class authorization_failed  : extends saga::exception { }
+    class authentication_failed : extends saga::exception { }
+    class timeout               : extends saga::exception { }
+    class no_success            : extends saga::exception { }
+    class not_implemented       : extends saga::exception { }
+ 
+ 
+    interface error_handler
+    {
+      has_error            (out boolean        has_error);
+      get_error            (out exception      error);
+    }
+  }
+ \end{myspec}
+ 
+
+ \subsubsection{Specification Details}
+ 
+  SAGA provides a set of well-defined exceptions (error states)
+  which MUST be supported by the implementation.  As to whether
+  these error states are critical, non-critical or fatal depends
+  on, (a) the specific implementation (one implementation might
+  be able to recover from an error while another implementation
+  might not), and (b) the specific application use case (e.g.
+  the error 'file does not exist' may or may not be fatal,
+  depending on whether the application really needs information
+  from that file).
+  
+  In language bindings where this is appropriate, some SAGA
+  methods do not raise exceptions on certain error conditions,
+  but return an error code instead.  For example, |file.read()|
+  might return an error code indicating that  not enough data is
+  available right now.  The error codes used in SAGA are based
+  on the definitions for |errno| as defined by POSIX, and MUST
+  be used in a semantically identical manner.
+  
+  \XAdd[7]{For try/catch blocks which cover multiple API calls,
+  on multiple SAGA objects, the \T{get\_object()} method allows
+  to retrieve the object which caused the exception to be
+  thrown.  In general, it will not be possible, however, to
+  determine the method call which caused the exception post
+  mortem.  \T{get\_object()} can also be used for exceptions
+  raised by asynchronous method calls (i.e. on
+  \T{task::rethrow()}, to retrieve the object on which that task
+  instance was created.}
+
+  This specification defines the set of allowed exceptions for
+  each method explicitly -- this set is normative: other SAGA
+  exceptions MUST NOT be thrown on these methods. Also,
+  implementations MUST NOT specify or use other SAGA exceptions
+  than listed in this specification.
+ 
+  Additionally, an implementation MAY throw other, non-SAGA
+  exceptions, e.g. on system errors, resource shortage etc.
+  \XAdd[2]{These exception SHOULD only signal local errors,
+  raised by the SAGA implementation, not errors raised by the
+  Grid backend.}
+  SAGA implementations MUST, \XRemn{however, }translate grid
+  middleware-specific exceptions and error conditions into SAGA
+  exceptions whenever possible, in order to avoid middleware
+  specific exception handling on applications level -- that
+  would clearly contradict the intent of SAGA to be middleware
+  independent.
+  
+  In the SAGA language bindings, exceptions are either derived
+  from the base SAGA exception types, or are error codes with
+  that specific name etc.   Note that the detailed description
+  for \T{saga::exception} below does not list the
+  \T{CONSTRUCTOR}s and \T{DESTRUCTOR}s for all exception classes
+  individually, but only for the base exception class.  The
+  individual exception classes MUST NOT add syntax or semantics
+  to the base exception class.
+  
+  The string returned by  |get_message()|
+  MUST be formatted as follows: 
+  
+   \shift |"<ExceptionName>:| |message"|
+ 
+  where |<ExceptionName>| MUST match the literal exception
+  \XRep{names}{type enum} as defined in this document, and
+  |message| SHOULD be a detailed, human readable description of
+  the cause of the exception.  \XAdd[7]{The error message SHOULD
+  include information about the middleware binding, and
+  information about the remote entities and remote operation
+  which caused the exception.  It CAN contain newlines.  When
+  messages from multiple errors are included in the returned
+  string, then each of these messages MUST follow the format
+  defined above, and the individual messages MUST be delimited
+  by newlines.  Also, indentation SHOULD be used to structure
+  the output for long messages.}
+
+
+  \newpage
+  \subsubsection*{Hierarchical SAGA Exceptions}
+
+  \XAdd[11]{SAGA implementations may be late binding, i.e. may
+  allow to interface to multiple backends at the same time, for
+  a single SAGA API call.  In such implementations, more than
+  one exception may be raised for a single API call.  This
+  specification proposes an algorithm to determine the most
+  'interesting' exception, which is to be throw by the API
+  call.  SAGA implementations MAY implement other algorithms,
+  but MUST document how it determines the exception to be thrown
+  from the list of backend exceptions.  Further, the thrown
+  exception MUST allow for inspection of the complete list of
+  backend exceptions, via \T{get\_all\_exceptions()}, and
+  \T{get\_all\_messages()}.  Further, the error message of the
+  thrown (top level) exception MUST include information about
+  the other (lower level) exceptions.}
+
+  \XAdd[5]{In the exception list returned by
+  \T{get\_all\_exceptions()}, the top level (thrown) exception
+  MUST be included again, as first member of the list, to allow
+  for a uniform handling of all exceptions.  To avoid infinite
+  recursion, however, that copy MUST NOT have any sub-exceptions,
+  i.e. the list returned by a call to \T{get\_all\_exceptions()}
+  MUST be empty.  See at the end of this section for an
+  extensive example.}
+
+  
+  \XRem[9]{For implementations with multiple middleware
+  bindings, it can be difficult to provide detailed and
+  conclusive error messaging with a single exception.  To
+  support such implementations, language bindings MAY allow
+  nested exceptions.  The outermost exception MUST, however,
+  follow the syntax and semantics guidelines described above.
+  Implementations of such bindings which only bind to a single
+  backend MUST support the defined interface for nested
+  exceptions as well, in order to keep the application
+  independent of the specifics of the SAGA implementation, but
+  will then in general not be able to return lower-level
+  exceptions.}
+
+ 
+
+ \subsubsection*{Enum \T{exception\_type}}
+
+  The exception types available in SAGA are listed below, with a
+  number of explicit examples on when exceptions should be
+  thrown.  These examples are not normative, but merely
+  illustrative.  \XAdd[10]{As discussed above, multiple
+  exceptions may apply to a single SAGA API call, in the case of
+  late binding implementations.  In that case, the
+  implementation must pick one of the exceptions to be thrown as
+  'top level' exception, with all other exceptions as
+  subordinate 'lower level' exceptions.  In general, that top
+  level exception SHOULD be that exception which is most
+  interesting to the user or application.  Although we are
+  fully aware of the fact that the notion of 'interesting' is
+  vague, and highly context dependent, we propose the following
+  mechanism to derive the top level exception -- implementations
+  MAY use other schemes to determine the top level exception,
+  but MUST document that mechanism:}
+
+  \begin{enumerate}
+  
+   \item \XAdd[2]{NotImplemented is only allowed as top level 
+         exception, if no other exception types are present.}
+
+   \item \XAdd[5]{Exceptions from a backend which previously
+         performed a successful API call on the same remote
+         entity, or on the same SAGA object instance, are more
+         interesting than exceptions from other backends, and
+         are in particular more interesting than exceptions from
+         backends which did not yet manage to perform any
+         successful operation on that entity or instance.}
+        
+   \item \XAdd[6]{Errors which get raised early when executing
+         the SAGA API call are less interesting than errors
+         which occur late.  E.g. BadParameter from the FTP
+         backend is less interesting than PermissionDenied from
+         the WWW backend, as the WWW backend seemed to at least
+         be able to handle the parameters, to access the backend
+         server, and to perform authentication, whereas the FTP
+         backend bailed out early, on the functions parameter
+         check.}
+
+  \end{enumerate}
+
+
+  
+  \XAdd[4]{In respect to item 3 above,} the list of exceptions
+  \XAddn{below} is sorted, with the most specific \XAddn{(i.e.
+  interesting)} exceptions listed first and least specific last.
+  \XAddn{This list is advisory, i.e.  implementation MAY use a
+  different sorting, which also may vary in different
+  contexts.}  
+  
+  \XRem[6]{The most specific exception possible (i.e.
+  applicable) MUST be thrown on all error conditions.  This
+  means that if multiple exceptions are applicable to an error
+  condition (e.g.  \T{PermissionDenied} and \T{NoSuccess} for
+  opening a file with incorrect permissions), then that
+  exception \XRepn{MUST}{SHOULD} be thrown which gives more
+  specific information about the respective error condition:
+  e.g., \T{PermissionDenied} describes the error condition
+  \XRemn{much} more explicitly than a generic \T{NoSuccess}}.
+ 
+ 
+  \subsubsection*{$\bullet$ \T{IncorrectURL}}\up
+  
+   This exception is thrown if a method is invoked with a URL
+   argument that could not be handled. This error specifically
+   indicates that an implementation cannot handle the specified
+   protocol, or that access to the specified entity via the
+   given protocol is impossible.  The exception MUST NOT be used
+   to indicate any other error condition.  See also the notes to
+   'The URL Problem' in Section~\ref{ssec:urlprob}.
+ 
+    Examples:
+ 
+    \begin{shortlist}
+     \item An implementation based on gridftp might be unable to
+       handle http-based URLs sensibly, and might be unable to
+       translate them into gridftp based URLs internally.  
+       The implementation should then throw an |IncorrectURL|
+       exception if it encounters a http-based URL.
+     \item A URL is well formed, but includes
+       characters or path elements which are not supported by
+       the SAGA implementation or the backend. Then, an
+       \T{IncorrectURL} exception is thrown, with detailed
+       information on why the URL could not be used.
+    \end{shortlist}
+ 
+ 
+  \subsubsection*{$\bullet$ \T{BadParameter}}\up
+ 
+    This exception indicates that at least one of the parameters
+    of the method call is ill-formed, invalid, out of bounds or
+    otherwise not usable.  The error message MUST give specific
+    information on what parameter caused the exception, and why.
+ 
+    Examples:
+ 
+    \begin{shortlist}
+     \item a specified context type is not supported by the
+           implementation
+     \item a file name specified is invalid, e.g. too long, or
+           contains characters which are not allowed
+     \item an ivec for scattered read/write is invalid, e.g. has
+           offsets which are out of bounds, or refer to
+           non-allocated buffers
+     \item a buffer to be written and the specified lengths are
+           incompatible
+     \item an enum specified is not known
+     \item flags specified are incompatible (|ReadOnly| 
+           and |Truncate|)
+    \end{shortlist}
+ 
+ 
+  \subsubsection*{$\bullet$ \T{AlreadyExists}}\up
+ 
+    This exception indicates that an operation cannot succeed
+    because an entity to be created or registered already exists
+    or is already registered, and cannot be overwritten.
+    Explicit flags on the method invocation may allow the
+    operation to succeed, e.g. if they indicate that Overwrite
+    is allowed.
+ 
+    Examples:
+ 
+    \begin{shortlist}
+     \item a target  for a file move already exists
+     \item a file    to be created already exists
+     \item a name    to be added to a logical file is already 
+           known
+     \item a metric  to be added to a object has the same name 
+           as an existing metric on that object
+    \end{shortlist}
+ 
+ 
+  \subsubsection*{$\bullet$ \T{DoesNotExist}}\up
+ 
+    This exception indicates that an operation cannot succeed
+    because a required entity is missing.  Explicit flags on the
+    method invocation may allow the operation to succeed, e.g.
+    if they indicate that Create is allowed.
+ 
+    Examples:
+ 
+    \begin{shortlist}
+     \item a file      to be moved  does not exist
+     \item a directory to be listed does not exist
+     \item a name      to be deleted    is not in a replica set
+     \item a metric    asked for is not known to the object
+     \item a context   asked for is not known to the session
+     \item a task      asked for is not in a task container
+     \item a job       asked for is not known by the backend
+     \item an attribute asked for is not supported
+    \end{shortlist}
+ 
+ 
+  \subsubsection*{$\bullet$ \T{IncorrectState}}\up
+ 
+    This exception indicates that the object a method was called
+    on is in a state where that method cannot possibly succeed.
+    A change of state might allow the method to succeed with the
+    same set of parameters.
+ 
+    Examples:
+ 
+    \begin{shortlist}
+     \item calling read   on a stream which is  not connected
+     \item calling run    on a task   which was canceled
+     \item calling resume on a job    which is  not suspended
+    \end{shortlist}
+ 
+ 
+  \subsubsection*{$\bullet$ \T{IncorrectType}}\up
+ 
+    \XAdd[6]{
+    This exception indicates that a specified type does not match any
+    of the available types.  This exception is in particular reserved
+    for places in the SAGA API which specify function return types in a
+    template like manner, such as for \T{task.get\_result()}.
+    Language binding MAY replace that exception by language specific
+    means of explicit/implicit type conversion, and SHOULD try to enforce type
+    mismatch errors on compile time instead of linktime or runtime.}
+ 
+    \XAdd[2]{Examples:}
+ 
+    \begin{shortlist}
+     \item \XAdd[3]{calling \T{get\_result <string> ()} on  task which actually
+     encapsulates an \T{int} typed \T{file.get\_size ()} operation.}
+    \end{shortlist}
+ 
+ 
+  \subsubsection*{$\bullet$ \T{PermissionDenied}}\up
+ 
+    An operation failed because the identity used for
+    the operation did not have sufficient permissions to perform
+    the operation successfully.  The authentication and
+    authorization steps have been completed successfully.
+ 
+    Examples:
+ 
+    \begin{shortlist}
+     \item attempt to change or set    a ReadOnly attribute
+     \item attempt to change or update a ReadOnly metric
+     \item calling write  on a file which is opened for read only
+     \item calling read on a file which is opened for 
+           write only
+     \item although a user could login to a remote host via 
+           GridFTP and could be mapped to a local user, the 
+           write on /etc/passwd failed.
+    \end{shortlist}
+ 
+    
+ 
+ 
+  \subsubsection*{$\bullet$ \T{AuthorizationFailed}}\up
+ 
+    An operation failed because none of the available contexts
+    of the used session could be used for successful
+    authorization. That error indicates that the
+    resource could not be accessed at all, and not that an
+    operation was not available due to restricted permissions.
+    The authentication step has been completed successfully.
+ 
+    The differences between AuthorizationFailed and
+    PermissionDenied are, admittedly, subtle.  Our intention
+    for introducing both exceptions was to allow to
+    distinguish between administrative authorization failures
+    (on VO and DN level), and backend related 
+    authorization failures (which can often be resolved on 
+    user level).
+ 
+    The AuthorizationFailed exception SHOULD be thrown when
+    the backend does not allow the execution of the 
+    requested operation at all, whereas the PermissionDenied 
+    exception SHOULD be thrown if the operation was executed, 
+    but failed due to insufficient privileges.
+ 
+    Examples:
+ 
+    \begin{shortlist}
+     \item although a certificate was valid on a remote GridFTP
+       server, the distinguished name could not be mapped to a
+       valid local user id.  A call to file.copy() should then
+       throw an AuthorizationFailed exception.
+    \end{shortlist}
+ 
+ 
+  \subsubsection*{$\bullet$ \T{AuthenticationFailed}}\up
+  
+    An operation failed because none of the available session
+    contexts could successfully be used for
+    authentication\XAdd[4]{, or the implementation could not
+    determine which context to use for the operation}.
+ 
+    Examples:
+ 
+    \begin{shortlist}
+     \item a remote host does not accept a X509 certificate because
+       the respective CA is unknown there.  A call to
+       file.copy() should then throw an AuthenticationFailed
+       exception.
+    \end{shortlist}
+ 
+ 
+  \subsubsection*{$\bullet$ \T{Timeout}}\up
+ 
+    This exception indicates that a remote operation did not complete
+    successfully because the network communication or the remote
+    service timed out.  The time waited before an
+    implementation raises a |Timeout| exception depends on
+    implementation and backend details, and SHOULD be documented by
+    the implementation.  This exception MUST NOT be
+    thrown if a timed |wait()| or similar method times out. The latter is not an error condition
+    and gets indicated by the method's return value.
+ 
+    Examples:
+ 
+    \begin{shortlist}
+     \item a remote file authorization request timed out
+     \item a remote file read operation timed out
+     \item a host name resolution timed out
+     \item a started file transfer stalled and timed out
+     \item an asynchronous file transfer 
+           stalled and timed out
+    \end{shortlist}
+ 
+ 
+  \subsubsection*{$\bullet$ \T{NoSuccess}}\up
+ 
+    This exception indicates that an operation failed
+    semantically, e.g. the operation was not successfully
+    performed.   This exception is the least specific exception
+    defined in SAGA, and CAN be used for all error conditions
+    which do not indicate a more specific exception specified
+    above.  The error message SHOULD always contain
+    some further detail, describing the circumstances which
+    caused the error condition.
+ 
+    Examples:
+ 
+    \begin{shortlist}
+     \item a once open file is not available right now
+     \item a backend response cannot be parsed
+     \item a remote procedure call failed due to a 
+           corrupted parameter stack
+     \item a file copy was interrupted mid-stream, due to 
+           shortage of disk space
+    \end{shortlist}
+ 
+
+  \subsubsection*{$\bullet$ \T{NotImplemented}}\up
+  
+    If a method is specified in the SAGA API, but cannot be
+    provided by a specific SAGA implementation, this exception
+    MUST be thrown.  Object constructors can also throw that
+    exception, if the respective object is not implemented by
+    that SAGA implementation at all. See also the notes about
+    compliant implementations in Section~\ref{ssec:compliance}.
+ 
+    Examples:
+ 
+    \begin{shortlist}
+     \item An implementation based on Unicore might not be able
+       to provide streams.  The |saga::stream_server| 
+       constructor should throw a NotImplemented exception for 
+       such an implementation.
+    \end{shortlist}
+ 
+ 
+ 
+ 
+ \subsubsection*{Class \T{exception}}
+  
+    This is the exception base class inherited by all exceptions
+    thrown by a SAGA object implementation.  \XAdd[3]{Wherever
+    this specification specifies the occurrence of an instance of
+    this class, the reader MUST assume that this could also be
+    an instance of any subclass of \T{saga::exception}, as
+    specified by this document.}
+ 
+    Note that |saga::exception| does not implement the
+    |saga::object| interface.
+ 
+ \begin{myspec}
+    - CONSTRUCTOR
+      Purpose:  create the exception
+      Format:   CONSTRUCTOR   (in  object         obj,
+                               in  string         message
+                               out exception      e);
+      Inputs:   obj:           the object associated with the
+                               exception.
+                message:       the message to be associated 
+                               with the new exception
+      InOuts:   -
+      Outputs:  e:             the newly created exception
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+      Throws:   -
+      Notes:    -
+ 
+ 
+    - CONSTRUCTOR
+      Purpose:  create the exception,  without associating 
+                a saga object instance
+      Format:   CONSTRUCTOR   (in  string         message
+                               out exception      e);
+      Inputs:   message:       the message to be associated 
+                               with the new exception
+      InOuts:   -
+      Outputs:  e:             the newly created exception
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+      Throws:   -
+      Notes:    -
+ 
+ 
+    - DESTRUCTOR
+      Purpose:  destroy the exception
+      Format:   DESTRUCTOR    (in  exception e);
+      Inputs:   e:             the exception to destroy
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+      Throws:   -
+      Notes:    -
+ 
+ 
+    - get_message
+      Purpose:  gets the message associated with the exception    
+      Format:   get_message   (out string message);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  message:       the error message
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+      Throws:   -
+      Notes:    - the returned string MUST be formatted as
+                  described earlier in this section.
+ 
+ 
+    - get_object
+      Purpose:  gets the SAGA object associated with exception
+      Format:   get_object     (out object obj);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  obj:            the object associated with the
+                                exception
+      PreCond:  - an object was associated with the exception
+                  during construction.
+      PostCond: -
+      Perms:    -
+      Throws:   DoesNotExist
+                NoSuccess
+      Notes:    - the returned object is a shallow copy of the 
+                  object which was used to call the method which 
+                  caused the exception.
+                - if the exception is raised in a task, e.g. on
+                  task.rethrow(), the object is the one which the
+                  task was created from.  That allows the
+                  application to handle the error condition 
+                  without the need to always keep track of 
+                  object/task relationships.
+                - an 'DoesNotExist' exception is thrown when no
+                  object is associated with the exception, e.g. 
+                  if an 'NotImplemented' exception was raised 
+                  during the construction of an object.
++
++   - get_type
++     Purpose:  gets the type associated with the exception    
++     Format:   get_type      (out exception_type type);
++     Inputs:   -
++     InOuts:   -
++     Outputs:  type:          the error type
++     PreCond:  -
++     PostCond: -
++     Perms:    -
++     Throws:   -
++     Notes:    - 
++
++   - get_all_exceptions
++     Purpose:  gets list of lower level exceptions
++     Format:   get_all_exceptions (out array<exception> el);
++     Inputs:   -
++     InOuts:   -
++     Outputs:  el:            list of exceptions
++     PreCond:  -
++     PostCond: -
++     Perms:    -
++     Throws:   -
++     Notes:    - a copy of the exception upon which this 
++                 method is called MUST be the first element 
++                 of the list, but that copy MUST NOT return 
++                 any exceptions when get_all_exceptions()
++                 is called on it.
++
++   - get_all_messages
++     Purpose:  gets list of lower level error messages
++     Format:   get_all_messages    (out array<string> ml);
++     Inputs:   -
++     InOuts:   -
++     Outputs:  ml:            list of error messages
++     PreCond:  -
++     PostCond: -
++     Perms:    -
++     Throws:   -
++     Notes:    - a copy of the error message of the exception 
++                 upon which this method is called MUST be the 
++                 first element of the list.
+ \end{myspec}
+ 
+ 
+ \newpage
+ 
+ \subsubsection*{Interface \T{error\_handler}}
+ 
+ The \T{error\_handler} interface allows the application
+ to retrieve exceptions.  An alternative approach would be to
+ return an error code for all method invocations.  This,
+ however, would put a significant burden on languages with
+ exception handling, and would also complicate the management of
+ return values.  Language bindings for languages with exception
+ support will thus generally \I{not} implement the
+ \T{error\_handler} interface, but use exceptions instead.
+ 
+ Implementations which are using the interface maintain
+ an internal error state for each class instance providing the
+ interface.  That error state is \T{false} by default, and is
+ set to \T{true} whenever an method invocation meets an error
+ condition which would, according to this specification, result
+ in an exception to be thrown.
+ 
+ The error state of an object instance can be tested with
+ \T{has\_error()}, and the respective exception can be retrieved
+ with \T{get\_error()}.  \XRep{Any one of these calls}{The
+ \T{get\_error()} call} clears the error state (i.e.  resets it
+ to \T{false}).  Note that there is no other mechanism to clear
+ an error state -- that means in particular that any successful
+ method invocation on the object leaves the error state
+ unchanged.  If two or more subsequent operations on an object
+ instance fail, then only the last exception is returned on
+ \T{get\_error()}.  That mechanism allows the execution of a
+ number of calls, and to check if they resulted in any error
+ condition, somewhat similar to \T{try}/\T{catch} statements in
+ languages with exception support.  However, it must be noted
+ that an exception does \I{not} cause subsequent methods to
+ fail, and does not inhibit their execution. 
+ 
+ If \T{get\_error()} is called on an instance whose error
+ state is \T{false}, an \T{Incor\-rectState} exception is
+ returned, which MUST state explicitly that the
+ \T{get\_\-error()} method has been invoked on an object instance
+ which did not encounter an error condition.
+ 
+ \begin{myspec}
+    - has_error
+      Purpose:  tests if an object method caused an exception
+      Format:   has_error     (out bool       has_error);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  has_error:     indicates that an exception was
+                               caught.
+      PreCond:  -
+-     PostCond: - the internal error state is false.
++     PostCond: - the internal error state is unchanged.
+      Perms:    -
+      Throws:   -
+      Notes:    - 
+ 
+ 
+    - get_error
+      Purpose:  retrieve an exception catched during a member
+                method invocation.
+      Format:   get_error     (out exception  e);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  e:             the caught exception
+      PreCond:  - the internal error state is true.
+      PostCond: - the internal error state is false.
+      Perms:    -
+-     Throws:   NotImplemented
+-               IncorrectURL
+-               BadParameter
+-               AlreadyExists
+-               DoesNotExist
+-               IncorrectState
+-               PermissionDenied
+-               AuthorizationFailed
+-               AuthenticationFailed
+-               Timeout
+-               NoSuccess
+-     Notes:    - the method throws the error/exception it is
+-                 reporting about.
+-               - an 'IncorrectState' exception is also thrown 
+-                 if the internal error state is false. 
++     Throws:   IncorrectState
++     Notes:    - an 'IncorrectState' exception is thrown 
++                 if the internal error state is false. 
+ \end{myspec}
+ 
+ 
+ \newpage
+ 
+ \subsubsection{Examples}
+ 
+ \begin{mycode}
+  ////////////////////////////////////////////////////////////////
+  // 
+  // C++ examples for exception handling in SAGA
+  // 
+  ////////////////////////////////////////////////////////////////
+ 
+  ////////////////////////////////////////////////////////////////
+  // 
+  // simple exception handling
+  //
+  int main ()
+  {
+    try
+    {
+      saga::file f ("file://remote.host.net/etc/passwd");
+      f.copy ("file:///usr/tmp/passwd.bak");
+    }
+ 
+    catch ( const saga::exception::PermissionDenied & e )
+    {
+      std::cerr << "SAGA error: No Permissions!" << std::endl;
+      return (-1);
+    }
+ 
+    catch ( const saga::exception & e )
+    {
+      std::cerr << "SAGA error: " 
+                << e.get_message () 
+                << std::endl;
+      return (-1);
+    }
+ 
+    return 0;
+  }
+
+ 
+  ////////////////////////////////////////////////////////////////
+  // 
+  // recursive exception handling
+  //
+  int main ()
+  {
+    try 
+    {
+      saga::file f ("any://remote.host.net/etc/passwd");
+      f.copy ("any:///usr/tmp/passwd.bak");
+    }
+
+    // handle a specific error condition
+    catch ( const saga::permission_denied & e )
+    {
+      ...
+    }
+
+    // handle all error conditions
+    catch ( const saga::exception & e )
+    {
+       std::cerr << e.what () << std::endl;
+       // prints complete set of error messages:
+       // DoesNotExist: ftp adaptor: /etc/passwd does not exist
+       //   DoesNotExist: ftp adaptor: /etc/passwd: does not exist
+       //   DoesNotExist: www adaptor: /etc/passwd: access denied
+
+       // handle backend exceptions individually
+       std::list <saga::exception> el = e.get_all_exceptions ();
+
+       for ( int i = 0; i < el.size (); i++ )
+       {
+         saga::exception esub = el[i];
+         std::list <saga::exception> esubl = esub.get_all_exceptions ();
+         // subl MUST be empty for i==0
+         // subl MAY  be empty for i!=0 
+
+         switch ( sub.get_type () )
+         {
+           // handle individual exceptions
+           case saga::exception::DoesNotExist:
+             ...
+           case saga::exception::PermissionDenied:
+             ...
+         }
+       }
+
+
+       // handle backend exception messages individually
+       std::list <saga::exception> ml = e.get_all_messages ();
+
+       for ( int i = 0; i < ml.size (); i++ )
+       {
+         std::cerr << ml[i] << std::endl;
+       }
+       // the loop above will result in
+       // DoesNotExist: ftp adaptor: /etc/passwd: does not exist
+       // DoesNotExist: www adaptor: /etc/passwd: access denied
+    }
+
+    return 0;
+  }
+         
+ 
+  ////////////////////////////////////////////////////////////////
+  // 
+  // exception handling for tasks
+  //
+  int main ()
+  {
+    saga::file f ("file://remote.host.net/etc/passwd");
+ 
+    saga::task t = f.copy <saga::task::Async> 
+                           ("file:///usr/tmp/passwd.bak");
+ 
+    t.wait ();
+ 
+    if ( t.get_state () == saga::task::Failed )
+    {
+      try {
+        task.rethrow ();
+      }
+      catch ( const saga::exception & e )
+      {
+        std::cout << "task failed: " 
+                  << e.what () 
+                  << std::endl;
+      }
+      return (-1);
+    }
+    return (0);
+  }
+ \end{mycode}
+ 
+ 
+ 
+ 

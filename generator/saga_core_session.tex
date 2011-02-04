@@ -1,0 +1,319 @@
+ 
+  The session object provides the functionality of a session,
+   which isolates independent sets of SAGA objects
+  from each other.  Sessions also support the management of
+  security information (see |saga::context| in
+  Section~\ref{ssec:context}).
+ 
+ 
+ \subsubsection{Specification}
+ 
+ 
+ \begin{myspec}
+  package saga.session
+  {
+    class session : implements   saga::object
+                 // from object  saga::error_handler
+    {
+      CONSTRUCTOR        (in  bool             default = true,
+                          out session          obj);
+      DESTRUCTOR         (in  session          obj);
+ 
+      add_context        (in  context          context);
+      remove_context     (in  context          context);
+      list_contexts      (out array<context,1> contexts);
+    }
+  }
+ \end{myspec}
+ 
+ 
+ \subsubsection{Specification Details}
+ 
+ \subsubsection*{Class \T{session}}
+ 
+    Almost all SAGA objects are created in a SAGA session, and
+    are associated with this (and only this) session for their
+    whole life time.
+ 
+    A session instance to be used on object
+    instantiation can explicitly be given as
+    first parameter to the SAGA object instantiation call
+    (|CONSTRUCTOR|).
+ 
+    If the session is omitted as first parameter, a
+    default session is used, with default security
+    context(s) attached.
+    The default session can be obtained by passing
+    \T{true} to the session \T{CONSTRUCTOR}.
+ 
+ \newpage
+
+ \begin{mycode}
+      // Example in C++:
+ 
+      // create a file object in a specific session:
+      saga::file f1 (session, url);
+ 
+      // create a file object in the default session:
+      saga::file f2 (url);
+ \end{mycode}
+ 
+ 
+    SAGA objects created from 
+    another SAGA object inherit its
+    session, such as, for example, |saga::streams| from
+    |saga::stream_server|.  Only some objects do not need a
+    session at creation time, and can hence be shared
+    between sessions.  These include:\up
+ 
+    \begin{tabbing}
+     XXXX \= \kill
+          \> |saga::exception|\\
+          \> |saga::buffer|\\
+          \> |saga::iovec|\\
+          \> |saga::parameter|\\
+          \> |saga::context|\\
+          \> |saga::job_description|\\
+          \> |saga::metric|\\
+          \> |saga::exception|\\
+          \> |saga::task|\\
+          \> |saga::task_container|\\
+    \end{tabbing}
+    
+    \up\up
+ 
+    Note that tasks have no explicit session attached.  The
+    |saga::object| the task was created from, however, has a
+    |saga::session| attached, and that session
+    instance is indirectly available, as the application can
+    obtain that object via the \T{get\_object} method call on
+    the respective task instance.
+ 
+    Multiple sessions can co-exist. 
+ 
+    If a |saga::session| object instance gets destroyed, or goes
+    out of scope, the objects associated with that session
+    survive.  The implementation MUST ensure that the session is
+    internally kept alive until the last object of that session gets destroyed.
+ 
+    If the session object instance itself gets
+    destroyed, the resources associated with that session MUST
+    be freed immediately as the last object associated with that
+    session gets destroyed.  The lifetime of the
+    default session is, however, only limited by the lifetime of
+    the SAGA application itself (see Notes about life time
+    management in Section~\ref{ssec:lifetime}).
+ 
+ 
+    Objects associated with different sessions MUST NOT
+    influence each other in any way - for all practical
+    purposes, they can be considered to be running in different
+    application instances.
+ 
+    
+ 
+    Instances of the |saga::context| class (which encapsulates
+    security information in SAGA) can be attached to a
+    |saga::session| instance.  The context instances are to be
+    used by that session for authentication and authorization to
+     the backends used.
+ 
+    If a |saga::context| gets removed from a session, but that
+    context is already/still used by any object created in that
+    session, the context MAY continue to be used by these
+    objects, and by objects which inherit the session from these
+    objects, but not by any other objects.  However, a call to
+    |list_contexts| MUST NOT list the removed context after it
+    got removed.
+ 
+    For the default \T{session} instance,  the list
+    returned by a call to \T{list\_contexts()} MUST include the
+    default |saga::context| instances.  These are those
+    contexts that are added to any \T{saga::session} by default,
+    e.g. because they are picked up by the SAGA implementation
+    from the application's run time environment. An application
+    can, however, subsequently remove default contexts from the
+    default session.  A new, non-default session has initially
+    no contexts attached.
+ 
+    A SAGA implementation MUST document which default context
+    instances it may create and attach to a saga::session.  That
+    set MAY change during runtime, but SHOULD NOT be
+    changed once a |saga::session| instance was created.
+    For example, two |saga::session| instances might
+    have different default |saga::context| instances attached.
+    Both sessions, however, will have these attached for their
+    complete lifetime  -- unless they expire or get
+    otherwise invalidated.
+ 
+    Default |saga::context| instances on a session can be
+    removed from a session, with a call to |remove_context()|.
+    That may result in a session with no contexts attached.
+    That session is still valid, but likely to fail on
+    most authorization points.
+ 
+ 
+ \begin{myspec}
+    - CONSTRUCTOR
+      Purpose:  create the object
+      Format:   CONSTRUCTOR          (in  bool    default = true,
+                                      out session obj)
+      Inputs:   default:              indicates if the default
+                                      session is returned
+      InOuts:   -
+      Outputs:  obj:                  the newly created object
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+-     Throws:   NotImplemented
+!     Throws:   NoSuccess
+      Notes:    - the created session has no context
+                  instances attached.
+                - if 'default' is specified as 'true', the
+                  constructor returns a shallow copy of the
+                  default session, with all the default 
+                  contexts attached.  The application can then
+                  change the properties of the default session,
+                  which is continued to be implicetly used on
+                  the creation of all saga objects, unless
+                  specified otherwise.
+ 
+ 
+    - DESTRUCTOR
+      Purpose:  destroy the object
+      Format:   DESTRUCTOR           (in  session obj)
+      Inputs:   obj:                  the object to destroy
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - See notes about lifetime management 
+                  in Section 2
+      Perms:    -
+      Throws:   -
+      Notes:    -
+ 
+ 
+    - add_context
+      Purpose:  attach a security context to a session
+      Format:   add_context          (in context  c);
+      Inputs:   c:                    Security context to add
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - the added context is deep copied, and no 
+                  state is shared.
++               - after the deep copy, the implementation MAY 
++                 try to initialize those context attributes
++                 which have not been explicitely set, e.g. to
++                 sensible default values.  
+                - any object within that session can use the
+                  context, even if it was created before
+                  add_context was called.
+      Perms:    -
+-     Throws:   NotImplemented
++     Throws:   NoSuccess
++               TimeOut
+      Notes:    - if the session already has a context attached
+                  which has exactly the same set of attribute
+                  values as the parameter context, no action is
+                  taken.
++               - if the implementation is not able to
++                 initialize the context, and cannot use the
++                 context as-is, a NoSuccess exception is
++                 thrown.
++               - if the context initialization implies remote
++                 operations, and that operations times out, a
++                 TimeOut exception is thrown.
+ 
+ 
+    - remove_context
+      Purpose:  detach a security context from a session
+      Format:   remove_context       (in context  c);
+      Inputs:   c:                    Security context to remove
+      InOuts:   -
+      Outputs:  -
+-     Throws:   NotImplemented
+!     Throws:   DoesNotExist
+      PreCond:  - a context with completely identical attributes
+                  is available in the session.
+      PostCond: - that context is removed from the session, and
+                  can from now on not be used by any object in
+                  that session, even if it was created before
+                  remove_context was called.
+      Perms:    -
+      Notes:    - this methods removes the context on the
+                  session which has exactly the same set of
+                  parameter values as the parameter context.
+                - a 'DoesNotExist' exception is thrown if no
+                  context exist on the session which has the
+                  same attributes as the parameter context.
+ 
+
+    - list_contexts
+      Purpose:  retrieve all contexts attached to a session
+      Format:   list_contexts        (out array<context>
+                                                  contexts);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  contexts:             list of contexts of this
+                                      session
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+-     Throws:   NotImplemented
++     Throws:   -
+      Notes:    - a empty list is returned if no context is
+                  attached.
+                - contexts may get added to a session by 
+                  default, hence the returned list MAY be 
+                  non-empty even if add_context() was never 
+                  called before.
+                - a context might still be in use even if not
+                  included in the returned list.  See notes
+                  about context life time above.
++               - the contexts in the returned list MUST be
++                 deep copies of the session's contexts.
+ \end{myspec}
+ 
+ 
+ \subsubsection{Examples}
+ 
+ \begin{mycode}
+  // c++ example
+  saga::session s;
+  saga::context c (saga::context::X509);
+ 
+  s.add_context   (c);
+ 
+  saga::directory  d (s, "gsiftp://remote.net/tmp/");
+  saga::file       f = d.open ("data.txt");
+ 
+  // file has same session attached as dir,
+  // and can use the same contexts
+ \end{mycode}
+ 
+ \begin{mycode}
+  // c++ example
+  saga::task    t;
+  saga::session s;
+ 
+  {
+    saga::context c ("X509");
+ 
+    s.add_context (c);
+ 
+    saga::file f (s, url);
+ 
+    t = f.copy <saga::task::Task> (target);
+ 
+    s.remove_context (c);
+  }
+ 
+  // As it leaves the scope, the X509 context gets 'destroyed'.
+  // However, the copy task and the file object MAY continue to
+  // use the context, as its destruction is actually delayed
+  // until the last object using it gets destroyed.
+ 
+  t.run (); // can still use the context
+ \end{mycode}
+ 

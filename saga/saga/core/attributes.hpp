@@ -9,14 +9,30 @@
 
 namespace saga
 {
+  namespace impl 
+  {
+    class attributes;
+  }
+
+
   class attributes 
   {
-    friend class impl::attributes;
+    typedef saga::impl::attributes impl_type;
+
+    friend class saga::impl::attributes;
+
 
     private:
-    saga::util::shared_ptr <saga::impl::attributes> attr_impl_;
+      // this is a base class (inherits nothing),
+      // thus we have to keep an impl pointer
+      saga::util::shared_ptr <impl_type> attr_impl_;
+
+      // this is an interface: d'tor is private and virtual
+      virtual ~attributes (void);
+
 
     protected:
+      // friends can create instances with state
       attributes  (std::set <std::string> ro_s, 
                    std::set <std::string> ro_v, 
                    std::set <std::string> rw_s, 
@@ -27,10 +43,15 @@ namespace saga
       attributes (const attributes & src);
 
       // copy c'tor (from impl, for inheritance)
-      attributes (impl::attributes * impl);
-      attributes (saga::util::shared_ptr <impl::attributes> impl);
+      attributes (                        impl_type * impl);
+      attributes (saga::util::shared_ptr <impl_type>  impl);
 
-      ~attributes (void);
+      // friends can see the impl_
+      template <class T>
+      saga::util::shared_ptr <impl_type> get_attr_impl (void) const;
+      template <class T>
+      saga::util::shared_ptr <impl_type> get_impl (void) const;
+
 
     public:
       std::string get_attribute             (std::string key);
@@ -47,10 +68,6 @@ namespace saga
       bool        attribute_is_writable     (std::string key);
       bool        attribute_is_scalar       (std::string key);
       bool        attribute_is_vector       (std::string key);
-
-    protected:
-      // friends can see the impl_
-      saga::util::shared_ptr <impl::attributes> get_attr_impl (void) const;
   };
 
   class attributes_async : public attributes
@@ -61,10 +78,11 @@ namespace saga
                          std::set <std::string> rw_s, 
                          std::set <std::string> rw_v, 
                          bool             extensible);
+
       ~attributes_async (void);
 
     public:
-      // add async attribs
+      // add async attrib methods
   };
 }
 

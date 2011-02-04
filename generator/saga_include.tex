@@ -1,0 +1,307 @@
+\documentclass{article}
+
+\usepackage{ifpdf}
+
+\ifpdf
+  \usepackage[pdftex]{graphicx}
+  \usepackage[pdftex]{hyperref}
+  \DeclareGraphicsExtensions{.pdf, .png, .jpg}
+\else
+  \usepackage{graphicx}
+  \usepackage[hypertex]{hyperref}
+  \DeclareGraphicsExtensions{.ps, .eps}
+\fi
+
+
+\usepackage{srcltx}
+\usepackage{fancyhdr}
+\usepackage{wrapfig}
+\usepackage{fancyvrb}
+\usepackage{lscape}
+\usepackage{color}
+\usepackage{xspace}
+\usepackage{ulem}
+
+\newcommand{\F}[1]{\textbf{FIXME: #1}}
+\newcommand{\B}[1]{\textbf{#1}}
+\newcommand{\I}[1]{\textit{#1}}
+\newcommand{\T}[1]{\texttt{#1}}
+\newcommand{\U}[1]{\underline{#1}}
+\newcommand{\Q}[1]{\begin{quote}\I{#1}\end{quote}}
+
+\newcommand{\D}[2]{\footnote{\textbf{DISCUSSION (#1): #2}}}
+\newcommand{\DMark}{\footnotemark}
+\newcommand{\DText}[2]{\footnotetext{\textbf{DISCUSSION (#1): #2}}}
+
+\newcommand{\BI}[1]{\B{\I{#1}}}
+\newcommand{\BU}[1]{\B{\U{#1}}}
+
+\newlength{\myflen} 
+
+\newcommand{\XMark}[1][1]{%
+  \setlength{\myflen}{1.2em}%
+  \marginpar{\rule[-0.3em]{.5mm}{#1\myflen}}%
+  \xspace%
+}
+\newcommand{\XRed}[1]{\textit{\textcolor{red}{\sout{#1}}}}
+\newcommand{\XGreen}[1]{\textbf{\textcolor{green}{#1}}}
+\newcommand{\XBlue}[1]{\textit{\textcolor{blue}{#1}}}
+
+\newif \iffinal \finalfalse
+\newcommand{\sagafinal}{
+  \finaltrue
+  \renewcommand{\XMark}[1][1]{}\xspace%
+  \renewcommand{\XRed}[1]{}
+  \renewcommand{\XGreen}[1]{\textcolor{black}{##1}}
+  \renewcommand{\XBlue}[1]{\textcolor{black}{##1}}
+}
+
+% spelling fix
+\newcommand{\XSpell}[2][1]{\XGreen{#2}\XMark[#1]}
+\newcommand{\XSpelln}[1]{\XGreen{#1}}
+
+% corrected text
+\newcommand{\XCorr}[2][1]{\XBlue{#2}\XMark[#1]}
+\newcommand{\XCorrn}[1]{\XBlue{#1}}
+
+% removed text
+\newcommand{\XRem}[2][1]{\XRed{#2}\XMark[#1]}
+\newcommand{\XRemn}[1]{\XRed{#1}}
+
+% added text
+\newcommand{\XAdd}[2][1]{\XCorr[#1]{#2}}
+\newcommand{\XAddn}[1]{\XCorrn{#1}}
+
+% replace text
+\newcommand{\XRep}[3][1]{\XRed{#2~}\XBlue{#3}\XMark[#1]}
+\newcommand{\XRepn}[2]{\XRed{#1~}\XBlue{#2}}
+
+% changeset comment
+\newcommand{\XComm}[2][1]{\XGreen{#2}\XMark[#1]}
+\newcommand{\XCommn}[1]{\XGreen{#1}}
+
+\newcommand{\MUST}       {\T{MUST}\xspace}
+\newcommand{\MUSTNOT}    {\T{MUST NOT}\xspace}
+\newcommand{\REQUIRED}   {\T{REQUIRED}\xspace}
+\newcommand{\SHALL}      {\T{SHALL}\xspace}
+\newcommand{\SHALLNOT}   {\T{SHALL NOT}\xspace}
+\newcommand{\SHOULD}     {\T{SHOULD}\xspace}
+\newcommand{\SHOULDNOT}  {\T{SHOULD NOT}\xspace}
+\newcommand{\RECOMMENDED}{\T{RECOMMENDED}\xspace}
+\newcommand{\MAY}        {\T{MAY}\xspace}
+\newcommand{\OPTIONAL}   {\T{OPTIONAL}\xspace}
+
+\newcommand{\sshift}{\hspace*{1em}}
+\newcommand{\sunshift}{\hspace*{-1em}}
+\newcommand{\shift}{\hspace*{3em}}
+\newcommand{\unshift}{\hspace*{-3em}}
+\newcommand{\down}{\vspace*{1em}}
+\newcommand{\downn}{\vspace*{0.5em}}
+\newcommand{\up}{\vspace*{-1em}}
+\newcommand{\upp}{\vspace*{-0.5em}}
+
+\newcommand{\LF}{Look-\&-Feel\xspace}
+
+\setlength{\parskip}{1em}
+\setlength{\parindent}{0em}
+\setlength{\fboxsep}{1em}
+
+\newcommand{\mywfig}[4]{
+  \begin{wrapfigure}{#1}{#2\textwidth}
+    \includegraphics[width=#2\textwidth]{#3}
+    \caption{\label{fig:#3} \footnotesize \B{#4}}
+    \vspace*{-1em}
+  \end{wrapfigure}
+}
+
+\newcommand{\myfig}[2]{
+  \begin{figure}[!ht]
+    \begin{center}
+      \includegraphics[width=0.95\textwidth]{#1}
+      \caption{\label{fig:#1} \footnotesize \B{#2}}
+    \end{center}
+  \end{figure}
+}
+
+\newcommand{\mysfig}[2]{
+  \begin{figure}[!ht]
+    \begin{center}
+      \includegraphics[width=0.45\textwidth]{#1}
+      \caption{\label{fig:#1} \footnotesize \B{#2}}
+    \end{center}
+  \end{figure}
+}
+
+\newcommand{\myxfig}[3]{
+  \begin{figure}[!ht]
+    \begin{center}
+      \includegraphics[width=#1\textwidth]{#2}
+      \caption{\label{fig:#2} \footnotesize \B{#3}}
+    \end{center}
+  \end{figure}
+}
+
+
+% \usepackage[titles]{tocloft}
+%   \renewcommand{\cftbeforesecskip}{-0.0ex}
+%   \renewcommand{\cftbeforesubsecskip}{-1ex}
+%   \renewcommand{\cftbeforesubsubsecskip}{-1ex}
+%   \renewcommand{\cftbeforetabskip}{-1ex}
+%   \renewcommand{\cftbeforefigskip}{-1ex}
+
+\newcommand{\sagatocdepth}{2}
+\setcounter{tocdepth}{\sagatocdepth}
+
+\pagestyle{fancy}
+\pagenumbering{arabic}
+
+\newcommand{\sagadate}{\today}
+
+\newcommand{\sagaheader}{}
+  \lhead{\sagadocument}
+  \chead{\sagaheader}
+  \rhead{\sagadate}
+  \lfoot{\hrulefill\\\T{\sagaemail} \hfill \thepage}
+  \cfoot{}
+  \rfoot{}
+
+\newcommand{\sagansec}[2]
+{
+  \section{#1}
+  \label{sec:#2}
+  \renewcommand{\sagaheader}{#1}
+  \iffinal
+    \input{\sagabasename_#2.tex.final}
+  \else
+    \input{\sagabasename_#2.tex}
+  \fi
+}
+
+\newcommand{\sagannsec}[2]
+{
+  \section*{#1}
+  \label{sec:#2}
+  \renewcommand{\sagaheader}{#1}
+  \iffinal
+    \input{\sagabasename_#2.tex.final}
+  \else
+    \input{\sagabasename_#2.tex}
+  \fi
+}
+
+\newcommand{\sagasec}[2]
+{
+  \newpage
+  \section{#1}
+  \label{sec:#2}
+  \renewcommand{\sagaheader}{#1}
+  \iffinal
+    \input{\sagabasename_#2.tex.final}
+  \else
+    \input{\sagabasename_#2.tex}
+  \fi
+}
+
+\newcommand{\sagassec}[2]
+{
+  \newpage
+  \subsection{#1}
+  \label{ssec:#2}
+  \renewcommand{\sagaheader}{#1}
+  \iffinal
+    \input{\sagabasename_#2.tex.final}
+  \else
+    \input{\sagabasename_#2.tex}
+  \fi
+}
+
+\newcommand{\sagasubpar}[1]{~\\ \underline{#1}~\\}
+
+\newenvironment{shortlist}{
+  \begin{itemize}
+  \vspace*{-0.5em}
+   \setlength{\itemsep}{-.1em}
+}{
+  \end{itemize}
+  \up
+}
+
+\newenvironment{shortenum}{
+  \begin{enumerate}
+  \vspace*{-0.5em}
+   \setlength{\itemsep}{-.1em}
+}{
+  \end{enumerate}
+  \upp
+}
+
+\newcounter{itemlistcnt}
+\newcommand{\itemlist}[2]{
+  \setcounter{itemlistcnt}{0}
+  \begin{list}{\B{#1-\arabic{itemlistcnt}:}}{
+    \setlength{\topsep}{0em}
+    \setlength{\itemsep}{0em}
+    \setlength{\parsep}{0.5em}
+    \usecounter{itemlistcnt}
+    }
+    #2
+  \end{list}
+}
+
+
+\DefineVerbatimEnvironment{mycode}{Verbatim}
+{
+  label=Code Example,
+  fontsize=\small,
+  frame=single,
+% framerule=1pt,
+  framesep=1em,
+  numbers=left,
+  gobble=2
+}
+
+
+\DefineVerbatimEnvironment{myio}{Verbatim}
+{
+  fontsize=\small,
+  frame=lines,
+% framerule=1pt,
+  framesep=1em
+}
+
+
+\DefineVerbatimEnvironment{mysmallspec}{Verbatim}
+{
+  fontsize=\small,
+  frame=lines,
+% framerule=1pt,
+  framesep=1em
+}
+
+\DefineVerbatimEnvironment{myspec}{Verbatim}
+{
+  fontsize=\normalsize,
+  frame=lines,
+% framerule=1pt,
+  framesep=1em
+}
+
+\newcommand{\sagaverb}[1]{
+ \DefineShortVerb{#1}
+}
+
+\newcommand{\saganoverb}[1]{
+ \UndefineShortVerb{#1}
+}
+
+\newcommand{\Bull}{$\bullet$\xspace}
+\newcommand{\Circ}{$\circ$\xspace}
+
+\newcommand{\sagabib}[1]{
+  \renewcommand{\sagaheader}{References}
+  \addcontentsline{toc}{section}{References}
+  \label{sec:References}
+  \bibliographystyle{abbrv}
+  \bibliography{#1}
+}
+

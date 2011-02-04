@@ -2,8 +2,6 @@
 #include <set>
 #include <iostream>
 
-#include <boost/assign/list_of.hpp>
-
 #include <saga/saga/saga.hpp>
 
 int main ()

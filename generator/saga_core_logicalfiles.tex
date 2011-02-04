@@ -1,0 +1,704 @@
+ 
+   This section of the SAGA API describes the interaction with
+   replica systems.  Numerous SAGA use cases required replica
+   management functionality in the API -- however, only a small
+   number of operation have been requested.  The methods
+   described here are hence limited to the creation and
+   maintainance of logical files, replicas, and to search on
+   logical file meta data.
+ 
+   The |saga::logical_file| class implements the
+   |saga::attributes| interface.  It is important to realize that
+   this is intended to reflect the ability of replica
+   systems to associate meta data with logical files.  The SAGA
+   attribute model (string based key/value pairs) can, with all
+   probability, only give a crude representation of
+   meta data models used in real world replica systems --
+   however, the definition of a more abstract and comprehensive
+   data model for replica meta data was felt to be outside the
+   scope of a SAGA API definition.  Implementations are expected
+   to map the native data model to key/value pairs as well as
+   possible, and MUST document that mapping process (and in
+   particular the supported keys) carefully.
+ 
+   Please note that the interactions with logical files as
+   opaque entities (as entries in logical file name spaces) are
+   covered by the |namespace| package.  The interfaces presented
+   here supplement the |namespace| package with operations for
+   operating on entries in replica catalogues.
+ 
+   It is up to the used backend to ensure that multiple
+   replica locations registered on a logical file are indeed
+   identical copies -- the SAGA API does not imply any specific
+   consistency model.  The SAGA implementation MUST document the
+   consistency model used.
+ 
+   \subsubsection{Definitions}
+ 
+    \paragraph{Logical File:} A \I{logical file} represents
+    merely an entry in a name space which has (a) an associated
+    set of registered (physical) replicas of that file, and (b)
+    an associated set of meta data describing that logical file.
+    Both sets can be empty.  To access the \I{content}
+    of a logical file, a \T{saga::file} needs to be created with
+    one of the registered replica locations.
+ 
+    \paragraph{Replica:} A \I{replica} (or \I{physical file}) is
+    a file which is registered on a logical file.  In general,
+    all replicas registered on the same logical file are
+    identical.  Often, one of these replicas is deemed to be a
+    master copy (often it is the first replica
+    registered, and/or the only one which can be changed) --
+    that distinction is, however, not visible in the SAGA API.
+ 
+    \paragraph{Logical Directory:} A \I{logical directory}
+    represents a directory entry in the name space of logical
+    files.  Several replica system implementations have the
+    notion of \I{container}s, which, for our purposes, represent
+    directories which can have, just as logical files,
+    associated sets of meta data.  In the presented API, logical
+    directories and containers are the same.
+ 
+    % Note that the 'Truncate' flag on opening logical files is
+    % interpreted as to truncate the set of registered replicas on
+    % that logical file -- the associated meta data set is \I{not}
+    % truncated.
+ 
+    Note that the |Truncate|, |Append| and |Binary| flags have no
+    meaning on logical files.  The respective enum values for these
+    flags for |saga::file|s have been reserved though, for (a) future
+    use, and (b) consistency with the |saga::file| flag values.
+ 
+    The |find()| method of the |saga::logical_directory| class
+    represents a combination of (a) the |find()| method from the
+    |saga::ns_directory| class, and (b) the |find_attributes()|
+    method from the |saga::attributes| interface.  The method
+    accepts patterns for meta data matches
+    (\T{attr\_pattern}) and a single pattern for file
+    name matches (|name_pattern|), and returns a list of logical
+    file names which match
+    all \T{attr\_pattern} and the \T{name\_pattern} (\T{AND}
+    semantics).  The \T{attr\_pattern} are formatted as
+    defined for |find_attribute()| of the |saga::attributes|
+    interface.  The |name_pattern| are formatted as defined for
+    the |find()| method of the |saga::ns_directory| class.  In
+    general, the allowed patterns are the same as defined as
+    wildcards in the description of the SAGA
+    |namespace| package.
+ 
+ \subsubsection{Specification}
+ 
+ \begin{myspec}
+  package saga.logical_file
+  {
+    enum flags
+    {
+      None            =    0, // same as in namespace::flags
+      Overwrite       =    1, // same as in namespace::flags
+      Recursive       =    2, // same as in namespace::flags
+      Dereference     =    4, // same as in namespace::flags
+      Create          =    8, // same as in namespace::flags
+      Exclusive       =   16, // same as in namespace::flags
+      Lock            =   32, // same as in namespace::flags
+      CreateParents   =   64, // same as in namespace::flags
+      //                 128,    reserved for Truncate
+      //                 256,    reserved for Append
+!     Read            =  512, // same as in namespace::flags 
+!     Write           = 1024, // same as in namespace::flags 
+!     ReadWrite       = 1536, // same as in namespace::flags 
+      //                2048     reserved for Binary
+    }
+ 
+ 
+    class logical_file : extends        saga::ns_entry
+                         implements     saga::attributes
+                      // from ns_entry  saga::object
+                      // from ns_entry  saga::async
+                      // from object    saga::error_handler
+    {
+      CONSTRUCTOR     (in  session             s,
+                       in  saga::url           name,
+                       in  int                 flags = Read,
+                       out logical_file        obj);
+      DESTRUCTOR      (in  logical_file        obj);
+ 
+ 
+      // manage the set of associated replicas
+      add_location    (in  saga::url           name);
+      remove_location (in  saga::url           name);
+      update_location (in  saga::url           name_old,
+                       in  saga::url           name_new);
+      list_locations  (out array<saga::url>    names);
+ 
+      // create a new physical replica
+      replicate       (in  saga::url           name, 
+                       in  int                 flags = None);
+ 
+      // Attributes (extensible):
+      // 
+      // no attributes pre-defined
+    }
+ 
+ 
+    class logical_directory : extends            saga::ns_directory
+                              implements         saga::attributes
+                           // from ns_directory  saga::ns_entry
+                           // from ns_entry      saga::object
+                           // from ns_entry      saga::async
+                           // from object        saga::error_handler
+    {
+ 
+      CONSTRUCTOR     (in  session             s,
+                       in  saga::url           name,
+                       in  int                 flags = Read,
+                       out logical_directory   obj);
+      DESTRUCTOR      (in  logical_directory   obj);
+ 
+ 
+      // inspection methods
+      is_file         (in  saga::url           name,
+                       out boolean             test);
+ 
+      // open methods
+      open_dir        (in  saga::url           name,
+                       in  int                 flags = Read,
+                       out logical_directory   dir);
+ 
+      open            (in  saga::url           name,
+                       in  int                 flags = Read,
+                       out logical_file        file);
+ 
+      // find logical files based on name and meta data
+      find            (in  string              name_pattern,
+                       in  array<string>       attr_pattern,
+                       in  int                 flags = Recursive,
+                       out array<saga::url>    names   );
+    }
+  }
+ \end{myspec}
+ 
+ 
+ \subsubsection{Specification Details}
+ 
+  \subsubsection*{Enum \T{flags}}
+ 
+   The \T{flags} enum is inherited from the \T{namespace}
+   package.  \XRep{A number of replica specific flags are added
+   to it.  All added flags are used for the opening of
+   \T{logical\_\-file} and \T{logical\_\-directory} instances, and
+   are not applicable to the operations inherited from the
+   \T{namespace} package.}{No additional flags are added.}
+  
+  % |Read|\\[0.3mm]
+  % \begin{tabular}{cp{110mm}}
+  %   ~~ & The logical file or directory is opened for 
+  %        reading -- that does not imply the ability to change 
+  %        the logical file or directory.
+  % \end{tabular}
+  %
+  % |Write|\\[0.3mm]
+  % \begin{tabular}{cp{110mm}}
+  %   ~~ & The logical file or directory is opened for 
+  %        writing -- that does not imply the ability to read 
+  %        from the logical file or directory.
+  % \end{tabular}
+  %
+  % |ReadWrite|\\[0.3mm]
+  % \begin{tabular}{cp{110mm}}
+  %   ~~ & The logical file or directory is opened for 
+  %        reading and writing.
+  % \end{tabular}
+ 
+ 
+ 
+  \subsubsection*{Class \T{logical\_file}}
+ 
+    This class provides the means to handle the contents
+    of logical files.  These contents consists of strings
+    representing locations of physical files (replicas)
+    associated with the logical file.  
+ 
+ \begin{myspec}
+    - CONSTRUCTOR
+      Purpose:  create the object
+      Format:   CONSTRUCTOR      (in session    s,
+                                  in  saga::url name,
+                                  in  int       flags = Read,
+                                  out logical_file  obj)
+      Inputs:   s:                session to associate with
+                                  the object
+                name:             location of file
+                flags:            mode for opening
+      InOuts:   -
+      Outputs:  obj:              the newly created object
+      PreCond:  -
+      PostCond: - the logical_file is opened.
+                - 'Owner' of target is the id of the context
+                  use to perform the operation, if the
+                  logical_file gets created.
+      Perms:    Exec  for parent directory.
+                Write for parent directory if Create is set.
+                Write for name if Write is set.
+                Read  for name if Read  is set.
+      Throws:   NotImplemented
+                IncorrectURL
+                BadParameter
+                AlreadyExists
+                DoesNotExist
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - the semantics of the inherited constructors
+                  and of the logical_directory::open() method 
+                  apply.
+                - the default flags are 'Read' (512).
+ 
+ 
+    - DESTRUCTOR
+      Purpose:  destroy the object
+      Format:   DESTRUCTOR       (in  logical_file   obj)
+      Inputs:   obj:              the object to destroy
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - the logical_file is closed.
+      Perms:    -
+      Throws:   -
+      Notes:    - the semantics of the inherited destructors
+                  apply.
+ 
+ 
+      manage the set of associated replicas:
+      --------------------------------------
+ 
+    - add_location
+      Purpose:  add a replica location to the replica set
+      Format:   add_location     (in  saga::url name);
+      Inputs:   name:             location to add to set
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - name is in the list of replica locations for
+                  the logical file.
+      Perms:    Write
+      Throws:   NotImplemented
+                IncorrectURL
+                BadParameter
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - this methods adds a given replica location 
+                  (name) to the set of locations associated with 
+                  the logical file.
+                - the implementation MAY choose to interpret the
+                  replica locations associated with the logical 
+                  file.  It MAY return an 'IncorrectURL' error 
+                  indicating an invalid location if it is unable 
+                  or unwilling to handle that specific locations
+                  scheme.  The implementation documentation MUST 
+                  specify how valid replica locations are formed.
+                - if 'name' can be parsed as URL, but contains 
+                  an invalid entry name, a 'BadParameter'
+                  exception is thrown.
+                - if the replica is already in the set, this
+                  method does nothing, and in particular MUST
+                  NOT raise an 'AlreadyExists' exception
+                - if the logical file was opened ReadOnly, a
+                  'PermissionDenied' exception is thrown.
+ 
+ 
+    - remove_location
+      Purpose:  remove a replica location from the replica set
+      Format:   remove_location  (in  saga::url name);
+      Inputs:   name:             replica to remove from set
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - name is not anymore in list of replica 
+                  locations for the logical file.
+      Perms:    Write
+      Throws:   NotImplemented
+                IncorrectURL
+                BadParameter
+                DoesNotExist
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - this method removes a given replica location 
+                  from the set of replicas associated with the 
+                  logical file.
+                - the implementation MAY choose to interpret the
+                  replica locations associated with the logical 
+                  file.  It MAY return an 'IncorrectURL' error 
+                  indicating an invalid location if it is unable 
+                  or unwilling to handle that specific locations
+                  scheme.  The implementation documentation MUST 
+                  specify how valid replica locations are formed.
+                - if 'name' can be parsed as URL, but contains 
+                  an invalid entry name, a 'BadParameter'
+                  exception is thrown.
+                - if the location is not in the set of
+                  replicas, a 'DoesNotExist' exception is 
+                  thrown.
+                - if the set of locations is empty after this
+                  operation, the logical file object is still 
+                  a valid object (see replicate() method
+                  description).
+                - if the logical file was opened ReadOnly, a
+                  'PermissionDenied' exception is thrown.
+ 
+ 
+    - update_location
+      Purpose:  change a replica location in replica set
+      Format:   update_location  (in saga::url name_old,
+                                  in saga::url name_new);
+      Inputs:   name_old          replica to be updated
+                name_new          update of replica
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - name_old is not anymore in list of replica 
+                  locations for the logical file.
+                - name_new is in the list of replica locations
+                  for the logical file.
+      Perms:    Read 
+                Write
+      Throws:   NotImplemented
+                IncorrectURL
+                BadParameter
+                AlreadyExists
+                DoesNotExist
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - this method removes a given replica location 
+                  from the set of locations associated with the 
+                  logical file, and adds a new location.
+                - the implementation MAY choose to interpret the
+                  replica locations associated with the logical 
+                  file.  It MAY return an 'IncorrectURL' error 
+                  indicating an invalid location if it is unable 
+                  or unwilling to handle that specific locations
+                  scheme.  The implementation documentation MUST 
+                  specify how valid replica locations are formed.
+                - if 'name' can be parsed as URL, but contains 
+                  an invalid entry name, a 'BadParameter'
+                  exception is thrown.
+                - if the old replica location is not in the 
+                  set of locations, a 'DoesNotExist' exception 
+                  is thrown.
+                - if the new replica location is already in the 
+                  set of locations, an 'AlreadyExists' exception 
+                  is thrown.
+                - if the logical file was opened ReadOnly, an
+                  'PermissionDenied' exception is thrown.
+                - if the logical file was opened WriteOnly, an
+                  'PermissionDenied' exception is thrown.
+ 
+ 
+    - list_locations
+      Purpose:  list the locations in the location set
+      Format:   list_locations   (out array<saga::url> names);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  names:            array of locations in set
+      PreCond:  -
+      PostCond: - 
+      Perms:    Read
+      Throws:   NotImplemented
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - this method returns an array of urls
+                  containing the complete set of locations
+                  associated with the logical file.
+                - an empty array returned is not an error - 
+                  the logical file object is still a valid 
+                  object (see replicate() method description).
+                - if the logical file was opened WriteOnly, an
+                  'PermissionDenied' exception is thrown.
+ 
+ 
+    - replicate 
+      Purpose:  replicate a file from any of the known
+                replica locations to a new location, and, on 
+                success, add the new replica location to the 
+                set of associated replicas 
+      Format:   replicate        (in  saga::url name, 
+                                  in  int       flags = None);
+      Inputs:   name:             location to replicate to
+                flags:            flags defining the operation
+                                  modus
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - an identical copy of one of the available
+                  replicas exists at name.
+                - name is in the list of replica locations
+                  for the logical file.
+      Perms:    Read 
+                Write
+      Throws:   NotImplemented
+                IncorrectURL
+                BadParameter
+                AlreadyExists
+                DoesNotExist
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - the method implies a two step operation:
+                  1) create a new and complete replica at the
+                     given location, which then represents
+                     a new replica location.
+                  2) perform an add_location() for the new
+                     replica location.
+                - all notes to the saga::ns_entry::copy() and
+                  saga::logical_file::add_location methods
+                  apply.
+                - the method is not required to be atomic, but:
+                  the implementation MUST be either
+                  successful in both steps, or throw an
+                  exception indicating if both methods failed, 
+                  or if one of the methods succeeded.
+                - a replicate call on an instance with empty
+                  location set raises an 'IncorrectState'
+                  exception, with an descriptive error message.  
+                - the default flags are 'None' (0).  The
+                  interpretation of flags is as described for 
+                  the ns_entry::copy() method.  
+                - The 'Recursive' flag is not allowed, and 
+                  causes a 'BadParameter' exception.
+                - if the logical file was opened ReadOnly, an
+                  'PermissionDenied' exception is thrown.
+                - if the logical file was opened WriteOnly, an
+                  'PermissionDenied' exception is thrown.
+ \end{myspec}
+ 
+ 
+  \subsubsection*{Class \T{logical\_directory}}
+ 
+    This class represents a container for logical files in a
+    logical file name space.  It allows traversal of the
+    catalog's name space, and the manipulation and creation
+    (open) of logical files in that name space.
+    
+ \begin{myspec}
+    Constructor / Destructor:
+    -------------------------
+ 
+    - CONSTRUCTOR
+      Purpose:  create the object
+      Format:   CONSTRUCTOR      (in  session       s,
+                                  in  saga::url     name,
+                                  in  int           flags = Read,
+                                  out logical_directory
+                                                    obj)
+      Inputs:   s:                session to associate with
+                                  the object
+                name:             location of directory
+                flags:            mode for opening
+      InOuts:   -
+      Outputs:  obj:              the newly created object
+      PreCond:  -
+      PostCond: - the logical_directory is opened.
+                - 'Owner' of target is the id of the context
+                  use to perform the operation, if the
+                  logical_directory gets created.
+      Perms:    Exec  for parent directory.
+                Write for parent directory if Create is set.
+                Write for name if Write is set.
+                Read  for name if Read  is set.
+      Throws:   NotImplemented
+                IncorrectURL
+                BadParameter
+                AlreadyExists
+                DoesNotExist
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - the semantics of the inherited constructors
+                  and of the logical_directory::open_dir()
+                  method apply.
+                - the default flags are 'Read' (512).
+ 
+ 
+    - DESTRUCTOR
+      Purpose:  destroy the object
+      Format:   DESTRUCTOR         (in  logical_directory obj)
+      Inputs:   obj:                the object to destroy
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - the logical_directory is closed.
+      Perms:    -
+      Throws:   -
+      Notes:    - the semantics of the inherited destructors
+                  apply.
+ 
+ 
+    - is_file
+      Alias:    for is_entry of saga::ns_directory
+ 
+ 
+    - open_dir
+      Purpose:  creates a new logical_directory instance
+      Format:   open_dir         (in  saga::url name,
+                                  in  int       flags = Read,
+                                  out logical_directory dir);
+      Inputs:   name:             name of directory to open
+                flags:            flags defining operation
+                                  modus
+      InOuts:   -
+      Outputs:  dir:              opened directory instance
+      PreCond:  -
+      PostCond: - the session of the returned instance is that of
+                  the calling instance.
+                - 'Owner' of name is the id of the context
+                  used to perform the operation if name gets
+                  created.
+      Perms:    Exec  for name's parent directory.
+                Write for name's parent directory if Create is set.
+                Write for name if Write is set.
+                Read  for name if Read  is set.
+      Throws:   NotImplemented
+                IncorrectURL
+                BadParameter
+                AlreadyExists
+                DoesNotExist
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - all notes from the ns_directory::open_dir()
+                  method apply.
+                - default flags are 'Read' (512).
+ 
+ 
+    - open
+      Purpose:  creates a new logical_file instance
+      Format:   open             (in  saga::url    name,
+                                  in  int          flags = Read,
+                                  out logical_file file);
+      Inputs:   name:             file to be opened
+                flags:            flags defining operation
+                                  modus
+      InOuts:   -
+      Outputs:  file:             opened file instance
+      PreCond:  -
+      PostCond: - the session of the returned instance is that of
+                  the calling instance.
+                - 'Owner' of name is the id of the context
+                  used to perform the operation if name gets
+                  created.
+      Perms:    Exec  for name's parent directory.
+                Write for name's parent directory if Create is set.
+                Write for name if Write is set.
+                Read  for name if Read  is set.
+      Throws:   NotImplemented
+                IncorrectURL
+                BadParameter
+                AlreadyExists
+                DoesNotExist
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - all notes from the ns_directory::open() method
+                  apply.
+                - the flag set 'Read | Write' is equivalent to
+                  the flag 'ReadWrite'.
+                - default flags are 'Read' (512).
+ 
+ 
+    - find
+      Purpose:  find entries in the current directory and below, 
+                with matching names and matching meta data
+      Format:   find             (in  string           name_pattern,
+                                  in  array<string>    attr_pattern,
+                                  in  int              flags = Recursive,
+                                  out array<saga::url> names);
+      Inputs:   name_pattern:     pattern for names of
+                                  entries to be found
+                attr_pattern:     pattern for meta data
+                                  key/values of entries to be 
+                                  found
+                flags:            flags defining the operation
+                                  modus
+      InOuts:   -
+      Outputs:  names:            array of names matching both
+                                  pattern
+      PreCond:  -
+      PostCond: -
+      Perms:    Read  for cwd.
+                Query for entries specified by name_pattern.
+                Exec  for parent directories of these entries.
+                Query for parent directories of these entries.
+                Read  for directories specified by name_pattern.
+                Exec  for directories specified by name_pattern.
+                Exec  for parent directories of these directories.
+                Query for parent directories of these directories.
+      Throws:   NotImplemented
+                BadParameter
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - the description of find() in the Introduction
+                  to this section applies.
+                - the semantics for both the find_attributes()
+                  method in the saga::attributes interface and 
+                  for the find() method in the 
+                  saga::ns_directory class apply.  On 
+                  conflicts, the find() semantic supersedes 
+                  the find_attributes() semantic.  Only entries
+                  matching all attribute patterns and the name 
+                  space pattern are returned.
+                - the default flags are 'Recursive' (2).
+ \end{myspec}
+ 
+ 
+ \subsubsection{Examples}
+ 
+ \begin{mycode}
+  // c++ example
+  int main ()
+  {
+    saga::logical_file lf ("lfn://remote.catalog.net/tmp/file1");
+ 
+    lf.replicate ("gsiftp://localhost//tmp/file.rep");
+    saga::file f ("gsiftp://localhost//tmp/file.rep");
+ 
+    std::cout << "size of local replica: "
+              << f.get_size ()
+              << std::endl;
+ 
+    return (0);
+  }
+ \end{mycode}
+ 
+ 

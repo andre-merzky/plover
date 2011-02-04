@@ -1,0 +1,699 @@
+ 
+ A number of SAGA use cases imply the ability of applications to
+ allow or deny specific operations on SAGA objects or grid
+ entities, such as files, streams, or monitorables.  This
+ packages provides a generic interface to query and set such
+ permissions, for (a) everybody, (b) individual users, and (c)
+ groups of users.
+ 
+ 
+ Objects implementing this interface maintain a set of
+ permissions for each object instance, for a set of IDs.  These
+ permissions can be queried, and, in many situations, set.  The
+ SAGA specification defines which permissions are available on a
+ SAGA object, and which operations are expected to respect these
+ permissions.
+ 
+ A general problem with this approach is that it is difficult to
+ anticipate how users and user groups are identified by various
+ grid middleware systems.  In particular, any translation of
+ permissions specified for one grid middleware is likely not
+ completely translatable to permissions for another grid
+ middleware.  
+ 
+ For example, assume that a |saga::file| instance gets created
+ via ssh, and permissions are set for the file to be readable
+ and executable by a specific POSIX user group ID.  Which
+ implications do these permissions have with respect to operations
+ performed with GridFTP, using a Globus certificate?  The
+ used X509 certificates have (a) no notion of groups (groups are
+ implicit due to the mapping of the |grid-mapfile|), and (b) are
+ not mappable to group ids; and (c) GridFTP ignores the
+ executable flag on files.
+ 
+ For this reason, it is anticipated that the permission model
+ described in this section has the following, undesired
+ consequences and limitations:
+ 
+ \begin{shortlist}
+ 
+  \item Applications using this interface are not expected to be
+  fully portable between different SAGA implementations.
+  (In cases like having two SAGA implementations that use different
+  middleware backends for accessing the same resources.)
+ 
+  \item A SAGA implementation MUST document which permission it
+  supports, for which operations.
+ 
+  \item A SAGA implementation MUST document if it supports group
+  level permissions.
+ 
+  \item A SAGA implementation MUST document how user and group
+  IDs are to be formed.
+ 
+ \end{shortlist}
+ 
+ Note that there are no separate calls to get/set user, group
+ and world permissions: this information must be part of the
+ IDs the methods operate upon.  To set/get permissions for
+ 'world' (i.e.  anybody), the ID |'*'| is used.
+ 
+ \subsubsection*{IDs}
+ 
+  SAGA can not, by design, define globally unique identifiers in
+  a portable way.  For example, it would be impossible to map,
+  transparently and bi-directionally, a Unix user ID and an
+  associated X509 Distinguished Name on any resource onto the
+  same hypothetical SAGA user ID, at least not without explicit
+  support by the grid middleware (e.g., by having access to the
+  Globus |grid-mapfile|).  That support is, however, rarely
+  available.
+ 
+  It is thus required that SAGA implementations MUST specify how the
+  user and group IDs are formed that they support.  In general, IDs
+  which are valid for the \T{UserID} attribute of the SAGA
+  \T{context} instances SHOULD also be valid IDs to be used in
+  the SAGA permission model.
+ 
+  A typical usage scenario is (extended from the context usage
+  scenario):
+ 
+  \begin{mycode}
+   // context and permission usage scenario in C++
+ 
+   saga::context c_1 ("globus")
+   saga::context c_2 ("ssh");
+ 
+   // c_1 is a globus proxy.  Identify the proxy to be used, 
+   // and pick up the other default globus settings
+   c_1.set_attribute ("UserProxy", "/tmp/special_x509up_u500");
+   c_1.set_defaults  (); 
+ 
+   // c_2 is a ssh context, and will just pick up the
+   // public/private key from $HOME/.ssh
+   c_2.set_defaults (); 
+ 
+   // a saga session gets created, and uses both contexts
+   saga::session s;
+   s.add_context (c_1);
+   s.add_context (c_2);
+ 
+   // a remote file in this session can now be accessed via 
+   // gridftp or ssh
+   saga::file f (s, "any://remote.net/tmp/data.txt");
+   f.copy ("data.bak");
+ 
+   // write permissions can be set for both context IDs
+   f.permission_allow (c_1.get_attribute ("UserID"), Write);
+   f.permission_allow (c_2.get_attribute ("UserID"), Write);
+  \end{mycode}
+ 
+ 
+ 
+  For middleware systems where group and user ids can clash, the
+  IDs should be implemented as |'user-<id>'| and |'group-<id>'|.
+  For example: on Unix, the name 'mail' can (and often does)
+  refer to a user and a group.  In that case, the IDs should be
+  expressed as |'user-mail'| and |'group-mail'|, respectively.
+  The ID |'*'| is always reserved, as described above.
+ 
+  Permissions for a user ID supersede the permissions for a
+  group ID, which supersede the permissions for |'*'| (all).  If
+  a user is in multiple groups, and the group's permissions
+  differ, the most permissive permission applies.
+ 
+ 
+ \subsubsection{Permissions for Multiple Backends}
+ 
+  In SAGA, an entity which provides the |permissions| interface
+  always has exactly one owner, for one middleware backend.
+  However, this implies that for SAGA implementations with
+  multiple backend bindings, multiple owner IDs may be valid.
+  For example, |"/O=dutchgrid/O=users/O=vu/OU=cs/CN=Joe Doe"|
+  and |"user-jdoe"| might be equally valid IDs, at the same
+  time, if the implementation supports local Unix access and
+  GridFTP access to a local file.  As long as the ID spaces do
+  not conflict, the |permissions| interface obviously allows to
+  set permissions individually for both backends. In case of conflicts,
+  the application would need to create new SAGA objects from
+  sessions that contain only a single context, representing the
+  desired backend's security credentials.  As such situations are
+  considered to be very rare exceptions in the known SAGA use cases, we
+  find this limitation accetable.
+ 
+  Note that, for SAGA implementations supporting multiple
+  middleware backends, the |permissions| interface can operate
+  on permissions for any of these backends, not only for the one
+  that was used by the original creation of the object
+  instance.  Such a restriction would basically inhibit implementations
+  with dynamic (``late'') binding to backends.
+ 
+ 
+ \subsubsection*{Conflicting Backend Permission Models}
+ 
+  Some middleware backends may not support the full range of
+  permissions, e.g., they might not distinguish between |Query| and
+  |Read| permissions.  A SAGA implementation MUST document which
+  permissions are supported.  Trying to set an unsupported
+  permission reults in a |BadParameter| exception, and NOT in
+  a |NotImplemented| exception -- that would indicate that the
+  method is not available at all, i.e. that no permission model at all
+  is available for this particular implementation.
+ 
+  \newpage
+ 
+  An implementation MUST NOT silently merge permissions,
+  according to its own model -- that would break for example the
+  following code:
+ 
+  \shift |file.permissions_allow ("user-jdoe", Query);|\\
+  \shift |file.permissions_deny  ("user-jdoe", Read );|\\
+  \shift |off_t file_size = file.get_size ();|
+ 
+  If an implementation binds to a system with standard Unix
+  permissions and does not throw a |BadParameter| exception on
+  the first call, but silently sets |Read| permissions instead,
+  because that does also allow query style operations on Unix,
+  then the code in line three would fail for no obvious reason,
+  because the second line would revoke the permissions from line
+  one.
+ 
+ 
+ \subsubsection*{Initial Permission Settings}
+ 
+  If new grid entities get created via the SAGA API, the owner
+  of the object is set to the value of the |'UserID'| attribute
+  of the context used during the creation.  Note that for SAGA
+  implementations with support for multiple middleware backends,
+  and support for late binding, this may imply that the owner is
+  set individually for one, some or all of the supported
+  backends.
+ 
+  Creating grid entities may require specific permissions on
+  other entities.  For example:
+ 
+  \begin{shortlist}
+   \item file creation requires |Write| permissions on the 
+         parent directory.
+   \item executing a file requires |Read| permissions on the
+         parent directory.
+  \end{shortlist}
+ 
+ 
+  An implementation CAN set initial permissions other than
+  |Owner|.  An implementation SHOULD document which initial
+  permission settings an application can expect.
+ 
+  The specification of the |ReadOnly| flag on the creation or
+  opening of SAGA object instances, such as |saga::file|
+  instances, causes the implementation to behave as if the
+  |Write| permission on the entity on that instance is not
+  available, even if it is, in reality, available.  The same
+  holds for the |WriteOnly| flag and the availability of the
+  |Read| permission on that entity.
+ 
+ \subsubsection*{Permission Definitions in the SAGA specification}
+ 
+  The SAGA specification normatively defines for each operation,
+  which permissions are required for that operation.  If a
+  permission is supported, but not set, the method invocation
+  MUST cause a |PermissionDenied| exception.  An implementation
+  MUST document any deviation from this scheme, e.g., if a
+  specified permission is not supported at all, or cannot be
+  tested for a particular method.  An example of such a definition is
+  (from the |monitorable| interface):
+ 
+  \begin{myspec}
+    - list_metrics
+      Purpose:  list all metrics associated with the object
+      Format:   list_metrics       (out array<string>   names);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  names:              array of names identifying
+                                    the metrics associated with
+                                    the object instance
+      PreCond:  -
+      PostCond: -
+      Perms:    Query
+      Throws:   NotImplemented
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - [...]
+  \end{myspec}
+ 
+  This example implies that for the session in which the
+  |list_metrics()| operation gets performed, there must be at least
+  one context for which's attribute |'UserID'| the |Query|
+  permission is both supported and available; otherwise, the method
+  MUST throw a |PermissionDenied| exception.  If |Query| is not
+  supported by any of the backends for which a context exists,
+  the implementation MAY try the backends to perform the
+  operation anyway.
+ 
+  For some parts of the specification, namely for attributes and
+  metrics, the |mode| specification is normative for the
+  respective, required permission.  For example, the mode
+  attribute |ReadOnly| implies that a |Write| permission,
+  required to change the attribute, is never available.
+ 
+ 
+ \subsubsection*{The \T{PermissionDenied} exception in SAGA}
+ 
+  SAGA supports a |PermissionDenied| exception, as documented in
+  Section~\ref{ssec:error}.  This exception can originate from
+  various circumstances, that are not necessarily related to
+  the SAGA permission model as described here.  However, if
+  the reason why that exception is raised maps onto the SAGA
+  permission model, the exception's error message MUST have the
+  following format (line breaks added for readability):
+ 
+  \shift |PermissionDenied: no <PERM> permission|\\
+  \shift\shift\shift\shift\, |on <ENTITY> <NAME>|\\
+  \shift\shift\shift\shift\, |for <ID>|
+ 
+  Here, |<PERM>| denotes which permission is missing, |<ENTITY>|
+  denotes on what kind of entity this permission is missing.
+  |<NAME>| denotes which entity misses that permission, and
+  |<ID>| denotes which user is missing that permission.  
+  
+  |<PERM>| is the literal string of the |permission| enum
+  defined in this section.  |<ENTITY>| is the type of backend
+  entity which is missing the permission, e.g. |file|,
+  |directory|, |job_service| etc.  Whenever possible, the
+  literal class name of the respective SAGA class name SHOULD be
+  used.  |<NAME>| SHOULD be a URL or literal name which allows
+  the end user to uniquely identify the entity in question.
+  |<ID>| is the value of the |UserID| attribute of the context
+  used for the operation (the notes about user IDs earlier in
+  this section apply).
+ 
+  Some examples for complete error messages are:
+ 
+  \shift |PermissionDenied: no Read permission |\\
+  \shift\shift\shift\shift\, |on file http:////tmp/test.dat|\\
+  \shift\shift\shift\shift\, |for user-jdoe|\\[1em]
+  \shift |PermissionDenied: no Write permission |\\
+  \shift\shift\shift\shift\, |on directory http:////tmp/|\\
+  \shift\shift\shift\shift\, |for user-jdoe|\\[1em]
+  \shift |PermissionDenied: no Query permission |\\
+  \shift\shift\shift\shift\, |on logical_file rls:////tmp/test|\\
+  \shift\shift\shift\shift\, |for /O=ca/O=users/O=org/CN=Joe Doe|\\[1em]
+  \shift |PermissionDenied: no Query permission |\\
+  \shift\shift\shift\shift\, |on job [fork://localhost]-[1234]|\\
+  \shift\shift\shift\shift\, |for user-jdoe|\\[1em]
+  \shift |PermissionDenied: no Exec permission |\\
+  \shift\shift\shift\shift\, |on RPC [rpc://host/matmult] for |\\
+  \shift\shift\shift\shift\, |for /O=ca/O=users/O=org/CN=Joe Doe|
+ 
+ \subsubsection*{Note to users}
+ 
+  The description of the SAGA permission model above should have
+  made clear that, in particular, the support for multiple
+  backends makes it difficult to strictly enforce the
+  permissions specified on application level.  Until a standard
+  for permission management for Grid application emerges, this
+  situation is unlikely to change.  Applications should thus be
+  careful to trust permissions specified in SAGA, and should
+  ensure to use an implementation which fully supports and
+  enforces the permission model, e.g., they should choose an
+  implementation which binds to a single backend.
+ 
+ \subsubsection{Specification}
+ 
+ \begin{myspec}
+  package saga.permissions
+  {
+    enum permission
+    {
+      None      =  0,
+      Query     =  1,
+      Read      =  2,
+      Write     =  4,
+      Exec      =  8,
+      Owner     = 16,
+      All       = 31
+    }
+ 
+    interface permissions : implements saga::async
+    {
+      // setter / getters
+      permissions_allow       (in  string          id,
+                               in  int             perm);
+      permissions_deny        (in  string          id,
+                               in  int             perm);
+      permissions_check       (in  string          id,
+                               in  int             perm,
+                               out bool            value);
+      get_owner               (out string          owner);
+      get_group               (out string          group);
+    }
+  }
+ \end{myspec}
+ 
+ 
+ \subsubsection{Specification Details}
+ 
+ \subsubsection*{Enum \T{permission}}
+ 
+  This enum specifies the available permissions in SAGA.  The
+  following examples demonstrate which type of operations are
+  allowed for certain permissions, and which aren't.  To keep
+  these examples concise, they are chosen from the following
+  list, with the convention that those operations in this list,
+  which are not listed in the respective example section, are
+  \I{not} allowed for that permission.  In general, the
+  availability of one permission does not imply the availability
+  of any other permission (with the exception of |Owner|, as
+  described below).
+ 
+  \begin{shortlist}
+   \item provide information about a metric, and its properties
+   \item provide information about file size, access time and ownership
+   \item provide information about job description, ownership, and runtime
+   \item provide information about logical file access time and ownership
+   \item provide access to a job's I/O streams
+   \item provide access to the list of replicas of a logical file
+   \item provide access to the contents of a file
+   \item provide access to the value of a metric
+   \item provide means to change the ownership of a file or job
+   \item provide means to change the permissions of a file or job
+   \item provide means to fire a metric
+   \item provide means to connect to a stream server
+   \item provide means to manage the entries in a directory
+   \item provide means to manipulate a file or its meta data
+   \item provide means to manipulate a job's execution or meta data 
+   \item provide means to manipulate the list of replicas of a logical file
+   \item provide means to run an executable
+  \end{shortlist}
+ 
+ The following permissions are available in SAGA:
+ 
+ \begin{list}{}{}
+ 
+  \item{\sunshift|Query|}
+  
+  This permission identifies the ability to \I{access all meta
+  data of an entity}, and thus to obtain any information about
+  an entity.  If that permission is not available for an actor,
+  that actor MUST NOT be able to obtain any information about
+  the queried entity, if possible not even about its existence.
+  If that permission is available for an actor, the actor MUST
+  be able to query for any meta data on the object which (a) do
+  imply changes on the entities state, and (b) are part of the
+  \I{content} of the entity (i.e., do not comprise its data).
+ 
+  Note that for logical files, attributes are part of the data
+  of the entities (i.e., the meta data belong to the logical
+  file's data).
+ 
+  An authorized |Query| operation can:
+ 
+  \begin{shortlist}
+   \item provide information about a metric, and its properties
+   \item provide information about file size, access time and ownership
+   \item provide information about job description, ownership, and runtime
+   \item provide information about logical file access time and ownership
+  \end{shortlist}
+ 
+ 
+  \item{\sunshift|Read|}
+ 
+  This permission identifies the ability to \I{access the
+  contents and the output of an entity}.  If that permission is
+  not available for an actor, that actor MUST NOT be able to
+  access the data of the entity.  That permission does not imply
+  the authorization to change these data, or to manipulate the
+  entity.  That permission does also not imply |Query|
+  permissions, i.e. the permission to access the entity's meta
+  data.
+ 
+  An authorized |READ| operation can:
+ 
+  \begin{shortlist}
+   \item provide access to a job's I/O streams
+   \item provide access to the list of replicas of a logical file
+   \item provide access to the contents of a file
+   \item provide access to the value of a metric
+  \end{shortlist}
+ 
+ 
+  \item{\sunshift|Write|}
+ 
+  This permission identifies the ability to \I{manipulate the
+  contents of an entity}.  If that permission is not
+  available for an actor, that actor MUST NOT be able to change
+  neither data nor meta data of the entity.  That permission
+  does not imply the authorization to read these data of the
+  entity, nor to manipulate the entity.  That permission does
+  also not imply |Query| permissions, i.e., the permission to
+  access the entity's meta data.
+ 
+  Note that, for a directory, its entries comprise its data.
+  Thus, |Write| permissions on a directory allow to manipulate
+  all entries in that directory -- but do not imply the ability
+  to change the data of these entries.  For example, |Write|
+  permissions on the directory |'/tmp'| allows to move
+  |'/tmp/a'| to |'/tmp/b'|, or to remove these entries, but does
+  not imply the ability to perform a |read()| operation on
+  |'/tmp/a'|.
+ 
+  An authorized |Write| operation can:
+ 
+  \begin{shortlist}
+   \item provide means to manage the entries in a directory
+   \item provide means to manipulate a file or its meta data
+   \item provide means to manipulate a job's execution or meta data
+   \item provide means to manipulate the list of replicas of a logical file
+  \end{shortlist}
+ 
+ 
+  \item{\sunshift|Exec|}
+ 
+  This permission identifies the ability to \I{perform an action
+  on an entity}.  If that permission is not available for an
+  actor, that actor MUST NOT be able to perform that action.
+  The actions covered by that permission are usually those which
+  affect the state of the entity, or which create a new entity.
+ 
+  An authorized |Exec| operation can:
+ 
+  \begin{shortlist}
+   \item provide means to fire a metric
+   \item provide means to connect to a stream server
+   \item provide means to run an executable
+  \end{shortlist}
+ 
+ 
+  \item{\sunshift|Owner|}
+ 
+  This permission identifies the ability to \I{change
+  permissions and ownership of an entity}.  If that permission
+  is not available for an actor, that actor MUST NOT be able to
+  change any permissions or the ownership of an entity.  As this
+  permission indirectly implies full control over all other
+  permissions, it does also imply that an actor with that
+  permission can perform \I{any} operation on the entity.
+  |Owner| is not listed as additional required permission in the
+  specification details for the individual methods, but only
+  listed for those methods, where |Owner| is an explicit
+  permission requirement which cannot be replaced by any other
+  permission.
+ 
+  An authorized |Owner| operation can:
+ 
+  \begin{shortlist}
+   \item provide means to change the ownership of a file or job
+   \item provide means to change the permissions of a file or job
+   \item perform \I{any} other operation, including all
+         operations from the original list of examples above
+  \end{shortlist}
+ 
+  Note that only one user can own an entity.  For example, the
+  following sequence:
+ 
+   \shift |file.permissions_allow ("Tarzan", saga::permission::Owner);|
+   \shift |file.permissions_allow ("Jane",   saga::permission::Owner);|
+ 
+  would result in a file ownership by |'Jane'|.  
+ 
+  Also note that 
+ 
+   \shift |file.permissions_allow ("*", saga::permission::Owner);|
+ 
+  or 
+ 
+   \shift |file.permissions_deny (id, saga::permission::Owner);|
+ 
+  will never be possible, and will throw a |BadParameter|
+  exception.
+ 
+ \end{list}
+ 
+ 
+ \subsubsection*{Interface \T{permissions}}
+ 
+ \begin{myspec}
+    - permissions_allow
+      Purpose:  enable permission flags
+      Format:   permissions_allow    (in  string     id,
+                                      in  int        perm);
+      Inputs:   id:                   id to set permission for
+                perm:                 permissions to enable
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - the permissions are enabled.
+      Perms:    Owner
+      Throws:   NotImplemented
+                BadParameter
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - an id '*' sets the permissions for all (world)
+                - whether an id is interpreted as a group id is up to
+                  the implementation.  An implementation MUST
+                  specify how user and group id's are formed.
+                - the 'Owner' permission can not be set to the
+                  id '*' (all).
+                - if the given id is unknown or not supported, a
+                  'BadParameter' exception is thrown.
+ 
+ 
+    - permissions_deny
+      Purpose:  disable permission flags
+      Format:   permissions_deny     (in  string     id,
+                                      in  int        perm);
+      Inputs:   id:                   id to set permissions for
+                perm:                 permissions to disable
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - the permissions are disabled.
+      Perms:    Owner
+      Throws:   NotImplemented
+                BadParameter
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - an id '*' sets the permissions for all (world)
+                - whether an id is interpreted as a group id is up to
+                  the implementation.  An implementation MUST
+                  specify how user and group id's are formed.
+                - the 'Owner' permission can not be set to the
+                  id '*' (all).
+                - if the given id is unknown or not supported, a
+                  'BadParameter' exception is thrown.
+ 
+ 
+    - permissions_check
+      Purpose:  check permission flags
+      Format:   permissions_check    (in  string     id,
+                                      in  int        perm,
+                                      out bool       allow);
+      Inputs:   id:                   id to check permissions for
+                perm:                 permissions to check
+      InOuts:   -
+      Outputs:  allow:                indicates if, for that id,
+                                      the permissions are granted
+                                      (true) or not.
+      PreCond:  -
+      PostCond: -
+      Perms:    Query
+      Throws:   NotImplemented
+                BadParameter
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - an id '*' gets the permissions for all (world)
+                - 'true' is only returned when all permissions
+                  specified in 'perm' are set for the given id.
+                - if the given id is unknown or not supported, a
+                  'BadParameter' exception is thrown.
+ 
+ 
+    - get_owner 
+      Purpose:  get the owner of the entity
+      Format:   get_owner            (out string     owner);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  owner:                id of the owner
+      PreCond:  -
+      PostCond: -
+      Perms:    Query
+      Throws:   NotImplemented
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - returns the id of the owner of the entity
+                - an entity, on which the permission interface is
+                  available, always has exactly one owner: this 
+                  method MUST NOT return an empty string, and 
+                  MUST NOT return '*' (all), and MUST NOT return 
+                  a group id.
+ 
+ 
+    - get_group 
+      Purpose:  get the group owning the entity
+      Format:   get_group            (out string     group);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  group:                id of the group
+      PreCond:  -
+      PostCond: -
+      Perms:    Query
+      Throws:   NotImplemented
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - returns the id of the group owning the entity
+                - this method MUST NOT return '*' (all), and 
+                  MUST NOT return a user id.
+                - if the implementation does not support groups, 
+                  the method returns an empty string.
+ \end{myspec}
+ 
+ 
+ \subsubsection{Examples}
+ 
+ \begin{mycode}
+ 
+  // c++ example
+  {
+    // create a file in the default session
+    saga::file f (url, saga::file::Create 
+                     | saga::file::Exclusive):
+ 
+    // get all contexts of the default session, and for each...
+    std::list <saga::context> ctxs = theSession.list_contexts ();
+ 
+    for ( int i = 0; i < ctxs.size (); i++ )
+    {
+      saga::context ctx = ctxs[i];
+ 
+      // set the file to be executable
+      f.permission_allow (ctx.get_attribute ("UserID"),
+                          saga::permission::Exec);
+    }
+ 
+    // the file should now be usable for job submission for all
+    // contexts in the default session.  Often, however, only 
+    // one context will succeed in setting the permission: the 
+    // one which was used for creation in the first place.  In 
+    // that case, job submission is most likely to succeed with 
+    // that context, too.
+  }
+ \end{mycode}
+ 

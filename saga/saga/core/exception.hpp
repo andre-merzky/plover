@@ -8,14 +8,21 @@
 
 namespace saga
 {
-  // FIXME: inherit std:: exception
+  namespace impl
+  {
+    class exception;
+  }
+
   class exception : public std::exception
   {
+    friend class saga::impl::exception;
+
     private:
       saga::util::shared_ptr <saga::impl::exception> impl_;
 
     protected:
       exception (std::string msg);
+     ~exception (void) throw ();
 
     public:
       std::string get_msg (void) const;

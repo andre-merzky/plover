@@ -1,0 +1,1264 @@
+ 
+  The ability to query grid entities about state is
+  requested in several SAGA use cases.  Also, the SAGA task
+  model introduces numerous new use cases for state monitoring.
+ 
+  This package definition approaches the problem space of
+  monitoring to unify the various usage patterns (see details
+  and examples), and to transparently incorporate SAGA task
+  monitoring.  The paradigm is realized by introducing
+  monitorable SAGA objects, which expose \I{metrics} to
+  the application, representing values to be monitored.
+  Metrics thus represent monitorable entities.
+ 
+  A closely related topic is Computational Steering, which is
+  (for our purposes) not seen independently from Monitoring: in
+  the SAGA approach, the steering mechanisms extend the
+  monitoring mechanisms with the ability to push values
+  back to the monitored entity, i.e. to introduce writable
+  metrics (see |fire()|).  Thus, metrics can also
+  represent steerable entities.
+ 
+ 
+ \subsubsection{Specification}
+ 
+ \begin{myspec}
+  package saga.monitoring
+  {
+    // callbacks are used for asynchronous notification of
+    // metric changes (events)
+    interface callback
+    {
+      cb               (in  monitorable     mt,
+                        in  metric          metric,
+                        in  context         ctx,
+                        out bool            keep);
+    }
+ 
+ 
+    // a metric represents an entity / value to be monitored.
+    class metric : implements   saga::object
+                   implements   saga::attributes
+                // from object  saga::error_handler
+    {
+      CONSTRUCTOR        (in  string          name,
+                          in  string          desc,
+                          in  string          mode,
+                          in  string          unit,
+                          in  string          type,
+                          in  string          value,
+                          out metric          obj);
+      DESTRUCTOR         (in  metric          obj);
+ 
+      // callback handling
+      add_callback       (in  callback        cb,
+                          out int             cookie);
+      remove_callback    (in  int             cookie);
+ 
+      // actively signal an event
+      fire               (void);
+ 
+ 
+      // Attributes:
+      //   name:  Name
+      //   desc:  name of the metric
+      //   mode:  ReadOnly
+      //   type:  String
+      //   value: -
+      //   notes: naming conventions as described below apply
+      //
+      //   name:  Description
+      //   desc:  description of the metric
+      //   mode:  ReadOnly
+      //   type:  String
+      //
+      //   name:  Mode
+      //   desc:  access mode of the metric
+      //   mode:  ReadOnly
+      //   type:  String
+      //   value: 'ReadOnly', 'ReadWrite' or 'Final'
+      //
+      //   name:  Unit
+      //   desc:  unit of the metric
+      //   mode:  ReadOnly
+      //   type:  String
+      //
+      //   name:  Type
+      //   desc:  value type of the metric
+      //   mode:  ReadOnly
+      //   type:  String
+      //   value: 'String', 'Int', 'Enum', 'Float', 'Bool', 
+      //          'Time' or 'Trigger'
+      //
+      //   name:  Value
+      //   desc:  value of the metric
+      //   mode:  depending on the mode attribute above
+      //   type:  String
+      //   value: -
+      //   notes: see description of value formatting below
+    }
+ 
+ 
+    // SAGA objects which provide metrics and can thus be
+    // monitored implement the monitorable interface
+    interface monitorable
+    {
+      // introspection
+      list_metrics       (out array<string>   names);
+      get_metric         (in  string          name,
+                          out metric          metric);
+ 
+      // callback handling
+      add_callback       (in  string          name,
+                          in  callback        cb,
+                          out int             cookie);
+      remove_callback    (in  int             cookie);
+    }
+ 
+ 
+    // SAGA objects which can be steered by changing their
+    // metrics implement the steerable interface
+    interface steerable : implements monitorable
+    {
+      // metric handling
+      add_metric         (in  metric          metric,
+                          out bool            success);
+      remove_metric      (in  string          name);
+      fire_metric        (in  string          name);
+    }
+  }
+ \end{myspec}
+ 
+ 
+ \subsubsection{Specification Details}
+ 
+  \upp
+  \subsubsection*{Interface \T{callback}}
+ 
+    \upp
+    The callback interface is supposed to be implemented by
+    custom, application level classes.  Instances of these
+    classes can then be passed to monitorable SAGA
+    objects, in order to have their |cb| method invoked on changes
+    of metrics upon these monitorables.
+ 
+    The callback classes can maintain state between
+    initialization and successive invocations.  The
+    implementation MUST ensure that a callback is only called
+    once at a time, so that no locking is necessary for the end
+    user.
+
+    \XAdd[3]{But also, the callback may remove conditions to be
+    called again, i.e. shut down the metric, read more than one
+    message, etc.  Implementations MUST be able to handle this.}
+ 
+    If an invoked callback returns true, it stays registered and
+    can be invoked again on the next metric change.  If it
+    returns false, it is not invoked again.
+ 
+    A callback can throw an \T{AuthorizationFailed}
+    exception if the passed context (i.e. the remote party) is
+    not deemed trustworthy.  In this case, the callback is not
+    removed.  The implementation MUST catch this
+    exception, and interpret it as a decline of the operation
+    which caused the callback.
+ 
+    For example, if a |saga::stream_server| instance invokes a
+    callback on a ClientConnect metric, and the |cb| method raises
+    an \T{AuthorizationFailed} exception, the created
+    client stream must be closed.
+ 
+    As another example, if a job instance invokes a callback on
+    a MemoryUsage metric, and the |cb| method raises an
+    \T{AuthorizationFailed} exception, the previous value
+    of the memory usage metric MUST be restored, and the
+    declined value MUST NOT influence the memory high water
+    mark.  Essentially, the exception indicates that the new
+    metric value was not trustworthy.
+ 
+    Callbacks are passed (e.g. added to a metric) by reference.
+    If a callback instance is used with multiple
+    metrics, the application must use appropriate locking mechanisms.
+ 
+ 
+ \begin{myspec}
+    - cb
+      Purpose:  asynchronous handler for metric changes
+      Format:   cb                 (in  monitorable mt,
+                                    in  metric      metric,
+                                    in  context     ctx,
+                                    out bool        keep);
+      Inputs:   mt:                 the saga monitorable object
+                                    which causes the callback
+                                    invocation
+                metric:             the metric causing the
+                                    callback invocation
+                ctx:                the context associated with
+                                    the callback causing entity
+      InOuts:   -
+      Outputs:  keep:               indicates if callback stays
+                                    registered
+      PreCond:  - the passed context is authenticated.
+      PostCond: - if 'keep' is returned as true, the callback
+                  stays registered, and will be invoked again on
+                  the next metric update.
+                - if 'keep' is returned as false, the callback
+                  gets unregistered, and will not be invoked
+                  again on metric updates, unless it gets
+                  re-added by the user.
+      Perms:    -
+      Throws:   NotImplemented
+                AuthorizationFailed
+      Notes:    - 'metric' is the metric the callback is
+                  invoked on - that means that this metric
+                  recently changed.  Note that this change is
+                  semantically defined by the metric, e.g. the
+                  string of the 'value' attribute of the metric
+                  might have the same value in two subsequent
+                  invocations of the callback.
+                - 'mt' is the monitorable object the metric 
+                  'metric' belongs to.
+                - the context 'ctx' is the context which allows
+                  the callback to authorize the metric change.
+                  If the cb method decides not to authorize this
+                  particular invocation, it MUST throw an
+                  'AuthorizationFailed' exception.
+                - if no context is available, a context of type 
+                  'Unknown' is passed, with no attributes
+                  attached.  Note that this can also indicate
+                  that a non-authenticated party connected.
+                - a callback can be added to a metric multiple
+                  times.  A 'false' return value (no keep) will 
+                  remove only one registration, and keep the 
+                  others.
+                - a callback can be added to multiple metrics at
+                  the same time.  A false return (no keep) will
+                  only remove the registration on the metric the
+                  callback was invoked on.  
+                - the application must ensure appropriate locking
+                  of callback instances which are used with multiple
+                  metrics.
+                - a callback added to exactly one metric exactly
+                  once is guaranteed to be active at most once at
+                  any given time.  That implies that the SAGA
+                  implementation MUST queue pending requests
+                  until a callback invocation is finished.
+ \end{myspec}
+ 
+  \up
+  \subsubsection*{Class \T{metric}}
+ 
+    The fundamental object introduced in this package is a
+    |metric|.  A metric represents an observable item, which can be
+    readable, or read/writable.  The availability of a readable
+    observable corresponds to monitoring; the availability of a
+    writable observable corresponds to steering.  A metric is
+    |Final| when its values cannot change anymore,  (i.e.
+    progress is |100%|, job state is |Done| etc).
+ 
+    The approach is severely limited by the use of SAGA
+    attributes for the description of a metric, as these are
+    only defined in terms of string-typed keys and values.  An
+    extension of the attribute definition by typed values will
+    greatly improve the usability of this package, but will also
+    challenge its semantic simplicity.
+ 
+    The metric MUST provide access to following attributes
+    (examples given):
+ 
+ \begin{myspectxt}
+    name:      short human readable name.
+                 - ex:  file.copy.progress
+ 
+    desc:      extensive human readable description
+                 - ex:  "This metric gives the state of
+                         an ongoing file transfer as
+                         percent completed."
+ 
+    mode:      "ReadOnly", "ReadWrite" or "Final"
+                 - ex:  "ReadWrite"
+ 
+    unit:      Unit of values
+                 - ex:  "percent (%)"
+                 - ex:  "Unit"
+ 
+    type:      "String", "Int", "Enum", "Float", "Bool", 
+               "Time", "Trigger"
+                 - ex:   "Float"
+ 
+    value:     value of the metric
+                 - ex:   "20.5"
+ \end{myspectxt}
+ 
+    The name of the metric must be unique, as it is used in
+    several methods to identify the metric of interest.  The use
+    of a dot-delimited name space for metrics as in the example
+    above is encouraged, as it greatly benefits the interactive
+    handling of metrics.  The first element of the name space
+    SHOULD be the SAGA class the metric belongs to, the second
+    element SHOULD be the operation the metric describes (if
+    applicable, otherwise leave out), the third element SHOULD
+    indicate the description of the metric (e.g.  'state' or
+    'progress' or 'temperature').  Illustrative examples for
+    metric names are:
+ 
+    \up
+    \begin{tabbing}
+     XXXX \= \kill
+          \> | file.copy.progress|\\
+          \> | file.move.progress|\\
+          \> | file.size|\\
+          \> | job.state|\\
+          \> | drive.temperature  // a custom observable|\\
+    \end{tabbing}
+    \up\up
+ 
+    The name, description, type and mode attributes are
+    |ReadOnly| -- so only unit and value can be changed by the
+    application.  All attributes are initialized in the metric
+    constructor.  The |mode|, |unit| and |value| attributes can
+    be changed internally, i.e. by the SAGA implementation or
+    lower layers.  Such a change does cause the metric to
+    \I{fire}.  For example, a metric fires if its |mode| changes
+    from |ReadWrite| to |Final|.
+ 
+    The |name| attribute MUST be interpreted case insensitive:
+    An implementation MAY change that attribute to
+    all-lowercase on metric creation.
+ 
+    If |fire()| is called on a metric, it returns immediately,
+    but any callbacks registered on that metric are not invoked
+    immediately.  Instead, the remote entity which is
+    represented by the metric gets invoked first, and only if it
+    acknowledges the changes, the callbacks are invoked.  A fire
+    can thus fail in the sense that the remote entity declines
+    the changes.  It is good practice to have at least one
+    callback registered on the metric before calling |fire()|,
+    in order to confirm the operation.
+ 
+    The metric |type|s are the same as defined for attributes,
+    and the metric |value|s are to be formatted as described for
+    the respective attribute types. The only exception
+    is a metric of type \T{Trigger} which has no value at all --
+    an attempt to access the value of that metric MUST result in
+    a \T{DoesNotExist} exception.
+ 
+ 
+    \subsubsection*{Metric definitions in the SAGA
+    specification}
+ 
+    The SAGA specification defines a number of metrics which
+    MUST or CAN be supported, for various SAGA objects.  An
+    example of such a definition is (from the
+    |saga::stream| object):
+ 
+ \newpage
+ 
+ \begin{myspectxt}
+        class stream ...
+        {
+          ...
+ 
+          // Metrics:
+          //   name:  stream.read
+          //   desc:  fires if a stream gets readable
+          //   mode:  ReadOnly
+          //   unit:  1
+          //   type:  Trigger
+          //   value: 1
+          //
+          //   ...
+        }
+ \end{myspectxt}
+ 
+    These specifications are NORMATIVE, even if described as
+    comments in the SIDL specification!  The specified metrics
+    MUST be supported by an implementation, unless noted
+    otherwise in the mode description, as:
+ 
+ \begin{myspectxt}
+          //   mode:  ReadOnly, optional
+          //   mode:  ReadWrite, optional
+ \end{myspectxt}
+ 
+    If a metric MUST be supported, but the SAGA implementation
+    cannot provide that metric, any operation on that metric
+    MUST throw a |NotImplemented| exception, and the resulting
+    error message MUST state \T{"Metric <name> not not available
+    in this implementation"}.
+ 
+    Implementations MAY add custom metrics, which SHOULD be
+    documented similarly.  However, metrics CAN also be added at
+    runtime -- that is, for example, required for computational
+    steering of custom applications.
+ 
+    
+    \subsubsection*{Metric Lifetime}
+ 
+    A metric can \I{appear} and \I{go away} during the lifetime
+    of an object (again, computational steering provides the
+    obvious use case for this).  Any operation on a metric which
+    got removed (\I{dead metric}) MUST throw an |IncorrectState|
+    exception, with the exceptions described below.
+    Existing class instances of a dead metric MUST stay valid,
+    and expose the same lifetime as any other \I{live
+    metric}.  Attributes of a dead metric MUST be readable for
+    the lifetime of the object.  The |mode| attribute of such an
+    instance MUST be changed to |Final| by the implementation.
+    Callbacks cannot be registered to a |Final| metric,
+    but can be unregistered.  No other changes are allowed on a
+    |Final| metric, neither by the user, nor by the SAGA
+    implementation.  
+ 
+    \subsubsection*{Client Side Authorization}
+ 
+    A metric can get fired from a remote party - in fact, that
+    will be the default situation for both monitoring and
+    steering.  In order to allow for client side authorization,
+    callbacks get a context as second parameter.  That
+    context contains information to be used to authorize the
+    remote party which caused the metric to fire, and the
+    callback to be invoked.  Thus, authorization is only
+    available via the callback mechanism.  The context
+    information passed to the callback are assumed to be
+    authenticated by the implementation.  If no context
+    information is available, a context of type
+    |'Unknown'| is passed, which has no attributes attached.
+ 
+    A callback can evaluate the passed context, and throw an
+    \T{AuthorizationFailed} exception if the context
+    (i.e. the remote party) is not deemed trustworthy.  See
+    callback description above.
+ 
+ 
+ \begin{myspec}
+ 
+    - CONSTRUCTOR
+      Purpose:  create the object
+      Format:   CONSTRUCTOR        (in  string   name
+                                    in  string   desc,
+                                    in  string   mode,
+                                    in  string   unit,
+                                    in  string   type,
+                                    in  string   value,
+                                    out metric   obj);
+      Inputs:   name:               name of the metric
+                desc:               description of the metric
+                mode:               mode of the metric
+                unit:               unit of the metric value
+                type:               type of the metric
+                value:              initial value of the metric
+      InOuts:   -
+      Outputs:  obj:                the newly created object
+      PreCond:  -
+      PostCond: - callbacks can be registered on the metric.
+      Perms:    -
+      Throws:   NotImplemented
+                BadParameter
+                Timeout
+                NoSuccess
+      Notes:    - a metric is not attached to a session, but
+                  can be used in different sessions.
+                - the string arguments given are used to
+                  initialize the attributes of the metric.
+                - the constructor ensures that metrics are
+                  always initialized completely.  All changes to
+                  attributes later will always result in an
+                  equally valid metric.
+                - incorrectly formatted 'value' parameter, 
+                  invalid 'mode' and 'type' parameter, and empty
+                  required parameter (all but 'unit') will cause
+                  a 'BadParameter' exception.
+                - a 'Timeout' or 'NoSuccess' exception indicates
+                  that the backend could not create that specific
+                  metric.
+ 
+ 
+    - DESTRUCTOR
+      Purpose:  destroy the object
+      Format:   DESTRUCTOR         (in  metric obj)
+      Inputs:   obj:                the object to destroy
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - all callbacks registered on the metric are
+                  unregistered.
+      Perms:    -
+      Throws:   -
+      Notes:    - if a callback is active at the time of
+                  destruction, the destructor MUST block until
+                  that callback returns.  The callback is not
+                  activated anew during or after that block.
+ 
+ 
+    // manage callbacks on the metric
+    - add_callback
+      Purpose:  add asynchronous notifier callback to watch
+                metric changes
+      Format:   add_callback       (in  callback cb,
+                                    out int      cookie);
+      Inputs:   cb:                 callback class instance
+      InOuts:   -
+      Outputs:  cookie:             handle for this callback,
+                                    to be used for removal
+      PreCond:  - the metric is not 'Final'.
+      PostCond: - the callback is invoked on metric changes.
+      Perms:    Read
+      Throws:   NotImplemented
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - 'IncorrectState' is thrown if the metric is 
+                  'Final'.
+                - the 'callback' method on cb will be invoked on
+                  any change of the metric (not only when its
+                  value changes)
+                - if the 'callback' method returns true, the
+                  callback is kept registered; if it returns
+                  false, the callback is called, and is
+                  un-registered after completion.  If the
+                  callback throws an exception, it stays
+                  registered.
+                - the cb is passed by reference.
+                - the returned cookie uniquely identifies the
+                  callback, and can be used to remove it.
+                - A 'Timeout' or 'NoSuccess' exception is thrown
+                  if the implementation cannot invoke the 
+                  callback on metric changes.
+                - a backend MAY limit the ability to add
+                  callbacks - the method may hence cause an 
+                  'AuthenticationFailed', 'AuthorizationFailed'
+                  or 'PermissionDenied' exception to be thrown.
+                
+ 
+    - remove_callback
+      Purpose:  remove a callback from a metric
+      Format:   remove_callback    (in  int      cookie);
+      Inputs:   cookie:             handle identifying the cb to
+                                    be removed
+      InOuts:   -
+      Outputs:  -
+      PreCond:  - the callback identified by 'cookie' is
+                  registered for that metric.
+      PostCond: - the callback identified by 'cookie' is not
+                  active, nor invoked ever again.
+      Perms:    Read
+      Throws:   NotImplemented
+                BadParameter
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - if a callback is active at the time of
+                  removal, the call MUST block until
+                  that callback returns.  The callback is not
+                  activated anew during or after that block.
+                - if the callback was removed earlier, or
+                  was unregistered by returning false, this call
+                  does nothing.
+                - the removal only affects the cb identified
+                  by 'cookie', even if the same callback was
+                  registered multiple times.
+                - if the cookie was not created by adding a
+                  callback to this object instance, a
+                  'BadParameter' is thrown.
+                - a 'Timeout' or 'NoSuccess' exception is thrown 
+                  if the backend cannot guarantee that the 
+                  callback gets successfully removed.
+                - note that the backend MUST allow the removal of
+                  the callback, if it did allow its addition -
+                  hence, no authentication, authorization or
+                  permission faults are tom be expected.
+ 
+ 
+    - fire
+      Purpose:  push a new metric value to the backend
+      Format:   fire               (void);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  -
+      PreCond:  - the metric is not 'Final'.
+                - the metric is 'ReadWrite'
+      PostCond: - callbacks registered on the metric are
+                  invoked.
+      Perms:    Write
+      Throws:   NotImplemented
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - 'IncorrectState' is thrown if the metric is 
+                  'Final'.
+                - 'PermissionDenied' is thrown if the metric is 
+                  not 'ReadWrite' -- That also holds for a once
+                  writable metric which was flagged 'Final'.
+                  To catch race conditions on this exceptions,
+                  the application should try/catch the fire().
+                - it is not necessary to change the value of a
+                  metric in order to fire it.
+                - 'set_attribute ("value", "...") on a metric
+                  does NOT imply a fire.  Hence the value can be
+                  changed multiple times, but unless fire() is
+                  explicitly called, no consumer will notice.
+                - if the application invoking fire() has
+                  callbacks registered on the metric, these 
+                  callbacks are invoked.
+                - 'AuthenticationFailed', 'AuthorizationFailed' 
+                  or 'PermissionDenied' may get thrown if the
+                  current session is not allowed to fire this 
+                  metric.
+                - a 'Timeout' or 'NoSuccess' exception signals 
+                  that the implementation could not communicate 
+                  the new metric state to the backend.
+ \end{myspec}
+ 
+  \subsubsection*{Interface \T{monitorable}}
+ 
+    The monitorable interface is implemented by those SAGA
+    objects which can be monitored, i.e. which have one or more
+    associated metrics.  The interface allows introspection of
+    these metrics, and allows to add callbacks to these metrics
+    which get called if these metrics change.
+ 
+    Several methods of this interface reflect similar methods on
+    the metric class -- the additional string argument |name|
+    identifies the metric these methods act upon.  The semantics
+    of these calls are identical to the specification above.
+ 
+ 
+ \begin{myspec}
+    // introspection
+    - list_metrics
+      Purpose:  list all metrics associated with the object
+      Format:   list_metrics       (out array<string>   names);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  names:              array of names identifying
+                                    the metrics associated with
+                                    the object instance
+      PreCond:  -
+      PostCond: -
+      Perms:    Query
+      Throws:   NotImplemented
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - several SAGA objects are required to expose
+                  certain metrics (e.g. 'task.state').  However,
+                  in general that assumption cannot be made, as
+                  implementations might be unable to provide
+                  metrics.  In particular, listed metrics might
+                  actually be unavailable.
+                - no order is implied on the returned array
+                - the returned array is guaranteed to have no
+                  double entries (names are unique)
+                - an 'AuthenticationFailed', 
+                  'AuthorizationFailed' or 'PermissionDenied'
+                  exception indicates that the current session
+                  is not allowed to list the available metrics.
+                - a 'Timeout' or 'NoSuccess' exception indicates
+                  that the backend was not able to list the
+                  available metrics.
+ 
+ 
+    - get_metric
+      Purpose:  returns a metric instance, identified by name
+      Format:   get_metric         (in  string  name,
+                                    out metric  metric);
+      Inputs:   name:               name of the metric to be
+                                    returned
+      InOuts:   -
+      Outputs:  metric:             metric instance identified 
+                                    by name
+      PreCond:  -
+      PostCond: -
+      Perms:    Query
+      Throws:   NotImplemented
+                DoesNotExist
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - multiple calls of this method with the same
+                  value for name return multiple identical
+                  instances (copies) of the metric.
+                - a 'DoesNotExist' exception indicates that the
+                  backend does not know the metric with the
+                  given name.
+                - an 'AuthenticationFailed', 
+                  'AuthorizationFailed' or 'PermissionDenied'
+                  exception indicates that the current session
+                  is not allowed to obtain the named metric.
+                - a 'Timeout' or 'NoSuccess' exception indicates
+                  that the backend was not able to return the
+                  named metric.
+ 
+ 
+    // callback handling
+    - add_callback
+      Purpose:  add a callback to the specified metric
+      Format:   add_callback       (in  string      name,
+                                    in  callback    cb,
+                                    out int         cookie);
+      Inputs:   name:               identifies the metric to 
+                                    which cb
+                                    is to be added
+                cb:                 reference to callback class
+                                    instance to be registered
+      InOuts:   -
+      Outputs:  cookie:             handle for callback removal
+      PreCond:  -
+      PostCond: - the callback is registered on the metric.
+      Perms:    Read on the metric.
+      Throws:   NotImplemented
+                DoesNotExist
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+                NoSuccess
+      Notes:    - notes to the add_callback method of the metric
+                  class apply.
+ 
+ 
+    - remove_callback
+      Purpose:  remove a callback from the specified metric
+      Format:   remove_callback    (in  string  name,
+                                    in  int     cookie);
+      Inputs:   name:               identifies the metric for 
+                                    which cb is to be removed
+                cookie:             identifies the cb to be
+                                    removed
+      InOuts:   -
+      Outputs:  -
+      PreCond:  - the callback was registered on the metric.
+      PostCond: - 
+      Perms:    Read on the metric.
+      Throws:   NotImplemented
+                BadParameter
+                DoesNotExist
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - notes to the remove_callback method of the 
+                  metric class apply
+ \end{myspec}
+ 
+ 
+  \subsubsection*{Interface \T{steerable}}
+ 
+    The steerable interface is implemented by saga objects which
+    can be steered, i.e. which have writable metrics, and which
+    might allow to add new metrics.  Steerable objects
+     also implement the monitorable interface.
+ 
+    The method |add_metric()| allows to implement steerable
+    applications.  In particular, the |saga::self| object is
+    steerable, and allows to add metrics (see description of
+    |saga::self| in the specification of the SAGA job
+    management).
+ 
+ 
+ \begin{myspec}
+    // metric handling
+    - add_metric
+      Purpose:  add a metric instance to the application 
+                instance
+      Format:   add_metric         (in  metric  metric,
+                                    out bool    success);
+      Inputs:   metric:             metric to be added
+      InOuts:   -
+      Outputs:  success:            indicates success
+      PreCond:  -
+      PostCond: - the metric can be accessed from this
+                  application, and possibly from other
+                  applications.
+      Perms:    Write
+      Throws:   NotImplemented
+                AlreadyExists
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - a metric is uniquely identified by its name
+                  attribute - no two metrics with the same name
+                  can be added.
+                - any callbacks already registered on the metric
+                  stay registered (the state of metric is not
+                  changed)
+                - an object being steerable does not guarantee
+                  that a metric can in fact be added -- the
+                  returned boolean indicates if that particular
+                  metric could be added.
+                - an 'AuthenticationFailed', 
+                  'AuthorizationFailed' or 'PermissionDenied'
+                  exception indicates that the current session
+                  is not allowed to add metrics to the 
+                  steerable.
+                - a 'Timeout' or 'NoSuccess' exception indicates
+                  that the backend was not able to add the 
+                  metric.
+                - if a metric with the same name is already
+                  known for the object, an 'AlreadyExists'
+                  exception is thrown.
+                - if the steerable instance does not support the
+                  addition of new metrics, i.e. if only the
+                  default metrics can be steered, an 
+                  'IncorrectState' exception is thrown.
+ 
+ 
+    - remove_metric
+      Purpose:  remove a metric instance
+      Format:   remove_metric      (in  string  name);
+      Inputs:   name:               identifies the metric to be
+                                    removed
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - all callbacks registered on that metric are
+                  unregistered.
+                - the metric is not available anymore.
+      Perms:    Write
+      Throws:   NotImplemented
+                DoesNotExist
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - only previously added metrics can be removed;
+                  default metrics (saga defined or implementation
+                  specific) cannot be removed; attempts to do so 
+                  raise a BadParameter exception.
+                - an 'AuthenticationFailed', 
+                  'AuthorizationFailed' or 'PermissionDenied'
+                  exception indicates that the current session
+                  is not allowed to remove the metrics from the 
+                  steerable.
+                - a 'Timeout' or 'NoSuccess' exception indicates
+                  that the backend was not able to remove the 
+                  metric.
+                - if a metric with that name is not known for
+                  the object, a 'DoesNotExist' exception is 
+                  thrown.
+                - if a steerable instance does not support the
+                  removal of some metric, e.g. if a metric
+                  needs to be always present, an 
+                  'IncorrectState' exception is thrown.  
+                  For example, the 'state' metric on a steerable
+                  job cannot be removed.
+ 
+ 
+    - fire_metric
+      Purpose:  push a new metric value to the backend
+      Format:   fire_metric        (int  string  name);
+      Inputs:   name:               identifies the metric to be 
+                                    fired
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: -
+      Perms:    Write
+      Throws:   NotImplemented
+                DoesNotExist
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - notes to the fire method of the metric
+                  class apply
+                - fire can be called for metrics which have been
+                  added with add_metric(), and for predefined
+                  metrics
+                - an 'AuthenticationFailed', 
+                  'AuthorizationFailed' or 'PermissionDenied'
+                  exception indicates that the current session
+                  is not allowed to fire the metric.
+                - a 'Timeout' or 'NoSuccess' exception indicates
+                  that the backend was not able to fire the 
+                  metric.
+                - if a metric with that name is not known for 
+                  the object, a 'DoesNotExist' exception 
+                  is thrown.
+                - an attempt to fire a metric which is
+                  'ReadOnly' results in an 'IncorrectState' 
+                  exception.
+                - an attempt to fire a 'Final' metric results in
+                  an 'IncorrectState' exception.
+ \end{myspec}
+ 
+ 
+ \subsubsection{Examples}
+ 
+ \begin{mycode}
+  callback example: trace all job state changes:
+  -----------------------------------------------
+ 
+    // c++ example
+    // callback definition
+    class trace_cb : public saga::callback
+    {
+      public:
+        bool cb (saga::monitorable mt, 
+                 saga::metric      m, 
+                 saga::context     c)
+        {
+          std::cout << "metric " << m.get_attribute ("name")
+                    << " fired." << std::endl;
+          return true; // stay registered
+        }
+    }
+ 
+    // the application
+    int main ()
+    {
+      ...
+ 
+      // if the callback defined above is added to all known
+      // metrics of all saga objects, a continuous trace of state
+      // changes of these saga objects will be written to stdout
+      trace_cb cb;
+ 
+      saga::job j = ...
+ 
+      j.add_callback ("state", cb);
+ 
+      ...
+    }
+ 
+ 
+  monitoring example: monitor a write task
+  ----------------------------------------
+ 
+    // c++ example for task state monitoring
+    class write_metric_cb : public saga::callback
+    {
+      public:
+        bool cb (saga::monitorable mt, 
+                 saga::metric      m, 
+                 saga::context     c)
+        {
+          saga::task t = saga::task (mt);
+ 
+          std::cout << "bytes written: "
+                    << m.get_attribute ("value")
+                    << std::endl;
+          std::cout << "task state:   "
+                    << t.get_state ()
+                    << std::endl;
+ 
+          return true; // keep callback registered
+        }
+    };
+ 
+    int main (int argc, char** argv)
+    {
+      ssize_t      len = 0;
+      saga::buffer buf ("Hello SAGA\n");
+      saga::url    url (argv[1]);
+ 
+      saga::file   f (url);
+      saga::task   t = f.write <saga::task::Async> (buf, &len);
+ 
+      // assume that a file write task has a 'progress' metric
+      // indicating the number of bytes already written.  In
+      // general, the list of metric names has to be searched
+      // for an interesting metric, unless it is a default
+      // metric as specified in the SAGA spec.
+ 
+      // create and add the callback instance
+      write_metric_callback cb;
+      t.add_callback ("file.write.progress", cb);
+ 
+      // wait until task is done, and give cb chance to get
+      // called a couple of times
+      t.wait ();
+    }
+ 
+ 
+  steering example: steer a remote job
+  ------------------------------------
+ 
+    // c++ example
+    class observer_cb : public saga::metric::callback
+    {
+      public:
+        bool cb (saga::monitorable mt, 
+                 saga::metric      m, 
+                 saga::context     c)
+        {
+           std::cout << "the new value is"
+                     << atoi ( m.get_attribute ("value") )
+                     << std::endl;
+ 
+           return true; // keep callback registered
+        }
+    };
+ 
+    // the steering application
+    int main (int argc, char** argv)
+    {
+      saga::job_service js;
+ 
+      saga::job j = js.run ("remote.host.net",
+                            "my_remote_application");
+ 
+      // Assume that job has a 'param_1' metric representing
+      // an integer parameter for the remote application.
+      // In general, one has to list the metrics available on
+      // job, with list_metric, and search for an interesting
+      // metric.  However, we assume here that we know that
+      // metric exists.  So we get that metric, and add an 
+      // observer callback to it - that causes the asynchronous 
+      // printout of any changes to the value of that metric.
+ 
+      // then we get the metric for active steering
+      saga::metric m = j.get_metric ("param_1");
+ 
+      observer_cb cb;
+      m.add_callback (cb);
+ 
+      for ( int i = 0; i < 10; i++ )
+      {
+        // if param_1 is ReadOnly, set_value() would throw
+        // 'ReadOnly' - it would not be usable for
+        // steering then.
+        m.set_attribute ("value", std::string (i));
+ 
+        // push the pending change out to the receiver
+        m.fire ();
+ 
+        // callback should get called NOW + 2*latency
+        // That means fire REQUESTS the value change, but only
+        // the remote job can CHANGE the value - that change
+        // needs then reporting back to us.
+ 
+        // give steered application some time to react
+        sleep (1);
+      }
+    }
+ 
+ 
+ 
+  steering example: BE a steerable job
+  ------------------------------------
+ 
+    // c++ example
+    //
+    // the example shows a job which
+    //  - creates a metric to expose a Float steerable
+    //    parameter
+    //  - on each change of that parameter computes a
+    //    new isosurface
+    //
+    // callback - on any change of the metric value, e.g. due to
+    // steering from a remote GUI application, a new iso surface
+    // is computed
+    class my_cb : public saga::callback
+    {
+      public:
+        // the callback gets called on any steering events, i.e.
+        // if some other application steers 'me'.
+        bool cb (saga::monitorable mt, 
+                 saga::metric      m, 
+                 saga::context     c)
+        {
+          // get the new iso-value
+          float iso = atof (m.get_attribute ("value"));
+ 
+          // compute an isosurface with that iso-value
+          compute_iso (iso);
+ 
+          // keep this callback alive, and get called again on
+          // the next metric event.
+           return true;
+        }
+     }
+ 
+    int main ()
+    {
+      // create a metric for the iso-value of an isosurfacer
+      saga::metric m ("application.isosurfacer.isovalue",
+                      "iso-value of the isosurfacer",
+                      "ReadWrite",   // is steerable
+                      "",            // no unit
+                      "Float",       // data type
+                      "1.0");        // initial value
+ 
+      // add the callback which reacts on changes of the
+      // metric's value (returned cookie is ignored)
+      my_cb cb;
+      m.add_callback (cb);
+ 
+      // get job handle for myself
+      saga::self self;
+ 
+      // add metric to myself
+      self.add_metric (m);
+ 
+      /*
+      // the callback could also have been added with:
+      self.add_callback ("application.isosurfacer.isovalue", cb);
+      */
+ 
+      // now others can 'see' the metric, e.g. via
+      // job.list_metrics ();
+ 
+      // compute isosurfaces for the next 10 minutes -
+      // the real work is done in the callback, on incoming
+      // requests (i.e. steering events).
+      sleep (600);
+ 
+      // on object (self) destruction, metrics and callback
+      // objects are destroyed as well
+      return (0);
+    }
+ 
+ 
+ 
+  monitoring example: callback for stream connects
+  ------------------------------------------------
+ 
+    // c++ example
+    //
+    // callback class which accepts an incoming client
+    // connection, and then un-registers itself.  So, it
+    // accepts exactly one client, and needs to be re-registered
+    // to accept another client.
+    class my_cb : public saga::callback
+    {
+      private:
+        // we keep a stream server and a single client stream
+        saga::stream_server ss_;
+        saga::stream        s_;
+ 
+ 
+      public:
+        // constructor initializes these (note that the
+        // client stream should not be connected at this
+        // point)
+        my_cb (saga::stream_server ss,
+               saga::stream        s )
+        {
+          ss_ = ss;
+          s_  = s;
+        }
+ 
+ 
+        // the callback gets called on any incoming client
+        // connection
+        bool cb (saga::monitorable mt, 
+                 saga::metric      m, 
+                 saga::context     c)
+        {
+          // the stream server got an event triggered, and
+          // should be able to create a client socket now.
+          s_ = ss_.wait ();
+ 
+          if ( s_.state == saga::stream::Open )
+          {
+            // have a client stream, we are done
+            // don't call this cb again!
+            return (true);
+          }
+ 
+          // no valid client stream obtained: keep this
+          // callback alive, and get called again on the
+          // next event on ss_
+          return true;
+        }
+     }
+ 
+     int main ()
+     {
+       // create a stream server, and an un-connected
+       // stream
+       saga::stream_server ss;
+       saga::stream        s;
+ 
+       // give both to our callback class, and register that
+       // callback with the 'client_connect' metric of the
+       // server.  That causes the callback to be invoked on
+       // every change of that metric, i.e. on every event
+       // that changes that metric, i.e. on every client
+       // connect attempt.
+       my_cb cb (ss, s);
+       ss.add_callback ("client_connect", cb);
+ 
+       // now we serve incoming clients forever
+       while ( true )
+       {
+         // check if a new client is connected
+         // the stream state would then be Open
+         if ( s.state == saga::stream::Open )
+         {
+           // a client got connected!
+           // handle open socket
+           saga::buffer buf ("You say hello, "
+                             "I say good bye!\r\n", 33);
+           s.write (buf);
+ 
+           // and close stream
+           s.close ();
+ 
+           // the stream is not Open anymore.  We re-add the
+           // callback, and hence wait for the next client
+           // to connect.
+           ss.add_callback ("client_connect", cb);
+         }
+         else
+         {
+           // no client yet, idle, or do something useful
+           sleep (1);
+         }
+       }
+ 
+       // we should never get here
+       return (-1);
+     }
+ \end{mycode}
+ 
+ 
+ % - other useful attributes might be:
+ %
+ %   - update-mode (discreet, cont, static)
+ %     This attribute would describe how often an attached
+ %     callback gets activated.
+ %     discreet: on changes of the metric value
+ %               example: job state (value is always defined, but
+ %               changes infrequently)
+ %     cont:     as fast as possible
+ %               example: time (value always defined, and changes
+ %               continously)
+ %     static:   once
+ %               example: complete (value changes once)
+ %
+ %   - value-range (1-10, [1,2,3], ...)
+ %
+ %     That attribute obviously depends on type and unit of
+ %     the metric, and is therefore not useful unless types
+ %     attribute values or typed metric values are introduced in
+ %     SAGA.
+ %
+ %     In particular computational steering would benefit from
+ %     value ranges, as that allows client side range checks, and
+ %     the creation of sensible client side user interfaces.
+ 

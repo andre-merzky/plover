@@ -1,0 +1,25 @@
+ \label{sec:func}
+ 
+  The Functional SAGA API packages define the functional SAGA
+  API scope, as motivated in the Introduction and
+  in~\cite{saga-req}.  
+ 
+  \subsection*{General Properties of Functional API Classes and
+  Instances}
+  
+  The interfaces, classes and methods defined in this part of
+  the specification are, in general, representing explicit
+  entities and actions of some backend system.  As such, all
+  operations on these entities are, in general, subject to
+  authentication and authorization.  In order
+  to simplify the specification, the following exceptions are
+  not separately motivated: |AuthenticationFailed|,
+  \T{Authorization\-Failed}, |PermissionDenied|, |Timeout|,
+  |NoSuccess|.  These exceptions have then exactly the semantics
+  as indicated in their description in Section~\ref{ssec:error}.
+  Additionally, the conventions for the exceptions
+  |NotImplemented| and |IncorrectURL| apply as described in
+  Section~\ref{sec:nonfunc}.
+ 
+  \newpage
+ 

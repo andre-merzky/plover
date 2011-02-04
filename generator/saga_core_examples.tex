@@ -1,0 +1,338 @@
+ 
+  This appendix shows a couple of SAGA examples in different
+  languages.  As stated in the introduction, these examples are not
+  normative -- language bindings are outside the scope of this
+  document.  This appendix is rather supposed to illustrate how the
+  authors imagine the use of the API in various languages.
+  
+  We hope that the examples illustrate that the API stays SIMPLE in
+  various language incarnations, as was the major design intent for
+  the \B{\_S\_}AGA API.
+ 
+ \begin{mycode}
+ 
+  Example 1 (C++): Object State:
+  ==============================
+  
+    // This example illustrates the expected life 
+    // times of object states.  State is shared in 
+    // these cases, as only shallow copies occur.
+ 
+    int main (void)
+    {
+      { // task scope
+        saga::task t;
+  
+        { // file scope
+          saga::file f;
+  
+          { // session scope
+            saga::session s;
+  
+            { // context scope
+              saga::context c (saga::context::UserPass);
+  
+              s.add_context (c);
+              f (s, saga::url ("file:////tmp/data.bin"));
+              t = f.copy <saga::task::Task> 
+                    (saga::url ("file:////tmp/data.bak"));
+  
+            } // leave context scope
+              // session keeps context state
+  
+          } // leave session scope
+            // file keeps session state
+  
+        } // file scope
+          // task keeps file state
+  
+        t.run ();
+        // task runs, and uses state of file, session, 
+        // and context.
+        t.wait ();
+  
+      } // task scope
+        // task    releases file state
+        // file    releases session state
+        // session releases context state
+  
+      return (0);
+    }
+  
+  
+  +-------------------------------------------------------------+
+  
+  Example 2: Files:
+  =================
+  
+    open a file. if its size is > 10, then read the first 10
+    bytes into a string, print it, end return it.
+  
+    --------------------------------------------------------------
+    Example 2a: C++
+    --------------------------------------------------------------
+    // c++ example
+    void head (const saga::url url)
+    {
+      try {
+        // get type and other info
+        saga::file f (url);
+ 
+        off_t size = f.get_size ();
+ 
+        if ( size > 10 )
+        {
+          char   buf[11];
+ 
+          ssize_t len_out = f.read (saga::buffer (buf));
+ 
+          if ( 10 == len_out )
+          {
+            std::cout << "head: "
+                      << buffer.get_data ()
+                      << std::endl;
+          }
+        }
+      }
+ 
+      catch ( const saga::exception & e )
+      {
+        std::cerr << "Oops! SAGA error: " 
+                  << e.get_message () 
+                  << std::endl;
+      }
+ 
+      return;
+    }
+    --------------------------------------------------------------
+    --------------------------------------------------------------
+    Example 2b: C
+    -------------
+      void head (const SAGA_URL url)
+      {
+        SAGA_File my_file = SAGA_File_create (url);
+  
+        if ( NULL == my_file )
+        {
+          fprintf (stderr, "Could not create SAGA_File "
+                           "for %s: %s\n",
+                   SAGA_URL_get_url (url), 
+                   SAGA_Session_get_error (theSession));
+          return (NULL);
+        }
+  
+        off_t size = SAGA_File_get_size (my_file);
+  
+        if ( size < 0 )
+        {
+          fprintf (stderr, "Could not determine file size "
+                           "for %s: %s\n",
+                   SAGA_URL_get_url (url), 
+                   SAGA_Session_get_error (theSession));
+          return (NULL);
+        }
+        else if ( size >= 10 )
+        {
+          SAGA_buffer b = SAGA_Buffer_create ();
+          size_t buflen;
+  
+          ssize_t ret = SAGA_File_read (my_file, b, 10);
+  
+          if ( ret < 0 )
+          {
+            fprintf (stderr, "Could not read file %s: %s\n",
+                     SAGA_URL_get_url (url), 
+                     SAGA_Session_get_error (theSession));
+          }
+          else if ( ret < 10 )
+          {
+            fprintf (stderr, "head: short read: %d\n", ret);
+          }
+          else
+          {
+            printf ("head: '%s'\n", SAGA_Buffer_get_data (b));
+          }
+        }
+        else
+        {
+          fprintf (stderr, "head: file %s is too short: %d\n", 
+                   file, size);
+        }
+ 
+        return;
+      }
+  
+    --------------------------------------------------------------
+    Example 2c: Java
+    ----------------
+  
+    import org.ogf.saga.URI;
+    import org.ogf.saga.buffer.Buffer;
+    import org.ogf.saga.buffer.BufferFactory;
+    import org.ogf.saga.file.File;
+    import org.ogf.saga.file.FileFactory;
+    import org.ogf.saga.namespace.Flags;
+    import org.ogf.saga.session.Session;
+    
+    public class Example {
+      // open a file. if its size is >= 10, then read the first
+      // 10 bytes into a string, print it, end return it.
+      public String head(Session session, URI uri)
+      {
+        try
+        {
+          File f = FileFactory.createFile(session, uri, Flags.READ);
+          long size = f.getSize();
+ 
+          if (10 <= size) {
+            Buffer    buffer = BufferFactory.createBuffer(10);
+            int       res    = f.read(10, buffer);
+ 
+            if (10 == res) {
+              System.out.println("head: " + buffer);
+            } else {
+              System.err.println("head: read is short! " + res);
+            }
+            return new String(buffer.getData());
+          } else {
+            System.err.println("file is too small: " + size);
+          }
+        } catch (Exception e) {
+          // catch any possible error - see elsewhere for better
+          // examples of error handling in SAGA
+          System.err.println ("Oops! " + e);
+        }
+ 
+        return null;
+      }
+    }
+    --------------------------------------------------------------
+    Example 2d: Perl ('normal' error handling)
+    ------------------------------------------
+  
+      sub head ($)
+      {
+        my $url     = shift;
+        my $my_file = new saga::file (url)
+                 or die ("can't create file for $url: $!\n");
+  
+        my $size    = my_file->get_size ();
+  
+        if ( $size > 10 )
+        {
+          my $buffer = new saga::buffer (10)l
+          my $ret    = my_file->read ($buffer)
+                 or die ("can't read from file $url: $!\n");
+  
+          if ( $ret == 10 )
+          {
+            print "head: ", $buffer->get_data (), "\n";
+          }
+          else
+          {
+            printf STDERR "head: short read: %d\n" ($buffer);
+          }
+        }
+        else
+        {
+          print STDERR "file $url is too short: $size\n";
+        }
+  
+        return;
+      }
+  
+    --------------------------------------------------------------
+    Example 2e: Perl (exceptions)
+    -----------------------------
+      sub head ($)
+      {
+        my $url     = shift;
+  
+        eval 
+        {
+          my $my_file = new saga::file (url);
+          my $size    = my_file->get_size ();
+  
+          if ( $size > 10 )
+          {
+            my $buffer = new saga::buffer (10)l
+            my $ret    = my_file->read ($buffer);
+  
+            if ( $ret == 10 )
+            {
+              print "head: ", $buffer->get_data (), "\n";
+            }
+            else
+            {
+              printf "head: short read: %d \n", length ($buffer);
+            }
+          }
+          else
+          {
+            print "file $url is too short: $size\n";
+          }
+        }
+  
+        if ( $@ =~ /^saga/i )
+        {
+          print "catched saga error: $@\n" if $@;
+        }
+  
+        return;
+      }
+  
+    --------------------------------------------------------------
+    Example 2f: Fortran 90
+    ----------------------
+  
+    C Fortran 90 example
+       SUBROUTINE HEAD(session, url, buffer)
+ 
+       INTEGER      :: session, url, file, size, buflen
+       CHARACTER*10 :: buffer
+       
+       CALL SAGA_FILE_CREATE(session, url, file)
+       CALL SAGA_FILE_GET_SIZE(file, size)
+       
+       IF size .GT. 10 THEN
+ 
+         CALL SAGA_FILE_READ(file, 10, buffer, buflen)
+         
+         IF buflen .EQ. 10 THEN
+           WRITE(5, *) 'head: ', buffer
+         ELSE
+           WRITE(5, *) 'head: short read: ', buflen
+         ENDIF
+       ELSE
+         WRITE(5, *) 'file is too short'
+       ENDIF
+ 
+       END
+  
+    --------------------------------------------------------------
+    Example 2g: Python
+    ------------------
+    # Python example
+    def head (session,url):
+ 
+      try:
+        my_file = saga.file(session,url)
+        size = my_file.get_size()
+  
+        if (size > 10):
+          my_buffer = saga.buffer (10)
+          ret = my_file.read (my_buffer)
+          if (ret == 10):
+            print "head: ", my_buffer.get_data ()
+          else
+            print "head: short read: ", ret
+        else
+          print "head: file is too short: ", size
+ 
+      # catch any possible error - see elsewhere for better
+      # examples of error handling in SAGA
+      except saga.Exception, e:
+        print "Oops! SAGA error: ", e.get_message ()
+ \end{mycode}
+ 
+ 

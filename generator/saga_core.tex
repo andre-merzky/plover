@@ -1,0 +1,115 @@
+
+\newcommand{\sagadocument}{GFD-R-P.90}
+\newcommand{\sagaversion}{1.1}
+\newcommand{\sagabasename}{saga_core}
+\newcommand{\sagaemail}{saga-core-wg@ogf.org}
+
+\input{saga_include}
+
+\sagaverb{\|}
+% \sagafinal
+
+\begin{document}
+
+ \thispagestyle{empty}
+
+ \sagadocument{}\hfill Tom Goodale, Cardiff\\
+ SAGA-CORE-WG   \hfill Shantenu Jha, UCL\footnotemark[1]\\
+           \rightline {Hartmut Kaiser, LSU}\\
+           \rightline {Thilo Kielmann, VU\footnotemark[1]}\\
+           \rightline {Pascal Kleijer, NEC}\\
+           \rightline {Andre Merzky, VU/LSU\footnotemark[1]}\\
+           \rightline {John Shalf, LBNL}\\
+           \rightline {Christopher Smith, Platform}\\[1em]
+           \rightline {January 15, 2008 }\\
+  Version: \sagaversion \hfill {Revised \sagadate}
+
+  \footnotetext[1]{editor}
+
+  \hrulefill\\
+
+  \B{\large A Simple API for Grid Applications (SAGA)}\\
+
+  \U{Status of This Document}
+
+  This document provides information to the grid community,
+  proposing the core components for an extensible
+  Simple API for Grid Applications (SAGA Core API). It is
+  supposed to be used as input to the definition of language
+  specific bindings for this API, and by implementors of these
+  bindings.  Distribution is unlimited.
+
+  In May 2009, a number of errata have been applied to this document.
+  A complete changelog can be found in the appendix.  Most changes
+  should be backward compatible with the original spec (see
+  changelog).\\
+
+
+  \U{Copyright Notice}
+
+  Copyright \copyright~Open Grid Forum (2007-2009).  All Rights
+  Reserved.\\
+
+  \U{Abstract}
+
+   This document specifies the core components for the
+   Simple API for Grid Applications (SAGA Core API), a high
+   level, application-oriented API for grid application
+   development.  The scope of this API is derived from the
+   requirements specified in GFD.71 ("A Requirements Analysis
+   for a Simple API for Grid Applications").  It will in the
+   future be extended by additional API extensions.
+
+  \newpage
+
+  \tableofcontents
+
+  \newpage
+
+%-----------------------------------------------------------------
+% Intro, structure, disclaimer, ...
+%-----------------------------------------------------------------
+                                        
+  \sagasec {Introduction                 }{intro}
+  \sagasec {General Design Considerations}{design}
+
+% \sagansec{SAGA API Specification       }{spec}
+\sagansec{SAGA API Specification -- Look\,\&\,Feel}
+                                          {nonfunctional}
+
+  \sagassec{SAGA Error Handling          }{error}
+  \sagassec{SAGA Base Object             }{object}
+  \sagassec{SAGA URL Class               }{url}
+  \sagassec{SAGA I/O Buffer              }{buffer}
+  \sagassec{SAGA Session Management      }{session}
+  \sagassec{SAGA Context Management      }{context}
+  \sagassec{SAGA Permission Model        }{permission}
+  \sagassec{SAGA Attribute Model         }{attributes}
+  \sagassec{SAGA Monitoring Model        }{monitoring}
+  \sagassec{SAGA Task Model              }{tasks}
+
+  \sagansec{SAGA API Specification -- API Packages}
+                                          {functional}
+ 
+  \sagassec{SAGA Job Management          }{job}
+  \sagassec{SAGA Name Spaces             }{namespaces}
+  \sagassec{SAGA File Management         }{files}
+  \sagassec{SAGA Replica Management      }{logicalfiles}
+  \sagassec{SAGA Streams                 }{stream}
+  \sagassec{SAGA Remote Procedure Call   }{rpc}
+
+  \sagasec {Intellectual Property Issues }{disclaimers}
+
+  \appendix
+
+  \section*{Appendix}
+
+  \sagasec {SAGA Code Examples           }{examples}
+  \sagasec {Changelog                    }{changelog}
+% \sagasec {Known Issues \& Feedback     }{feedback}
+
+  \sagabib {saga_core}
+
+\end{document}
+
+

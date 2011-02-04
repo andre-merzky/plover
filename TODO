@@ -1,9 +1,15 @@
 
+    # vim: set tw=64 nocindent
+
   - keep parts of the instance_data read_only, so that one
     adaptor cannot temper with instance data, and spoil init for
     other adaptors.  Only state related instance data (file
     pointer, job id, etc) should be mutable.  Define those, also
     for advert publishing.
+
+  - different sets of instance data:
+    instance_data, adaptor_instance_data, suite_instance_data
+    (why limit to a adaptor suite?)
 
   - provide adaptor programmers with status check and monitoring
     threads automatically, and take care of thread resource
@@ -16,4 +22,71 @@
     selection on following calls.  That improves performance
     for, for example, the message API, where the same channel
     has to be used anyway
+
+  - have a hook in adaptor which gets called before/after any
+    method call to the adaptor, e.g. to refresh state, caches,
+    etc.  Possibly, also allow for hooks and shared 'instance'
+    data for complete adaptor suites (see ini for aws adaptors)
+    - ???
+
+  - also have hooks in the packages, to do, for example, simple
+    parameter checks, state checks, after-call-postprocessing,  etc.
+
+  - allow for CPI and adaptor classes which do NOT have
+    a session (buffer, context, ...)
+
+  - sometimes, all adaptors which do _not_ throw win.  For
+    example, on service discovery, but also if a session tries
+    to get it's default contexts (set type to any, and call
+    set_defaults())
+
+  - ini thingies
+    simplify, prune functionality
+
+  - Sometimes, SAGA class implementation get used with adaptors.
+    For example, a context may get used by other adaptors in the
+    same suite.  Find a way to make it simple to get that
+    implementation, or to add 'friend'ly methods to the saga
+    class (latter is best if, e.g., "inherited from friend
+    'cpi'" is sufficient).
+
+  - provide means to do adaptor loop detection.  For example,
+    allow to use SAGA for file staging from within the job
+    adaptor, but don't allow that staging to run a job via the
+    same adaptor.
+    - low priority
+
+  - add some utilities, like for wrapping a SAGA file into a 
+    std::iostream
+    - goes together with adaptor writers guide
+    - needs to be documented along with the SPI
+
+  - attributes interface should act like a string map
+    job_description jd;
+    std::map <std::string, std:string> attributes;
+    jd["Executable"] = "/bin/date";
+
+  - empty class ctors should do nothing, and in particular
+    should not do remote ops.  Its braindead that a application
+    class, which has a set of saga objects as mempers, needst to
+    either initialize _all_ of them at creation time, via member
+    initialization, or needs to wait for the default
+    initialization, only to assignt and initialize them later
+    again.  Sure, application can use pointers - but that kind
+    of defeats our whole pimpl idea, doesn't it?  So, we need
+    some mechanism to delay instantiation.  That _may_ go along
+    well with async object creation btw.
+
+    saga_file_factory.create_file <Async> (url);
+
+    saga::file::file f (false);
+    f.init <Async> (url);
+    f.close ();
+
+  - saga-a has predefined names for attributes.  Such names should 
+    also exist for predefined metrics.
+
+  - flags can simply be public const int members of the respective 
+    classes.  We use int's anyway, no need to keep enums around in 
+    the parent namespace then.
 

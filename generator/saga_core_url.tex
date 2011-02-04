@@ -1,0 +1,377 @@
+ 
+ In many places in the SAGA API, URLs are used to reference remote
+ entities.  In order to
+ 
+  \begin{itemize}
+   \item simplify the construction and the parsing of URLs on
+         application level,
+   \item allow for sanity checks within and outside the SAGA
+         implementation,
+   \item simplify and unify the signatures of SAGA calls which 
+         accept URLs,
+  \end{itemize}
+ 
+ a SAGA URL class is used.  This class provides means to set and
+ access the various elements of a URL.  The class parses the URL
+ in conformance to RFC-3986~\cite{rfc-3986}.
+ 
+ In respect to the URL problem (stated in
+ Section~\ref{ssec:urlprob}), the class provides the method
+ |translate (in string scheme)|, which allows to translate a URL
+ from one scheme to another -- with all the limitations
+ mentioned in Section~\ref{ssec:urlprob}.
+
+ \XAdd[6]{Note that resolving relative URLs (or, more specific,
+ relative path components in URLs) is often non-trivial.  In
+ particular, such resolution may need to be deferred until the
+ URL is used, as the resolution will usually depend on the
+ context of usage.  If not otherwise specified in this document,
+ a URL used in some object method will be considered relative to
+ the object's CWD, if that is available, or otherwise to the
+ application's working directory.}
+
+ \XAdd[7]{URLs require some characters to be escaped, in order
+ to allow for the URLS to be well formatted.  The setter methods
+ described below MUST perform character escaping transparently.
+ That may not always be possible for the \T{CONSTRUCTOR} and
+ \T{set\_string()}, which will then raise a \T{BadParameter}
+ exception.  The getter methods MUST return unescaped versions
+ of the URL components.  However, the string returned by the
+ method \T{get\_escaped()} MUST NOT contain unescaped
+ characters.}
+
+ \XAdd[3]{This specification is silent about URL encoding issues
+ -- those are left to the implementation. For additional notes
+ on URL usage and implementation, see
+ Section~\ref{ssec:namespaces}.}
+ 
+ \newpage 
+
+ \begin{myspec}
+  package saga.url
+  {
+    class url : implements   saga::object
+             // from object  saga::error_handler
+    {
+      CONSTRUCTOR   (in  string     url       ,
+                     out buffer     obj       );
+      DESTRUCTOR    (in  buffer     obj       );
+ 
+      set_string    (in  string     url       = "");
+      get_string    (out string     url       );
++     get_escaped   (out string     url       );
+ 
+      set_scheme    (in  string     scheme    = "");
+      get_scheme    (out string     scheme    );
+ 
+      set_host      (in  string     host      = "");
+      get_host      (out string     host      );
+ 
+      set_port      (in  int        port      = "");
+      get_port      (out int        port      );
+ 
+      set_fragment  (in  string     fragment  = "");
+      get_fragment  (out string     fragment  );
+ 
+      set_path      (in  string     path      = "");
+      get_path      (out string     path      );
+ 
+      set_query     (in  string     query     = "");
+      get_query     (out string     query     );
+ 
+      set_userinfo  (in  string     userinfo  = "");
+      get_userinfo  (out string     userinfo  );
+ 
+      translate     (in  session    s         ,
+                     in  string     scheme    ,
+                     out url        url       );
+      translate     (in  string     scheme    ,
+                     out url        url       );
+    }
+  }
+ \end{myspec}
+ 
+ 
+ \subsubsection{Specification Details}
+ 
+ \subsubsection*{Class \T{url}}
+ 
+ \begin{myspec}
+    - CONSTRUCTOR
+      Purpose:  create a url instance
+      Format:   CONSTRUCTOR          (in  string url = "",
+                                      out url    obj);
+      Inputs:   url:                  initial URL to be used
+      InOuts:   -
+      Outputs:  url:                  the newly created url
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+-     Throws:   NotImplemented
+!     Throws:   BadParameter
+                NoSuccess
+      Notes:    - if the implementation cannot parse the given
+                  url, a 'BadParameter' exception is thrown.
++               - if the implementation cannot perform proper
++                 escaping on the url, a 'BadParameter' 
++                 exception is thrown.
+                - this constructor will never throw an
+                  'IncorrectURL' exception, as the
+                  interpretation of the URL is not part of the
+                  functionality of this class.
+                - the implementation MAY change the given
+                  URL as long as that does not change the
+                  resource the URL is pointing to.  For
+                  example, an implementation may normalize the
+                  path element of the URL.
+ 
+ 
+    - DESTRUCTOR
+      Purpose:  destroy a url
+      Format:   DESTRUCTOR           (in  url obj);
+      Inputs:   obj:                  the url to destroy
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+      Throws:   -
+      Notes:    -
+ 
+ 
+    - set_string
+      Purpose:  set a new url
+      Format:   set_string           (in  string url = "");
+      Inputs:   url:                  new url
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+-     Throws:   NotImplemented
+!     Throws:   BadParameter
+      Notes:    - the method is semantically equivalent to
+                  destroying the url, and re-creating it with
+                  the given parameter.
+                - the notes for the DESTRUCTOR and the 
+                  CONSTRUCTOR apply.
+ 
+ 
+    - get_string
+      Purpose:  retrieve the url as string
+      Format:   get_string           (out string url);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  url:                  string representing the url
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+-     Throws:   NotImplemented
++     Throws:   -
+      Notes:    - the URL may be empty, e.g. after creating the
+                  instance with an empty url parameter.
++               - the returned string is unescaped.
+ 
++
++   - get_escaped
++     Purpose:  retrieve the url as string with escaped
++               characters
++     Format:   get_escaped          (out string url);
++     Inputs:   -
++     InOuts:   -
++     Outputs:  url:                  string representing the url
++     PreCond:  -
++     PostCond: -
++     Perms:    -
++     Throws:   -
++     Notes:    - the URL may be empty, e.g. after creating the
++                 instance with an empty url parameter.
++               - as get_string(), but all characters are 
++                 escaped where required.
++
+ 
+    - set_*
+      Purpose:  set an url element
+      Format:   set_<element>       (in  string <element> = "");
+                set_scheme          (in  string scheme    = "");
+                set_host            (in  string host      = "");
+                set_port            (in  int    port      = "");
+                set_fragment        (in  string fragment  = "");
+                set_path            (in  string path      = "");
+                set_query           (in  string query     = "");
+                set_userinfo        (in  string userinfo  = "");
+      Inputs:   <element>:           new url <element>
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - the <element> part of the URL is updated.
+      Perms:    -
+-     Throws:   NotImplemented
+!     Throws:   BadParameter
+      Notes:    - these calls allow to update the various
+                  elements of the url.  
+                - the given <element> is parsed, and if it is
+                  either not well formed (see RFC-3986), or the
+                  implementation cannot handle it, a
+                  'BadParameter' exception is thrown.
+                - if the given <element> is empty, it is removed
+                  from the URL.  If that results in an invalid
+                  URL, a 'BadParameter' exception is thrown.
+                - the implementation MAY change the given
+                  elements as long as that does not change the
+                  resource the URL is pointing to.  For
+                  example, an implementation may normalize the
+                  path element.
++               - the implementation MUST perform character 
++                 escaping for the given string.
+ 
+ 
+    - get_*
+      Purpose:  get an url element
+      Format:   get_<element>       (out string <element>);
+                get_scheme          (out string scheme   );
+                get_host            (out string host     );
+                get_port            (out int    port     );
+                get_fragment        (out string fragment );
+                get_path            (out string path     );
+                get_query           (out string query    );
+                get_userinfo        (out string userinfo );
+      Inputs:   -
+      InOuts:   -
+      Outputs:  <element>:           the url <element>
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+-     Throws:   NotImplemented
++     Throws:   -
+      Notes:    - these calls allow to retrieve the various
+                  elements of the url.  
+                - the returned <element> is either empty, or 
+                  guaranteed to be well formed (see RFC-3986).
++               - the returned string is unescaped.
++               - if the requested value is not known, or 
++                 unspecified, and empty string is returned, 
++                 or '-1' for get_port().
+ 
+ 
++   - translate
++     Purpose:  translate an URL to a new scheme
++     Format:   translate            (in  session s, 
++                                     in  string  scheme,
++                                     out url     url);
++     Inputs:   s:                    session for authorization/
++                                     authentication
++               scheme:               the new scheme to
++                                     translate into
++     InOuts:   -
++     Outputs:  url:                  string representation of
++                                     the translated url
++     PreCond:  -
++     PostCond: -
++     Perms:    -
++     Throws:   BadParameter
++               NoSuccess
++     Notes:    - the notes from section 'The URL Problem' apply.
++               - if the scheme is not supported,  a
++                 'BadParameter' exception is thrown.
++               - if the scheme is supported, but the url
++                 cannot be translated to the scheme, a
++                 'NoSuccess' exception is thrown.
++               - if the url can be translated, but cannot be
++                 handled with the new scheme anymore, no
++                 exception is thrown.  That can only be
++                 detected if the returned string is again used
++                 in a URL constructor, or with set_string().
++               - the call does not change the URL represented
++                 by the class instance itself, but the
++                 translation is only reflected by the returned
++                 url string.
++               - the given session is used for backend
++                 communication.
+
+    - translate
+      Purpose:  translate an URL to a new scheme
+      Format:   translate            (in  string scheme,
+                                      out url    url);
+      Inputs:   scheme:               the new scheme to
+                                      translate into
+      InOuts:   -
+      Outputs:  url:                  string representation of
+                                      the translated url
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+-     Throws:   NotImplemented
+!     Throws:   BadParameter
+                NoSuccess
++     Notes:    - all notes from the overloaded translate() 
++                 method apply.
++               - the default session is used for backend
++                 communication.
+-     Notes:    - the notes from section 'The URL Problem' apply.
+-               - if the scheme is not supported,  a
+-                 'BadParameter' exception is thrown.
+-               - if the scheme is supported, but the url
+-                 cannot be translated to the scheme, a
+-                 'NoSuccess' exception is thrown.
+-               - if the url can be translated, but cannot be
+-                 handled with the new scheme anymore, no
+-                 exception is thrown.  That can only be
+-                 detected if the returned string is again used
+-                 in a URL constructor, or with set_string().
+-               - the call does not change the URL represented
+-                 by the class instance itself, but the
+-                 translation is only reflected by the returned
+-                 url string.
+ \end{myspec}
+ 
+ 
+ \subsubsection{Examples}
+ 
+ \begin{mycode}
+  // C++ URL examples
+  
+  int main (int argc, char ** argv)
+  {
+    if ( argc < 1 )
+      return -1;
+ 
+    std::string url_string = argv[1];
+ 
+    try 
+    {
+      saga::url url (url_string);
+ 
+      cout << "url      : " << url.get_string    () << endl;
+      cout << "===================================" << endl;
+      cout << "scheme   : " << url.get_scheme    () << endl;
+      cout << "host     : " << url.get_host      () << endl;
+      cout << "port     : " << url.get_port      () << endl;
+      cout << "fragment : " << url.get_fragment  () << endl;
+      cout << "path     : " << url.get_path      () << endl;
+      cout << "query    : " << url.get_query     () << endl;
+      cout << "userinfo : " << url.get_userinfo  () << endl;
+      cout << "===================================" << endl;
+ 
+      url.set_scheme    ("ftp");
+      url.set_host      ("ftp.remote.net");
+      url.set_port      (1234);
+      url.set_fragment  ("");
+      url.set_path      ("/tmp/data");
+      url.set_query     ("");
+      url.set_userinfo  ("ftp:anon");
+ 
+      cout << "===================================" << endl;
+      cout << "scheme   : " << url.get_scheme    () << endl;
+      cout << "host     : " << url.get_host      () << endl;
+      cout << "port     : " << url.get_port      () << endl;
+      cout << "fragment : " << url.get_fragment  () << endl;
+      cout << "path     : " << url.get_path      () << endl;
+      cout << "query    : " << url.get_query     () << endl;
+      cout << "userinfo : " << url.get_userinfo  () << endl;
+      cout << "===================================" << endl;
+      cout << "url      : " << url.get_string    () << endl;
+    }
+  }
+ \end{mycode}
+ 

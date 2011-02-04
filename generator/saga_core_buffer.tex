@@ -1,0 +1,789 @@
+ 
+ The SAGA API includes a number of calls which perform
+ byte-level I/O operations, e.g. |read()|/|write()| on files and
+ streams, and |call()| on rpc instances.  Future SAGA API
+ extensions are expected to increase the number of I/O methods.
+ The |saga::buffer| class encapsulates a sequence of bytes to be
+ used for such I/O operations -- that allows for uniform I/O
+ syntax and semantics over the various SAGA API packages.
+ 
+ The class is designed to be a simple container containing one
+ single element (the opaque data).  The data can either be
+ allocated and maintained in application memory, or can be
+ allocated and maintained by the SAGA implementation.  The
+ latter is the default, and applies when no data and no size are
+ specified on buffer construction.
+ 
+ For example, an application that has data memory already
+ allocated and filled, can create and use a buffer by calling
+ 
+   \shift |// create buffer with application memory|\\
+   \shift |char data[1000];|\\
+   \shift |saga::buffer b (data, 1000);|
+ 
+ The same also works when used with the respective I/O
+ operations:
+ 
+   \shift |// write to a file using a buffer with application |
+          |memory|\\
+   \shift |char data[1000] = ...;|\\
+   \shift |file.write (saga::buffer (data, 1000));|
+ 
+ Another application, which wants to leave the buffer memory
+ management to the SAGA implementation, can use a second
+ constructor, which causes the implementation to allocate memory
+ on the fly:
+ 
+   \shift |// create empty, implementation managed buffer|\\
+   \shift |saga::buffer b;  // no data nor size given!|
+ 
+   \shift |// read 100 byte from file into buffer|\\
+   \shift |file.read (b, 100);|
+ 
+   \shift |// get memory from SAGA|\\
+   \shift |const char * data = b.get_data ();|
+ 
+   \shift |// or use data directly|\\
+   \shift |std::cout << "found: " << b.get_data () << std::endl;|
+ 
+ Finally, an application can leave memory management to the
+ implementation, as above, but can specify how much memory
+ should be allocated by the SAGA implementation:
+ 
+   \shift |// create an implementation managed buffer of 100 |
+          |byte|\\
+   \shift |saga::buffer b (100);|
+ 
+   \upp
+   \shift |// get memory from SAGA|\\
+   \shift |const char * data = b.get_data ();|
+ 
+   \upp
+   \shift |// fill the buffer|\\
+   \shift |memcpy (data, source, b.get_size ());|
+ 
+   \upp
+   \shift |// use data for write|\\
+   \shift |file.write (b);|
+ 
+ Application-managed memory MUST NOT be re- or de-allocated by
+ the SAGA implementation, and implementation-managed memory MUST
+ NOT be re- or de-allocated by the application.  However, an
+ application CAN change the \I{content} of implementation
+ managed memory, and vice versa.
+ 
+ Also, a buffer's contents MUST NOT be changed by the application
+ while it is in use, i.e. while any I/O operation on that buffer
+ is ongoing.  For asynchronous operations, an I/O operation is
+ considered ongoing if the associated |saga::task| instance is
+ not in a final state.
+ 
+ If a buffer is too small (i.e. more data are available for a
+ read, or more data are required for a write), only the
+ available data are used, and an error is returned
+ appropriately.  If a buffer is too large (i.e. read is not able
+ to fill the buffer completely, or write does not need the
+ complete buffer), the remainder of the buffer data MUST be
+ silently ignored (i.e. not changed, and not set to zero).  The
+ error reporting mechanisms as listed for the specific I/O
+ methods apply.
+ 
+ Implementation-managed memory is released when the buffer is
+ destroyed, (either explicitly by calling |close()|, or
+ implicitly by going out of scope).  It MAY be re-allocated,
+ and reset to zero, if the application calls |set_size()|.
+ 
+ Application-managed memory is released by the application.  In
+ order to simplify memory management, language bindings (in
+ particular for non-garbage-collecting languages) MAY allow to
+ register a callback on buffer creation which is called on
+ buffer destruction, and which can be used to de-allocate the
+ buffer memory in a timely manner.  The |saga::callback| class
+ SHOULD be used for that callback -- those language bindings
+ SHOULD thus define the buffer to be |monitorable|, i.e. it
+ should implement the |saga::monitorable| interface.  After the
+ callback's invocation, the buffer MUST NOT be used by the
+ implementation anymore.
+ 
+ When calling |set_data()| for application-managed buffers, the
+ implementation MAY copy the data internally, or MAY use the
+ given data pointer as is.  The application SHOULD thus not
+ change the data while an I/O operation is in progress, and only
+ consider the data pointer to be unused after another
+ |set_data()| has been called, or the buffer instance was
+ destroyed.
+ 
+ Note that these conventions on memory management allow for zero- copy
+ SAGA implementations, and also allow to reuse buffer
+ instances for multiple I/O operations, which makes, for
+ example, the implementation of pipes and filters very simple.
+ 
+ The buffer class is designed to be inherited by application-level
+ I/O buffers, which may, for example, add custom data
+ getter and setter methods (e.g. |set_jpeg()| and |get_jpeg()|.
+ Such derived buffer classes can thus add both data formats and
+ data models transparently on top of SAGA I/O.  For developers
+ who program applications for a specific community it seems
+ advisable to standardize both data format and data model, and
+ possibly to standardize derived SAGA buffers -- that work is,
+ at the moment, out of scope for SAGA.  The SAGA API MAY,
+ however, specify such derived buffer classes in later versions,
+ or in future extensions of the API.  
+ 
+ A buffer does not belong to a session, and a buffer object
+ instance can thus be used in multiple sessions, for I/O
+ operations on different SAGA objects.
+ 
+ Note that even if a buffer size is given, the |len_in|
+ parameter to the SAGA I/O operations supersedes the buffer
+ size.  If the buffer is too small, a |'BadParameter'| exception
+ will be thrown on these operations.  If |len_in| is omitted
+ and the buffer size is not known, a |'BadParameter'| exception
+ is also thrown.
+ 
+ Note also that the |len_out| parameter of the SAGA I/O
+ operations has not necessarily the same value as the buffer
+ size, obtained with |buffer.get_size()|.  A read may read only
+ a part of the requested data, and a write may have written only
+ a part of the buffer.  That is not an error, as is described in
+ the notes for the respective I/O operations.
+ 
+ SAGA language bindings may want to define a |const|-version of
+ the buffer, in order to allow for safe implementations.
+ A non-const buffer SHOULD then inherit the |const| buffer class,
+ and add the appropriate constructor and setter methods.
+ The same holds for SAGA classes which inherit from the |buffer|.
+ 
+ Also, language bindings MAY allow buffer constructors with
+ optional |size| parameter, if the size of the given data is
+ implicitly known.  For example, the C++ bindings MAY allow an
+ buffer constructor |buffer (std::string s)|.  The same holds
+ for SAGA classes that inherit from the |buffer|.
+ 
+ \newpage
+ 
+ \subsubsection{Specification}
+ 
+ \begin{myspec}
+  package saga.buffer
+  {
+    class buffer : implements   saga::object
+                // from object  saga::error_handler
+    {
+      CONSTRUCTOR (in  array<byte>  data,
+                   in  int          size,
+                   out buffer       obj);
+      CONSTRUCTOR (in  int          size = -1,
+                   out buffer       obj);
+      DESTRUCTOR  (in  buffer       obj);
+ 
+      set_size    (in  int          size = -1);
+      get_size    (out int          size);
+ 
+      set_data    (in  array<byte>  data, 
+                   in  int          size);
+      get_data    (out array<byte>  data);
+ 
+      close       (in  float        timeout = -0.0);
+    }
+  }
+ \end{myspec}
+ 
+ 
+ \subsubsection{Specification Details}
+ 
+ \subsubsection*{Class \T{buffer}}
+ 
+ \begin{myspec}
+    - CONSTRUCTOR
+      Purpose:  create an I/O buffer
+      Format:   CONSTRUCTOR          (in  array<byte> data,
+                                      in  int         size,
+                                      out buffer      obj);
+      Inputs:   data:                 data to be used
+                size:                 size of data to be used
+      InOuts:   -
+      Outputs:  buffer:               the newly created buffer
+      PreCond:  - size >= 0
+      PostCond: - the buffer memory is managed by the
+                  application.
+      Perms:    -
+-     Throws:   NotImplemented
+!     Throws:   BadParameter
+                NoSuccess
+      Notes:    - see notes about memory management.
+                - if the implementation cannot handle the 
+                  given data pointer or the given size, a 
+                  'BadParameter' exception is thrown.
+                - later method descriptions refer to this
+                  CONSTRUCTOR as 'first CONSTRUCTOR'.
+ 
+ 
+    - CONSTRUCTOR
+      Purpose:  create an I/O buffer
+      Format:   CONSTRUCTOR          (in  int         size = -1,
+                                      out buffer      obj);
+      Inputs:   size:                 size of data buffer
+      InOuts:   -
+      Outputs:  buffer:               the newly created buffer
+      PreCond:  -
+      PostCond: - the buffer memory is managed by the
+                  implementation.
+                - if size > 0, the buffer memory is allocated by
+!                 the implementation.
+      Perms:    -
+-     Throws:   NotImplemented
+!     Throws:   BadParameter
+                NoSuccess
+      Notes:    - see notes about memory management.
+                - if the implementation cannot handle the 
+                  given size, a 'BadParameter' exception is 
+                  thrown.
+                - later method descriptions refer to this
+                  CONSTRUCTOR as 'second CONSTRUCTOR'.
+ 
+ 
+    - DESTRUCTOR
+      Purpose:  destroy a buffer
+      Format:   DESTRUCTOR           (in  buffer obj);
+      Inputs:   obj:                  the buffer to destroy
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+      Throws:   -
+      Notes:    - if the instance was not closed before, the 
+                  DESTRUCTOR performs a close() on the instance,
+                  and all notes to close() apply.
+ 
+ 
+    - set_data
+      Purpose:  set new buffer data
+      Format:   set_data             (in  array<byte> data, 
+                                      in  int         size);
+      Inputs:   data:                 data to be used in buffer
+                size:                 size of given data
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - the buffer memory is managed by the
+                  application.
+      Perms:    -
+-     Throws:   NotImplemented
+!     Throws:   BadParameter
+                IncorrectState
+      Notes:    - the method is semantically equivalent to
+                  destroying the buffer, and re-creating it with
+                  the first CONSTRUCTOR with the given size.
+                - the notes for the DESTRUCTOR and the first
+                  CONSTRUCTOR apply.
+ 
+ 
+    - get_data
+      Purpose:  retrieve the buffer data
+      Format:   get_data             (out array<byte> data);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  data:                 buffer data to retrieve
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+-     Throws:   NotImplemented
+!     Throws:   DoesNotExist
+                IncorrectState
+      Notes:    - see notes about memory management
+                - if the buffer was created as implementation
+                  managed (size = -1), but no I/O operation has
+                  yet been successfully performed on the buffer,
+                  a 'DoesNotExist' exception is thrown.
+ 
+ 
+    - set_size
+      Purpose:  set size of buffer
+      Format:   set_size           (in  int   size = -1);
+      Inputs:   size:               value for size
+      InOuts:   -
+      Outputs:  -
+      PreCond:  - 
+      PostCond: - the buffer memory is managed by the
+                  implementation.
+      Perms:    -
+-     Throws:   NotImplemented
+!     Throws:   BadParameter
+                IncorrectState
+      Notes:    - the method is semantically equivalent to
+                  destroying the buffer, and re-creating it with
+                  the second CONSTRUCTOR using the given size.
+                - the notes for the DESTRUCTOR and the second
+                  CONSTRUCTOR apply.
+ 
+ 
+    - get_size
+      Purpose:  retrieve the current value for size
+      Format:   get_size           (out int   size);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  size               value of size
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+-     Throws:   NotImplemented
+!     Throws:   IncorrectState
+      Notes:    - if the buffer was created with negative size
+                  with the second CONSTRUCTOR, or the size was
+                  set to a negative value with set_size(), this
+                  method returns '-1' if the buffer was not yet
+                  used for an I/O operation.  
+                - if the buffer was used for a successful I/O
+                  operation where data have been read into the
+                  buffer, the call returns the size of the 
+                  memory which has been allocated by the
+                  implementation during that read operation.
+ 
+ 
+    - close
+      Purpose:  closes the object
+      Format:   close              (in  float timeout = 0.0);
+      Inputs:   timeout             seconds to wait
+      InOuts:   -
+      Outputs:  -
+      Perms:    -
+      PreCond:  -
+      PostCond: - any operation on the object other than 
+                  close() or the DESTRUCTOR will cause 
+                  an 'IncorrectState' exception.
+-     Throws:   NotImplemented
++     Throws:   -
+      Notes:    - any subsequent method call on the object
+                  MUST raise an 'IncorrectState' exception
+                  (apart from DESTRUCTOR and close()).
+                - if the current data memory is managed by the
+                  implementation, it is freed.
+                - close() can be called multiple times, with no
+                  side effects.
+                - if the current data memory is managed by the
+                  application, it is not accessed anymore by the
+                  implementation after this method returns.
+                - if close() is implicitly called in the
+                  DESTRUCTOR, it will never throw an exception.
+                - for resource deallocation semantics, see 
+                  Section 2.
+                - for timeout semantics, see Section 2.
+ \end{myspec}
+ 
+ 
+ \subsubsection{Examples}
+ 
+ \begin{mycode}
+  ////////////////////////////////////////////////////////////////
+  // C++ I/O buffer examples
+  ////////////////////////////////////////////////////////////////
+  
+  ////////////////////////////////////////////////////////////////
+  //
+  // general examples
+  //
+  // all following examples ignore the ssize_t return value, which 
+  // should be the number of bytes successfully read
+  //
+  ////////////////////////////////////////////////////////////////
+  {
+    char data[x][y][z];
+    char* target = data + 200;
+    buffer b;
+    
+    // the following four block do exactly the same, reading 
+    // 100 byte (the read parameter supersedes the buffer size)
+  
+    // apps managed memory
+    {
+      b.set_data (target);
+      stream.read (b, 100);
+      printf ("%100s", target);
+    }
+  
+    {
+      b.set_data (target, 100);
+      stream.read (b);
+      printf ("%100s", target);
+    }
+  
+    {
+      b.set_data (target, 100);
+      stream.read (b, 100);
+      printf ("%100s", target);
+    }
+  
+    {
+      b.set_data (target, 200);
+      stream.read (b, 100);
+      printf ("%100s", target);
+    }
+  
+  
+    // now for impl managed memory
+    {
+      b.set_size (100);
+      stream.read (b);
+      printf ("%100s", b.get_data ());
+    }
+  
+    {
+      b.set_size (-1);
+      stream.read (b, 100);
+      printf ("%100s", b.get_data ());
+    }
+  
+    {
+      b.set_size (200);
+      stream.read (b, 100);
+      printf ("%100s", b.get_data ());
+    }
+  
+  
+    // these two MUST throw, even if there is 
+    // enough memory available
+  
+    // app managed memory
+    {
+      b.set_data (target, 100);
+      stream.read (b, 200);
+    }
+  
+    // impl. managed memory
+    {
+      b.set_size (100);
+      stream.read (b, 200);
+    }
+  }
+  
+  
+  ////////////////////////////////////////////////////////////////
+  //
+  // the next 4 examples perform two reads from a stream, 
+  // first 100 bytes, then 200 bytes.
+  //
+  ////////////////////////////////////////////////////////////////
+  
+  // impl managed memory
+  {
+    {
+      buffer b;
+  
+      stream.read (b, 100);
+      printf ("%100s", b.get_data ());
+      
+      stream.read (b, 200);
+      printf ("%200s", b.get_data ());
+  
+    } // b dies here, data are gone after that
+  }
+  
+  
+  // same as above, but with explicit c'tor
+  {
+    {
+      buffer b (100);
+      stream.read (b);
+      printf ("%100s", b.get_data ());
+  
+      b.set_size (200);
+      stream.read (b);
+      printf ("%200s", b.get_data ());
+  
+    } // b dies here, data are gone after that
+  }
+  
+  
+  // apps managed memory
+  {
+    char   data[x][y][z]; // the complete data set
+    char * target = data; // target memory address to read into...
+    target += offset;     // ... is somewhere in the data space.
+  
+    stream.read (buffer (target,       100));
+    stream.read (buffer (target + 100, 200));
+  
+    printf ("%300s", target);
+  
+    // data must be larger than offset + 300, otherwise bang!
+  }
+  
+  
+  // same as above with explicit buffer c'tor
+  {
+    char   data[x][y][z]; // the complete data set
+    char * target = data; // target memory address to read into...
+    target += 200;          // ... is somewhere in the data space.
+  
+    {
+      buffer b (target, 100);
+      stream.read (b);
+  
+      b.set_data (target + 100, 200);
+      stream.read (b);
+  
+    } // b dies here.  data are intact after that
+  
+    printf ("%300s", target);
+  
+    // data must be larger than offset + 300, otherwise bang!
+  }
+  
+  
+  ////////////////////////////////////////////////////////////////
+  //
+  // the next two examples perform the same reads, 
+  // but switch memory management in between
+  //
+  ////////////////////////////////////////////////////////////////
+  
+  // impl managed memory, then apps managed memory
+  {
+    {
+      char [x][y][z] data;
+      char* target = data + 200;
+  
+      buffer b;
+  
+      // impl managed
+      stream.read (b, 100);
+      printf ("%100s", target);
+  
+      b.set_data (target, 200); // impl data are gone after this
+  
+      // apps managed
+      stream.read (b);
+      printf ("%200s", target);
+  
+    } // b dies here, apps data are ok after that, impl data are gone
+  }
+  
+  
+  // apps managed memory, then impl managed
+  {
+    {
+      char [x][y][z] data;
+      char* target = data + 200;
+  
+      buffer b (target);
+  
+      // apps managed
+      stream.read (b, 100);
+      printf ("%100s", target);
+  
+      b.set_size (-1);
+  
+      // impl managed
+      stream.read (b, 200);
+      printf ("%200s", target);
+  
+    } // b dies here, apps data are ok after that, impl data are gone
+  }
+  
+  
+  ////////////////////////////////////////////////////////////////
+  //
+  // now similar for write
+  //
+  ////////////////////////////////////////////////////////////////
+  
+  ////////////////////////////////////////////////////////////////
+  //
+  // general part
+  //
+  // all examples ignore the ssize_t return value, which should be
+  // the number of bytes successfully written
+  //
+  ////////////////////////////////////////////////////////////////
+  {
+    char data[x][y][z];
+    char* target = data + 200;
+    buffer b;
+    
+    // the following four block do exactly the same, writing 
+    // 100 byte (the write parameter supersedes the buffer size)
+  
+    // apps managed memory
+    {
+      b.set_data (target);
+      stream.write (b, 100);
+    }
+  
+    {
+      b.set_data (target, 100);
+      stream.write (b);
+    }
+  
+    {
+      b.set_data (target, 100);
+      stream.write (b, 100);
+    }
+  
+    {
+      b.set_data (target, 200);
+      stream.write (b, 100);
+    }
+  
+  
+    // now for impl managed memory
+    {
+      b.set_size (100);
+      memcpy (b.get_data (), target, 100);
+      stream.write (b);
+    }
+  
+    {
+      b.set_size (200);
+      memcpy (b.get_data (), target, 200);
+      stream.write (b, 100);
+    }
+  
+  
+    // these two MUST throw, even if there is 
+    // enough memory available
+  
+    // app managed memory
+    {
+      b.set_data (target, 100);
+      stream.write (b, 200); // throws BadParameter
+    }
+  
+    // impl. managed memory
+    {
+      b.set_size (100);
+      memcpy (b.get_data (), target, 200); // apps error
+      stream.write (b, 200); // throws BadParameter
+    }
+  }
+  
+  
+  ////////////////////////////////////////////////////////////////
+  //
+  // the next 4 examples perform two writes to a stream, 
+  // first 100 bytes, then 200 bytes.
+  //
+  ////////////////////////////////////////////////////////////////
+  
+  // impl managed memory
+  {
+    char   data[x][y][z]; // the complete data set
+    char * target = data; // target memory address to write into...
+    target += offset;     // ... is actually somewhere in the data space.
+  
+    {
+      buffer b (200);
+  
+      memcpy (b.get_data (), target, 100);
+      stream.write (b, 100);
+      
+      memcpy (b.get_data (), target + 100, 200);
+      stream.write (b, 200);
+  
+    } // b dies here, data are gone after that
+  }
+  
+  
+  // same as above, but using set_size ()
+  {
+    char   data[x][y][z]; // the complete data set
+    char * target = data; // target memory address to write into...
+    target += offset;     // ... is actually somewhere in the data space.
+  
+    {
+      buffer b (100);
+      memcpy (b.get_data (), target, 100);
+      stream.write (b);
+  
+      b.set_size (200);
+      memcpy (b.get_data (), target + 100, 200);
+      stream.write (b);
+  
+    } // b dies here, data are gone after that
+  }
+  
+  
+  // apps managed memory
+  {
+    char   data[x][y][z]; // the complete data set
+    char * target = data; // target memory address to write into...
+    target += offset;     // ... is actually somewhere in the data space.
+  
+    stream.write (buffer (target,       100));
+    stream.write (buffer (target + 100, 200));
+  
+    // data must be larger than offset + 300, otherwise bang!
+  }
+  
+  
+  // same as above with explicit buffer c'tor
+  {
+    char   data[x][y][z]; // the complete data set
+    char * target = data; // target memory address to write into...
+    target += 200;          // ... is actually somewhere in the data space.
+  
+    {
+      buffer b (target, 100);
+      stream.write (b);
+  
+      b.set_data (target + 100, 200);
+      stream.write (b);
+  
+    } // b dies here.  data are intact after that
+  
+  
+    // data must be larger than offset + 300, otherwise bang!
+  }
+  
+  
+  ////////////////////////////////////////////////////////////////
+  //
+  // the next two examples perform the same reads, 
+  // but switch memory management in between
+  //
+  ////////////////////////////////////////////////////////////////
+  
+  // impl managed memory, then apps managed memory
+  {
+    {
+      char [x][y][z] data;
+      char* target = data + 200;
+  
+      buffer b (100);
+  
+      // impl managed
+      memcpy (b.get_data (), target, 100);
+      stream.write (b, 100);
+  
+      b.set_data (target + 100, 200); // apps managed now
+                                      // impl data are gone after this
+  
+      // apps managed
+      stream.write (b);
+  
+    } // b dies here, apps data are ok after that, impl data are gone
+  }
+  
+  
+  // apps managed memory, then impl managed
+  {
+    {
+      char [x][y][z] data;
+      char* target = data + 200;
+  
+      buffer b (target);
+  
+      // apps managed
+      stream.write (b, 100);
+  
+      b.set_size (200); // impl managed now
+      memcpy (b.get_data (), target + 100, 200);
+  
+      // impl managed
+      stream.write (b);
+  
+    } // b dies here, apps data are ok after that, impl data are gone
+  }
+ \end{mycode}
+ 

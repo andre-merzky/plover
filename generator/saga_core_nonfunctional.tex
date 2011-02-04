@@ -1,0 +1,56 @@
+ \label{sec:nonfunc}
+ 
+  The SAGA API consists of a number of interface and class
+  specifications.  The relation between these is shown in
+  Figure~\ref{fig:classes} on Page~\pageref{fig:classes}.  This
+  figure also marks which interfaces are part
+  of the SAGA Look-\&-Feel, and which classes are
+  combined into packages.  
+ 
+  This and the next section form the normative part of the SAGA
+  Core API specification.  It has one subsection for each
+  package, starting with those interfaces that define the SAGA
+  Look-\&-Feel,
+  followed by the various, capability-providing packages: job
+  management, name space management, file management, replica
+  management, streams, and remote procedure call.
+ 
+  The SAGA Look-\&-Feel is defined by a number of
+  classes and interfaces which ensure the non-functional
+  properties of the SAGA API (see~\cite{saga-req} for a complete
+  list of non-functional requirements).  These interfaces and
+  classes are intended to be used by the functional SAGA API
+  packages, and are hence thought to be orthogonal to the
+  functional scope of the SAGA API.
+ 
+  \begin{figure}[!ht]
+  \begin{center}
+     \up\up
+     \includegraphics[angle=90,height=0.97\textheight]{classes}
+     \caption{\label{fig:classes}\footnotesize The SAGA class 
+              and interface hierarchy.\newline
+              \XCommn{added URL class, moved iovec and parameter.}}
+   \end{center}
+  \end{figure}
+
+  \XAdd[4]{Section~\ref{ssec:compliance} contains important notes on
+  the extent the SAGA \LF needs to be implemented by compliant
+  implementations.  The \T{NotImplemented} exception is listed for a
+  number of method calls, but MUST only be used under the
+  circumstances described in~\ref{ssec:compliance}.} \XRem[8]{SAGA implementations should
+  be able to implement the SAGA Look-\&-Feel API packages independent
+  of the grid middleware backend.  This, however, might not always be
+  possible, at least to a full extent.  In particular Monitoring and
+  Steering, but also Attributes and asynchronous operations, may need
+  explicit support from the backend system.  As such, methods in these
+  four packages MUST be expected to throw a \T{NotImplemented}
+  exception, in accordance with the SAGA implementation compliance
+  guidelines given in Section~\ref{ssec:compliance}.}   Similarly, the
+  \T{IncorrectURL} exception is listed when appropriate, but is not,
+  in general, separately motivated or detailed -- the semantic
+  conventions for this exception are as defined in
+  Section~\ref{ssec:urlprob}.
+
+ \clearpage
+ 
+ 

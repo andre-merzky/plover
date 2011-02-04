@@ -1,0 +1,77 @@
+ 
+  This document specifies SAGA CORE, the Core of the
+  \emph{Simple API for Grid Applications}.  SAGA %has been
+  % defined 
+  is a high-level API that directly addresses the needs of application
+  developers.  The purpose of SAGA is two-fold:
+ 
+  \begin{enumerate}
+ 
+  \item Provide an {\bf simple} API that can be used with much less
+    effort compared to the vanilla interfaces of existing grid
+    middleware.  A guiding principle for achieving this simplicity is
+    the \emph{80--20 rule}: serve 80\,\% of the use cases with 20\,\%
+    of the effort needed for serving 100\,\% of all possible
+    requirements.
+ 
+  \item Provide a standardized, common interface across various grid
+    middleware systems and their versions.
+ 
+  \end{enumerate}
+ 
+  \subsection{How to read this Document}
+ 
+  This document is an API \I{specification}, and as such targets
+   \I{implementors of the API}, rather than its end users.
+  In particular, this document should not be confused with a SAGA
+  Users' Guide.  This document might be useful as an API reference,
+  but, in general, the API users' guide and reference should be
+  published as separate documents, and should accompany SAGA
+  implementations. The latest version of the users guide and
+    reference can be found at \url{http://saga.cct.lsu.edu}
+   
+  An implementor of the SAGA API should read the complete document
+  carefully. It will very likely be insufficient{unlikely be
+    sufficient} to extract the embedded SIDL specification of the API
+  and implement a SAGA-compliant API. In particular,
+  the general design considerations in Section~\ref{sec:design} give
+  essential, additional information to be taken into account for any
+  implementation in order to be SAGA
+  compliant.
+ 
+   This document is structured as follows. This Section
+   focuses on the formal aspects of an OGF
+   recommendation document.  Section~\ref{sec:design} outlines
+   the general design considerations of the SAGA API.
+   Sections~\ref{sec:nonfunc} and~\ref{sec:func} contain the
+   SAGA API specification itself. Section~\ref{sec:disclaimers}
+   gives author contact information and provides disclaimers
+   concerning intellectual property rights and copyright issues,
+   according to OGF policies.  Finally,
+   Appendix~\ref{sec:examples} gives illustrative,
+   non-normative, code examples of using the SAGA API.
+ 
+ 
+ \subsection{Notational Conventions}
+ 
+   The key words \MUST, \MUSTNOT, \REQUIRED, \SHALL, \SHALLNOT,
+   \SHOULD, \SHOULDNOT, \RECOMMENDED, \MAY, and \OPTIONAL are to
+   be interpreted as described in
+   RFC~2119~\cite{rfc-2119}.
+ 
+ 
+ \subsection{Security Considerations}
+ 
+  As the SAGA API is to be implemented on different types of
+  grid (and non-grid) middleware, it does not
+  specify a single security model, but rather provides hooks to
+  interface to various security models -- see the documentation of the
+  |saga::context| class in Section~\ref{ssec:context} for details.
+ 
+  A SAGA implementation is considered secure if and only if it
+  fully supports (i.e. implements) the security models of the
+  middleware layers it builds upon, and neither provides any
+  (intentional or unintentional) means to by-pass these security
+  models, nor weakens these security models' policies in any
+  way.
+ 

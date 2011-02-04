@@ -1,0 +1,1103 @@
+  
+  Operations performed in highly heterogeneous distributed
+  environments may take a long time to complete, and it is thus
+  desirable to have the ability to perform operations in an
+  asynchronous manner.  The SAGA task model as described here,
+  provides this ability to all other SAGA classes.  As such, the
+  package is orthogonal to the rest of the SAGA API.
+  
+  % Jha: do we mean independent? Is this package independent of
+  % the other packages or are the other packages independent of
+  % this package? If so, we should say so explicitly and not as
+  % said currently?
+  % 
+  % AM: Orthogonal means really that: think of two dimensions
+  % for the API, X and Y.  Extending the API in X means adding
+  % new classes, extending the API in Y means adding new async
+  % models or calls.  Any changes in the task model apply
+  % immediately to all classes: these dimensions are orthogonal.
+  % We use that term frequently to describe architecture
+  % properties, to describe what a property means for other
+  % elements: if it is 'orthogonal', it means its implicitly
+  % available immediately.  I am not sure how widely used the
+  % term is, but I have seen it more often than not.
+  
+  \myfig{task_states}{\footnotesize The SAGA task state model
+  (See figure~\ref{fig:states} for a legend).}
+  
+  In order to understand the SAGA task model it is \I{not}
+  sufficient to read the specification of the |saga::task| and
+  |saga::task_container| classes below, but it is also
+  imperative to understand how task instances get created.  This
+  is actually not covered in the SIDL specification sections in
+  this document, but documented in prose below, with references
+  to Figure~\ref{fig:task_states}.  Note that the task state
+  model is closely modeled after the BES state model~\cite{bes},
+  which is in particular relevant to the (similar) job state
+  model as described in Section~\ref{ssec:job}.
+ 
+  \subsubsection*{Tasks versus Jobs}
+ 
+   In SAGA, tasks should not be confused with jobs!
+   Jobs represent remotely running applications/executables,
+   which are usually managed by a job manager.  Tasks on the
+   other hand represent asynchronous operations.  Thus, any
+   asynchronous method call in SAGA results in a task.
+  
+   Tasks and jobs have, however, several commonalities,
+   the most important one is \I{state}: both can be newly
+   created (in \T{New} state), can be currently making progress
+   (in \T{Running} state), or can be finished in some way (in
+   \T{Done}, \T{Failed} or \T{Canceled} state).  Additionally,
+   jobs can be suspended and resumed (they have a \T{Suspended}
+   state).
+  
+   Mostly for this reason, and to simplify the
+   management of both tasks and jobs in SAGA, the \T{saga::job}
+   class inherits the \T{saga::task} class.
+ 
+  \subsubsection*{Tasks versus Threads}
+ 
+   Tasks and threads are another potential pair to
+   confuse: in many APIs and programming languages, tasks and
+   asynchronous operations are implemented by threading.  In
+   SAGA, however, tasks have a semantically richer meaning.  In
+   particular, threads always imply that the state management
+   for the asynchronous operation lies within the application
+   hosting the thread.  SAGA tasks, however, imply no such
+   restriction.
+   
+   For example, a SAGA task to copy a remote file
+   could be implemented by using the Globus Reliable File
+   Transfer Service (RFT,~\cite{rft}): the asynchronous method
+   invocation in SAGA would then start the remote operation on
+   the RFT service.  All management of the operation progress is
+   in the service - no threading at all is required on the
+   application side.  Even more: the application could finish,
+   and after restart could reconnect to the RFT service, and
+   recreate the task, as the complete state is still available
+   on the RFT service - that is basically impossible with
+   threads.  Well, it is also not possible in SAGA right now,
+   but for very different reasons, and it is expected that
+   future versions and extensions of SAGA add this and other
+   options to the notion of tasks.
+ 
+   Implementors of SAGA are warned \B{not} to rely
+   solely on threading while implementing \T{saga::task}, but to
+   exploit middleware support for server side asynchronous
+   operations wherever possible.
+ 
+ 
+  \subsubsection*{Task Model Description}
+ 
+  The SAGA task model operates as follows:
+ 
+ \begin{itemize}
+   
+   \item A SAGA object is said to \I{implement the SAGA task
+   model} if, (a) it inherits the |saga::async| interface, and
+   (b) all methods on that object are implemented in three
+   different versions, which are called \I{synchronous},
+   \I{asynchronous}, and \I{task} version.
+ 
+   \item The \I{synchronous} version of a SAGA call corresponds
+   to the normal method call specified in the SAGA
+   specification.  The first |out| parameter specified (if any)
+   is used as return value.
+ 
+   \item The \I{asynchronous} version of a SAGA
+   call has the same signature, but 
+   returns a
+   |saga::task| instance.  That returned task is in |Running|
+   state and represents the asynchronous operation: it can be
+   queried for state, and can be canceled.
+ 
+   \item The \I{task} version of the SAGA call is very similar to
+   the asynchronous version; the only difference is that the
+   returned task instance is in the |New| state, and must
+   be |run()| to get into the |Running| state.
+ 
+   \item For symmetry, a language binding MAY add a second
+   flavour of the synchronous call, which has the same signature
+   as the asynchronous and task version, but the
+   returned task is in a final state (i.e., |run()| \I{and}
+   |wait()| have been called on that task before returning).
+   \footnote{Note that state transitions for this type of method
+   call are not shown in the state diagram -- the diagram would
+   essentially have 'Done' as an initial
+   and final state.}
+ 
+   \item The first \T{out} parameter, which is the
+   return value in the synchronous method version, is, in the
+   task and asynchronous version, accessed by calling
+   \T{task.get\_result <return\_type> (void);}, which is a
+   templetized member method.  That call implies a call to
+   \T{wait()}.  For language bindings where templetized member
+   functions are not available, a language specific mechanism
+   MUST be found, which MAY use type casting.
+ 
+   \item Other |out| and all |inout| parameter for
+   asynchronous operations are passed by reference to the
+   initial function call, and MUST NOT be accessed before the
+   corresponding task enters the \T{Done} state.  In all
+   other states, no assumption can be made about the contents of
+   these parameters.  They are guaranteed to not be
+   accessed or changed by the implementation when the task
+   enters any final state.
+   
+   \item |in| parameters are passed by value, and are assumed to
+   be constant.  They can be accessed and changed again as soon
+   as the task instance is created.
+ 
+   \item The original object instance, from which the task was
+   created, can be retrieved from a task by calling
+   \T{get\_object <object\_type> (void);}, again a templetized
+   member method, on the task.  The same comments as above apply
+   to that templetized method.
+ 
+ \end{itemize}
+ 
+ 
+ \subsubsection*{Asynchronous Object Construction}
+ 
+  The task model as described above focuses on
+  asynchronous invocation of object methods.  It does not
+  explicitly cover asynchronous object construction or
+  destruction though.  That is important, however, as many
+  constructors, such as for example for \T{saga::file}, imply a
+  remote operation during construction or destruction (here
+  \T{open()/close()}).
+  
+  How asynchronous constructors and destructors are
+  provided is up to the specific language bindings.  Procedural
+  bindings, such as expected for C, SHOULD integrate
+  asynchronous versions for the respective method calls to keep
+  these mechanisms in sync with the task model presented above.
+  Object oriented language bindings MAY either introduce an
+  asynchronous factory pattern, or introduce delayed
+  construction/destruction by explicitly using asynchronous
+  \T{init()} and \T{close()}, or MAY introduce some other
+  mechanism which most natively allows to asynchronously create
+  SAGA objects.
+ 
+ 
+ \subsubsection*{Tasks and Error Handling}
+ 
+  Errors arising from synchronous method invocations on SAGA
+  objects are, in general, flagged by exceptions, and can be
+  inspected using the \T{error\_hand\-ler} interface that all
+  SAGA objects implement.  For asynchronous operations, this
+  mechanism would break, as the |error_handler| interface allows
+  in general only inspection of the \I{last} method call
+  -- but the order of execution is undefined for asynchronous
+  operations.  Additionally, exceptions from asynchronous
+  operations would be difficult to catch, as they would
+  presumably be thrown outside of an exception
+  protection block.
+ 
+  For this reason, errors on asynchronous operations (i.e.
+  tasks) are handled as follows:
+ 
+  \begin{description}
+   
+   \item[Error Handler:] The |saga::task| class implements the
+   |saga::error_handler| interface, which allows inspection of
+   an error thrown by an asynchronous operation.  Errors MUST
+   NOT be reported unless the task enters a final state.
+     
+   \item[Exceptions:] The task instance MUST catch all SAGA
+   exceptions and, if possible, all other exceptions thrown by
+   the asynchronous operation.  If an exception is caught by the
+   task instance, the task state MUST be changed to |Failed|
+   immediately.  Such exceptions are to be re-thrown by the task
+   when the |rethrow()| method is called.
+ 
+  \end{description}
+ 
+  This specification assumes that tasks are, in general, created
+  and maintained in the API implementation, and not in the
+  backend.  However, for those cases where task states are
+  maintained in the middleware backend, several methods on
+  |task|s and |task_containers| MAY throw a |Timeout| or
+  |NoSuccess| exception, if that backend is not available
+   -- these exceptions can be directly delivered to the
+  application.  It is, however, not allowed to throw an
+  |AuthorizationFailed|, |AuthenticationFailed| or
+  |PermissionDenied| exception, as this specification
+  assumes that the creator of the task can always inspect and
+  control that task  -- these exceptions MUST be
+  caught, and MUST be made available via \T{rethrow()}.  Later
+  versions of this API MAY change that, for example when they
+  introduce persistent tasks which can survive the lifetime of a
+  SAGA application.
+ 
+ \subsubsection{Example Rendering in C++}
+ 
+  Below is an example of how the SAGA task model might be
+  rendered in C++ (this example is not normative).  Note that
+  template-tags are used here to distinguish the three
+  task-returning method calls.
+ 
+ \begin{mycode}
+  // c++ example
+ 
+  // SAGA specification:
+  //  read        (inout array<byte>             buffer,
+  //               in    int                     len_in = -1,
+  //               out   int                     len_out);
+ 
+  // create a saga file
+  saga::file f (url);
+ 
+  // synchronous version
+  ssize_t len_out = f.read (size_t   len_in, 
+                            char   * buffer);
+                             
+ 
+  // alternative synchronous version
+  saga::task t1   = f.read <saga::task::Sync>
+                           (size_t    len_in,
+                            char    * buffer);
+ 
+  // asynchronous version
+  saga::task t2   = f.read <saga::task::ASync>
+                           (size_t    len_in, 
+                            char    * buffer);
+ 
+  // task version
+  saga::task t3   = f.read <saga::task::Task>
+                           (size_t    len_in,
+                            char    * buffer);
+ 
+  // t1 is in Done or Failed state
+  // t2 is in Running state
+  // t3 is in New state
+ 
+  // get results
+  ssize_t len_out_1 = t1.get_result <ssize_t> ();
+  ssize_t len_out_2 = t2.get_result <ssize_t> ();
+  ssize_t len_out_3 = t3.get_result <ssize_t> ();
+ 
+  // all tasks are in a final state now, 
+  // as get_result() implies a wait().
+ 
+  // obtain the original file object, three 
+  // times the same actually
+  saga::file f1 = t1.get_object <saga::file> ();
+  saga::file f2 = t2.get_object <saga::file> ();
+  saga::file f3 = t3.get_object <saga::file> ();
+ \end{mycode}
+ 
+  A C language binding of this package might choose to use flags
+  to distinguish between these calls;
+  equivalently the C binding might
+  use different method names, for it is up to the language
+  bindings to define the mechanism that is native -- or as close
+  as possible -- to the language to distinguish these calls.
+ 
+  For additional notes on resource management and task lifetime,
+  see the introduction Section~\ref{ssec:lifetime} of this
+  document.
+ 
+ \subsubsection{Specification}
+ 
+ \begin{myspec}
+  package saga.task
+  {
+    enum state
+    {
+      New       =  1,
+      Running   =  2,
+      Done      =  3,
+      Canceled  =  4,
+      Failed    =  5
+    }
+ 
+ 
+    enum wait_mode
+    {
+      All       =  0,
+      Any       =  1
+    }
+ 
+ 
+    interface async
+    {
+      // this interface is empty on purpose, and is used only
+      // for tagging of SAGA classes which implement the SAGA
+      // task model.
+    }
+ 
+ 
+    class task : implements   saga::object
+                 implements   saga::monitorable
+              // from object  saga::error_handler
+    {
+      // no constructor
+      DESTRUCTOR       (in  task            obj);
+ 
+      // state management
+      run               (void);
+      cancel            (in  float           timeout =  0.0);
+      wait              (in  float           timeout = -1.0,
+                         out boolean         finished);
+ 
+      // inspection
+      get_state         (out state           state);
+      get_result <type> (out type            result);
+      get_object <type> (out type            object);
+ 
+      // error handling
+      rethrow           (void);
+ 
+      // Metric:
+      //   name:  task.state
+      //   desc:  fires on task state change, and
+      //          has the literal value of the task
+      //          state enum.
+      //   mode:  ReadOnly
+      //   unit:  1
+      //   type:  Enum
+      //   value: 0
+    }
+ 
+ 
+    class task_container : implements   saga::object
+                           implements   saga::monitorable
+                        // from object  saga::error_handler
+    {
+      CONSTRUCTOR      (out task_container  obj);
+      DESTRUCTOR       (in  task_container  obj);
+ 
+      // task management
+      add               (in  task            t);
+      remove            (in  task            t);
+ 
+      // state management
+      run               (void);
+      cancel            (in  float           timeout =  0.0);
+      wait              (in  wait_mode       mode    =  All,
+                         in  float           timeout = -1.0,
+                         out task            finished);
+ 
+      // inspection
+      size              (out int             n);
+      list_tasks        (out array<task>     tasks);
+      get_task          (in  string          id, 
+                         out task            t);
+      get_tasks         (out array<task>     tasks);
+      get_states        (out array<state>    states);
+ 
+      // Metric:
+      //   name:  task_container.state
+      //   desc:  fires on state changes of any task in
+      //          the container, and has the value of that
+      //          task's object id.
+      //   mode:  ReadOnly
+      //   unit:  1
+      //   type:  String
+      //   value: -
+    }
+  }
+ \end{myspec}
+ 
+ 
+ \subsubsection{Specification Details}
+ 
+ % Jha: ``It is initial'' is it redundant? Or am I missing
+ % something.
+ % 
+ % AM: Initial states are something special - see figure 1.  We
+ % probably should include a reference here.  Better yet, the state
+ % description should be moved to the top, to the state diagram (where
+ % that reference is, and where Initial States are marked)
+ % (TODO).
+ 
+  \subsubsection*{Enum \T{state}}
+ 
+  A task can be in one of several possible states (see
+  Fig.~\ref{fig:task_states}):
+  
+ 
+    |New|\\[1.5mm]
+    \begin{tabular}{cp{110mm}}
+      ~~ & This state identifies a newly constructed task
+           instance which has not yet run.  This state corresponds to
+           the BES state 'Pending'.   This state is initial.
+    \end{tabular}
+ 
+    |Running|\\[1.5mm]
+    \begin{tabular}{cp{110mm}}
+       ~~ & The \T{run()} method has been invoked on the task, either
+            explicitly or implicitly.  This state corresponds to the
+            BES state 'Running'.  This state is initial.  
+    \end{tabular}
+ 
+    |Done|\\[1.5mm]
+    \begin{tabular}{cp{110mm}}
+       ~~ & The synchronous or asynchronous operation has finished
+            successfully.  It corresponds to the BES state 'Finished'.
+            This state is final.  
+    \end{tabular}
+ 
+    |Canceled|\\[1.5mm]
+    \begin{tabular}{cp{110mm}}
+       ~~ & The asynchronous operation has been canceled, i.e.
+            \T{cancel()} has been called on the task instance.  It
+            corresponds to the BES state 'Canceled'.  This state is
+            final.  
+    \end{tabular}
+ 
+    |Failed|\\[1.5mm]
+    \begin{tabular}{cp{110mm}}
+       ~~ & The synchronous or asynchronous operation has
+            finished unsuccessfully.  It corresponds to the BES state
+            'Failed'.  This state is final.  
+    \end{tabular}
+ 
+ 
+  \subsubsection*{Enum \T{wait\_mode}}
+ 
+    The \T{wait\_mode} enum specifies the condition on
+    which a \T{wait()} operation on a \T{saga::task\_container}
+    returns:
+ 
+    |All|\\[1.5mm]
+    \begin{tabular}{cp{110mm}}
+       ~~ & \T{wait()} returns if all tasks in the 
+            container reached a final state.
+    \end{tabular}
+    
+    |Any|\\[1.5mm]
+    \begin{tabular}{cp{110mm}}
+       ~~ & \T{wait()} returns if one or more tasks in 
+            the container reached a final state.
+    \end{tabular}
+ 
+  \subsubsection*{Class \T{task}}
+ 
+    Objects of this class represent asynchronous API calls.
+    They are only created by invoking a method on a SAGA object
+    which returns a task object (with |saga::task::ASync| or
+    |saga::task::Task|).  But as |saga::job| instances
+    inherit from the task class, jobs are also
+    effectively created as tasks.
+ 
+    If a task gets created, it will share the state of the
+    object it was created from.  For more information on state
+    sharing, see Section~\ref{ssec:lifetime}).
+    
+    Note that no \T{CONSTRUCTOR} is available, as tasks
+    are only created through asynchronous method calls.
+ 
+ \begin{myspec}
+    - DESTRUCTOR
+      Purpose:  destroy the object
+      Format:   DESTRUCTOR           (in  task obj)
+      Inputs:   obj:                  the object to destroy
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - state is no longer shared with the object
+                  the task was created from.
+                - the task instance is 'Canceled' prior to 
+                  resource deallocation.
+      Perms:    -
+      Throws:   -
+      Notes:    - if the instance was not in a final state 
+                  before, the destructor performs a cancel() 
+                  on the instance, and all notes to cancel() 
+                  apply.
+ 
+    
+    State Management
+    ----------------
+ 
+    - run
+      Purpose:  Start the asynchronous operation.
+      Format:   run (void);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  -
+      PreCond:  - task is in 'New' state.
+      PostCond: - task left the 'New' state.
+      Perms:    - appropriate permissions for the method 
+                  represented by the task
+      Throws:   NotImplemented
+                IncorrectState
+                Timeout
+                NoSuccess
+      Notes:    - run can only be called on a task in 'New' 
+                  state.  All other states will cause the 
+                  'IncorrectState' exception to be thrown.
+                - a 'Timeout' or 'NoSuccess' exception indicates
+                  that the backend was not able to start the 
+                  task.
+ 
+ 
+    - wait
+      Purpose:  Wait for the task to finish.
+      Format:   wait                 (in  float   timeout,
+                                      out boolean done);
+      Inputs:   timeout:              seconds to wait
+      InOuts:   -
+      Outputs:  done:                 indicating if the task
+                                      is done running
+      PreCond:  - task is not in 'New' state.
+      PostCond: - if no timeout occurs, task is in a final 
+                  state.
+      Perms:    -
+      Throws:   NotImplemented
+                IncorrectState
+                Timeout
+                NoSuccess
+      Notes:    - wait returns success (true) as soon as the
+                  task enters a final state
+                - if the task is already in a final state, the
+                  call returns success (true) immediately.
+                - if the task is in 'New' state, an
+                  'IncorrectState' exception is thrown.
+                - wait returns no success (false) if the task 
+                  is, even after timeout, not in a final state.
+                - a 'Timeout' or 'NoSuccess' exception indicates
+                  that the backend was not able to wait for the
+                  task.  Note that a 'Timeout' exception does
+                  not indicate that the task is not in a final
+                  state after the given wait period - that
+                  causes an unsuccessful (false) return value.
+                - for timeout semantics, see Section 2.
+ 
+ 
+    - cancel
+      Purpose:  Cancel the asynchronous operation.
+      Format:   cancel               (in  float  timeout = 0.0);
+      Inputs:   timeout:              time for freeing resources
+      InOuts:   -
+      Outputs:  -
+      PreCond:  - task is in 'Running' state.
+      PostCond: - task is in 'Canceled' state.
+      Perms:    -
+      Throws:   NotImplemented
+                IncorrectState
+                Timeout
+                NoSuccess
+      Notes:    - for resource deallocation semantics, see 
+                  Section 2.
+                - if cancel() fails to cancel the task
+                  immediately, and tries to continue to cancel
+                  the task in the background, the task state 
+                  remains 'Running' until the cancel operation 
+                  succeeded.  The state then changes to 
+                  'Canceled'.
+                - if the task is in a final state, the call has
+                  no effect, and, in particular, does NOT change
+                  the state from 'Done' to 'Canceled', or from 
+                  'Failed' to 'Canceled'.  This is to
+                  avoid race conditions.
+                - if the task is in 'New' state, an
+                  'IncorrectState' exception is thrown.
+                - a 'NoSuccess' exception indicates
+                  that the backend was not able to initiate the
+                  cancellation for the task.
+                - for timeout semantics, see Section 2.
+ 
+ 
+    Inspection
+    ----------
+ 
+    - get_state 
+      Purpose:  Get the state of the task.
+      Format:   get_state            (out state state);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  state:                state of the task.
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+      Throws:   NotImplemented
+                Timeout
+                NoSuccess
+      Notes:    - a 'Timeout' or 'NoSuccess' exception indicates
+                  that the backend was not able to retrieve the
+                  task state.
+ 
+ 
+    - get_result 
+      Purpose:  Get the result of the async operation
+      Format:   get_result <type>    (out type result);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  result:               return value of async
+                                      method
+      PreCond:  - task is not in New, Failed or Canceled state.
+      PostCond: - task is in a final state.
+      Perms:    -
+      Throws:   NotImplemented
++               IncorrectURL
++               BadParameter
++               AlreadyExists
++               DoesNotExist
+                IncorrectState
++               IncorrectType
++               PermissionDenied
++               AuthorizationFailed
++               AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - get_result implies a wait() - all notes to
+                  wait apply.
++               - if the task is in 'Failed' state after wait(), a
++                 rethrow() is called.  That is why all possible
++                 exceptions can be thrown by get_result().
++               - an IncorrectType exception is thrown when the 
++                 'type' specifier does not match the return type
++                 of the operation represented by the task
+                - the method returns the type and value which
+                  would be returned by the synchronous version of
+                  the respective function call.
+ 
+ 
+    - get_object
+      Purpose:  Get the object from which this task was created
+      Format:   get_object <type>    (out type object);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  object:               object this task was
+                                      created from
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+      Throws:   NotImplemented
+                Timeout
+                NoSuccess
+      Notes:    - the method returns a shallow copy of the
+                  object this task was created from.
+ 
+ 
+    - rethrow
+      Purpose:  re-throw any exception a failed task caught.
+      Format:   rethrow (void);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+      Throws:   NotImplemented
+                IncorrectURL
+                BadParameter
+                AlreadyExists
+                DoesNotExist
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - that method does nothing unless the task is in
+                  'Failed' state, and also MUST NOT throw 
+                  'IncorrectState' if the task is in any other 
+                  state.
+                - if in 'Failed' state, the method MUST raise an
+                  exception which indicates the reason why that
+                  task entered the 'Failed' state (i.e. it throws 
+                  the exception which caused it to enter the 
+                  'Failed' state.
+                - language bindings for languages with no
+                  support for exceptions MUST change the state
+                  of the object from which the task was created
+                  so that a subsequent call to has_error() on
+                  that object returns true.  A subsequent call to
+                  get_error() must then return the respective
+                  exception.
+                - rethrow can be called multiple times, always
+                  throwing the same exception.
+ \end{myspec}
+ 
+  \subsubsection*{Class \T{task\_container}}
+ 
+    Managing a large number of tasks can be tedious.
+    The |task_container| class is designed to help in
+    these situations, and to effectively handle a large
+    number of asynchronous operations.
+    
+    For example, when an application uses many
+     tasks, it would be inefficient to
+    invoke the |wait()| method on each of them
+    individually.  The |task_container| class provides (amongst
+    other operations) a mechanism to wait for a set of
+    tasks.
+ 
+    Language bindings CAN specify the \T{task\_container} to
+    be, or to inherit from, a native container type, if that allows
+    for the same semantics as described below, and if that helps to
+    'naturalize' the SAGA Look\,\&\,Feel for that language.
+ 
+ 
+ \begin{myspec}
+    - CONSTRUCTOR
+      Purpose:  create a task_container
+      Format:   CONSTRUCTOR          (out task_container tc);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  tc:                   newly created container
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+      Throws:   NotImplemented
+                Timeout
+                NoSuccess
+      Notes:    - a 'Timeout' or 'NoSuccess' exception indicates
+                  that the backend was not able to create a task
+                  container.
+ 
+ 
+    - DESTRUCTOR
+      Purpose:  destroy a task_container
+      Format:   DESTRUCTOR           (in task_container tc);
+      Inputs:   tc:                   container to destroy
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+      Throws:   -
+      Notes:    - tasks in the task_container during its
+                  destruction are not affected by its
+                  destruction, and, in particular, are not
+                  canceled.
+ 
+ 
+    Task Management
+    ---------------
+ 
+    - add
+      Purpose:  Add a task to a task_container.
+      Format:   add                  (in  task task);
+      Inputs:   task:                 task to add to the
+                                      task_container
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - the task is managed by the task container.
+      Perms:    -
+      Throws:   NotImplemented
+                Timeout
+                NoSuccess
+      Notes:    - a task can be added only once.  Any attempt 
+                  to add a task to the container which already 
+                  is in the container is silently ignored.
+                - a 'Timeout' or 'NoSuccess' exception indicates
+                  that the backend was not able to add the task
+                  to the container.
+ 
+ 
+    - remove
+      Purpose:  Remove a task from a task_container.
+      Format:   remove               (in  task task);
+      Inputs:   task:                 the task to be removed
+      InOuts:   -
+      Outputs:  -
+      PreCond:  - the task is managed by the task container.
+      PostCond: - the task is not managed by the task container.
+      Perms:    -
+      Throws:   NotImplemented
+                DoesNotExist
+                Timeout
+                NoSuccess
+      Notes:    - if a task was added more than once, it can be
+                  removed only once - see notes to add().
+                - if the task is not in the task_container, a 
+                  'DoesNotExist' exception is thrown.
+                - a 'Timeout' or 'NoSuccess' exception indicates
+                  that the backend was not able to remove the 
+                  task from the container.
+ 
+ 
+    State Management
+    ----------------
+ 
+    - run
+      Purpose:  Start all asynchronous operations in the
+                container.
+      Format:   run (void);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  -
+      PreCond:  - all tasks in the container are in 'New' state.
+      PostCond: - all tasks in the container are in 'Running'
+                  state.
+      Perms:    - see permissions on task::run()
+      Throws:   NotImplemented
+                IncorrectState
+                DoesNotExist
+                Timeout
+                NoSuccess
+      Notes:    - run() MUST cause an 'IncorrectState' exception 
+                  if any of the tasks in the container causes 
+                  that exception on run().
+                - a 'Timeout' or 'NoSuccess' exception indicates
+                  that the backend was not able to run one or
+                  more tasks in the container.
+                - if the task_container is empty, an
+                  'DoesNotExist' exception is thrown.
+                - As the order of execution of the tasks is
+                  undefined, no assumption on the individual
+                  task states can be made after any
+                  exception gets thrown.
+ 
+ 
+    - wait
+      Purpose:  Wait for one or more of the tasks to finish.
+      Format:   wait                 (in  wait_mode mode = All,
+                                      in  float  timeout = -1.0,
+                                      out task   done);
+      Inputs:   mode:                 wait for All or Any task
+                timeout:              seconds to wait
+      InOuts:   -
+      Outputs:  done:                 finished task
+      PreCond:  -
+      PostCond: - if no timeout occurs, All/Any tasks in the 
+                  container are in a final state.
+      Perms:    -
+      Throws:   NotImplemented
+                IncorrectState
+                DoesNotExist
+                Timeout
+                NoSuccess
+      Notes:    - if mode is 'All', the wait call returns only
+                  if all tasks in the container are finished,
+                  or on timeout, whichever occurs first.
+                  The output task is then any of the finished
+                  tasks.
+                - if mode is 'Any', the wait call returns on the
+                  first task which would return on task::wait in
+                  that timeout period, and returns that task.
+                - the default wait mode is 'All' (0).
+                - the returned task is removed from the
+                  container, which allows constructs like
+                    while ( tc.size () )
+                    { 
+                       saga::task t = tc.wait (saga::task::Any) ) 
+                       ... 
+                    }
+                - wait() MAY cause an 'IncorrectState' exception
+                  if any of the tasks in the container causes 
+                  that exception on wait().
+                - if the task_container is empty, an
+                  'DoesNotExist' exception is thrown.
+                - a 'Timeout' or 'NoSuccess' exception indicates
+                  that the backend was not able to wait for one 
+                  or more tasks in the container.
+                - As the order of execution of the tasks is
+                  undefined, no assumption on the individual
+                  task states can be made after any
+                  exception gets thrown.
+                - for timeout semantics, see Section 2.
+ 
+ 
+    - cancel
+      Purpose:  Cancel all the asynchronous operations in the
+                container.
+      Format:   cancel               (in  float  timeout = 0.0);
+      Inputs:   timeout:              time for freeing resources
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - if no timeout occurs, all tasks in the 
+                  container are in 'Canceled' state.
+      Perms:    -
+      Throws:   NotImplemented
+                IncorrectState
+                DoesNotExist
+                Timeout
+                NoSuccess
+      Notes:    - see semantics of task cancel.
+                - cancel() MUST cause an 'IncorrectState' 
+                  exception if any of the tasks in the container
+                  causes that exception on cancel().
+                - a 'Timeout' or 'NoSuccess' exception indicates
+                  that the backend was not able to run one or
+                  more tasks in the container.
+                - if the task_container is empty, an
+                  'DoesNotExist' exception is thrown.
+                - As the order of execution of the tasks is
+                  undefined, no assumption on the individual
+                  task states can be made after any
+                  exception gets thrown.
+ 
+ 
+    Inspection
+    ----------
+ 
+    - size
+      Purpose:  return the number of tasks in the task 
+                task_container.
+      Format:   size                 (out int  n);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  n:                    number of tasks in 
+                                      task_container
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+      Throws:   NotImplemented
+                Timeout
+                NoSuccess
+      Notes:    - a 'Timeout' or 'NoSuccess' exception indicates
+                  that the backend was not able to list the
+                  tasks in the container.
+ 
+ 
+    - list_tasks
+      Purpose:  List the tasks in the task_container.
+      Format:   list_tasks           (out array<task>   tasks);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  tasks:                array of all tasks in 
+                                      the task_container
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+      Throws:   NotImplemented
+                Timeout
+                NoSuccess
+      Notes:    - a 'Timeout' or 'NoSuccess' exception indicates
+                  that the backend was not able to list the
+                  tasks in the container.
+ 
+ 
+    - get_task
+      Purpose:  Get a single task from the task_container.
+      Format:   get_task             (in  string   id,
+                                      out task     t);
+      Inputs:   id:                   the object id identifying
+                                      the task to return
+      InOuts:   -
+      Outputs:  t:                    the task identified by
+                                      id
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+      Throws:   NotImplemented
+                DoesNotExist
+                Timeout
+                NoSuccess
+      Notes:    - the returned task is NOT removed from the
+                  task_container.
+                - if the id specifies a task which is not in 
+                  the container, a 'DoesNotExist' exception is
+                  thrown.
+                - a 'Timeout' or 'NoSuccess' exception indicates
+                  that the backend was not able to list the
+                  tasks in the container.
+ 
+ 
+    - get_tasks 
+      Purpose:  Get the tasks in the task_container.
+      Format:   get_tasks            (out array<task>   tasks);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  tasks:                array of tasks in
+                                      task_container
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+      Throws:   NotImplemented
+                Timeout
+                NoSuccess
+      Notes:    - the returned tasks are NOT removed from the
+                  task_container.
+                - if the task_container is empty, an
+                  empty list is returned.
+                - a 'Timeout' or 'NoSuccess' exception indicates
+                  that the backend was not able to list the
+                  tasks in the container.
+ 
+ 
+    - get_states
+      Purpose:  Get the states of all tasks in the 
+                task_container.
+      Format:   get_states           (out array<state>   states);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  states:               array of states for
+                                      tasks in task_container
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+      Throws:   NotImplemented
+                Timeout
+                NoSuccess
+      Notes:    - the returned list is not ordered
+                - if the task_container is empty, an
+                  empty list is returned.
+                - a 'Timeout' or 'NoSuccess' exception indicates
+                  that the backend was not able to obtain the
+                  states of the tasks in the container.
+ \end{myspec}
+ 
+ 
+ \subsubsection{Examples}
+ 
+ \begin{mycode}
+  // c++ example
+  saga::directory dir;
+  saga::job       job;
+ 
+  ...
+ 
+  /* create tasks */
+  saga::task t1 = dir.ls         <saga::task> (result);
+  saga::task t2 = dir.copy       <saga::task> (source,target);
+  saga::task t3 = dir.move       <saga::task> (source,target);
+  saga::task t4 = job.checkpoint <saga::task> ();
+  saga::task t5 = job.signal     <saga::task> (SIG_USR);
+ 
+  // start tasks
+  t1.run ();
+  t2.run ();
+  t3.run ();
+  t4.run ();
+  t5.run ();
+ 
+  // put all tasks into container
+  saga::task_container tc;
+ 
+  tc.add (t1);
+  tc.add (t2);
+  tc.add (t3);
+  tc.add (t4);
+  tc.add (t5);
+ 
+  // take one out again
+  tc.remove (t5);
+ 
+  // wait for all other tasks in container to finish
+  tc.wait ();
+ 
+  // wait for the last task
+  t5.wait ();
+ 
+  +-------------------------------------------------------------+
+ 
+  // example for error handling in C++
+  {
+    task.run  ();
+    task.wait ();
+ 
+    if ( task.get_state () == saga::task::Failed )
+    {
+      try {
+        task.rethrow ();
+      }
+      catch ( const saga::exception & e )
+      {
+        std::cout << "task failed: " 
+                  << e.get_message () 
+                  << std::endl;
+      }
+    }
+  }
+ \end{mycode}
+ 

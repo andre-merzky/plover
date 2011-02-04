@@ -24,14 +24,14 @@ saga::context::context ()
 }
 
 // copy c'tor (shallow copy)
-saga::context::context (saga::impl::context * impl)
+saga::context::context (impl_type * impl)
   : saga::object     (impl),
     saga::attributes (impl)
 {
 }
 
 // copy c'tor (shallow copy)
-saga::context::context (saga::util::shared_ptr <saga::impl::context> impl)
+saga::context::context (saga::util::shared_ptr <impl_type> impl)
   : saga::object     (impl),
     saga::attributes (impl)
 {
@@ -39,8 +39,8 @@ saga::context::context (saga::util::shared_ptr <saga::impl::context> impl)
 
 // copy c'tor (shallow copy)
 saga::context::context (const context & src)
-  : saga::object     (src.get_obj_impl  ()),
-    saga::attributes (src.get_attr_impl ())
+  : saga::object     (src.get_impl <saga::impl::object>     ()),
+    saga::attributes (src.get_impl <saga::impl::attributes> ())
 {
 }
 
@@ -49,27 +49,14 @@ saga::context::~context (void)
 {
 }
 
-saga::util::shared_ptr <saga::impl::context> saga::context::get_obj_impl (void) const
+
+template <class base_type>
+saga::util::shared_ptr <impl_type> saga::task::get_impl (void) const
 { 
-  // from where should we get the impl?  (base class)
-  typedef saga::object base_type;
+  // get impl from base class, and cast into type of this's implementation
+  saga::util::shared_ptr <base_type> bp = this->base_type::get_impl <base_type> ();
+  saga::util::shared_ptr <impl_type> ip = bp.static_pointer_cast    <impl_type> ();
 
-  // type should the impl have?
-  typedef saga::impl::context impl_type;
-
-  // get impl from base class, and cast into correct type
-  return boost::static_pointer_cast <impl_type> (this->base_type::get_obj_impl ());
-}
-
-saga::util::shared_ptr <saga::impl::context> saga::context::get_attr_impl (void) const
-{ 
-  // from where should we get the impl?  (base class)
-  typedef saga::attributes base_type;
-
-  // type should the impl have?
-  typedef saga::impl::context impl_type;
-
-  // get impl from base class, and cast into correct type
-  return boost::static_pointer_cast <impl_type> (this->base_type::get_attr_impl ());
+  return ip;
 }
 

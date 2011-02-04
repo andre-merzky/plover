@@ -1,0 +1,266 @@
+ 
+  The SAGA object interface provides methods which are essential
+  for all SAGA objects.  It provides a unique ID which helps
+  maintain a list of SAGA objects at the application level as
+  well as allowing for inspection of objects type and its
+  associated session.
+        
+  The object id MUST be formatted as UUID, as standardized by
+  the Open Software Foundation (OSF) as part of the Distributed
+  Computing Environment (DCE).  The UUID format is also
+  described in the IETF RFC-4122~\cite{rfc-4122}.
+ 
+  Note that there are no object IDs for the various
+  SAGA exceptions, but only one ID for the \T{saga::exception}
+  base class. Also, it is not possible to inspect a SAGA object
+  instance for the availability of certain SAGA interfaces, as
+  they are fixed and well defined by the SAGA specification.
+  Language bindings MAY, however, add such inspection, if that
+  is natively supported by the language.
+ 
+ \subsubsection{Specification}
+ 
+ \begin{myspec}
+  package saga.object
+  {
+    enum object_type
+    {
+-     Exception        =   1,
+      URL              =   1,
+      Buffer           =   2,
+      Session          =   3,
+      Context          =   4,
+      Task             =   5,
+      TaskContainer    =   6,
+      Metric           =   7,
+      NSEntry          =   8,
+      NSDirectory      =   9,
+      IOVec            =  10,
+      File             =  11,
+      Directory        =  12,
+      LogicalFile      =  13,
+      LogicalDirectory =  14,
+      JobDescription   =  15,
+      JobService       =  16,
+      Job              =  17,
+      JobSelf          =  18,
+      StreamService    =  19,
+      Stream           =  20,
+      Parameter        =  21,
+      RPC              =  22,
+    }
+ 
+ 
+    interface object : implements saga::error-handler
+    {
+      get_id       (out string      id     );
+      get_type     (out object_type type   );
+      get_session  (out session     s      );
+ 
+      // deep copy
+      clone        (out object      clone  );
+    }
+  }
+ \end{myspec}
+ 
+ 
+ \subsubsection{Specification Details}
+ 
+ \subsubsection*{Enum \T{object\_type}}
+ 
+  The SAGA \T{object\_type} enum allows for inspection of
+  SAGA object instances.  This, in turn, allows to treat large
+  numbers of SAGA object instances in containers, without the
+  need to create separate container types for each specific SAGA
+  object type.  Bindings to languages that natively support inspection on
+  object types MAY omit this enum and the \T{get\_type()}
+  method.
+ 
+  SAGA extensions which introduce new SAGA objects (i.e.
+  introduce new classes which implement the \T{saga::object}
+  interface) MUST define the appropriate \T{object\_type} enums
+  for inspection.  SAGA implementations SHOULD support these
+  enums for all packages which are provided in that
+  implementation, even for classes which are not implemented.
+ 
+ 
+ \subsubsection*{Interface \T{object}}
+ 
+ \begin{myspec}
+    - get_id
+      Purpose:  query the object ID
+      Format:   get_id               (out string id);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  id:                   uuid for the object
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+      Throws:   -
+      Notes:    - 
+ 
+ 
+    - get_type
+      Purpose:  query the object type
+      Format:   get_type             (out object_type type);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  type:                 type of the object
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+      Throws:   -
+      Notes:    - 
+ 
+ 
+    - get_session
+      Purpose:  query the objects session
+      Format:   get_session          (out session s);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  s:                    session of the object
+      PreCond:  - the object was created in a session, either
+                  explicitly or implicitly.
+      PostCond: - the returned session is shallow copied.
+      Perms:    -
+      Throws:   DoesNotExist
+      Notes:    - if no specific session was attached to the
+                  object at creation time, the default SAGA
+                  session is returned.
+                - some objects do not have sessions attached,
+                  such as job_description, task, metric, and the
+                  session object itself.  For such objects, the
+                  method raises a 'DoesNotExist' exception.
+ 
+ 
+    // deep copy:
+    -------------
+ 
+    - clone
+      Purpose:  deep copy the object
+      Format:   clone                (out object clone);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  clone:                the deep copied object
+      PreCond:  -
+      PostCond: - apart from session and callbacks, no other
+                  state is shared between the original object 
+                  and it's copy.
+      Perms:    -
+      Throws:   NoSuccess
+      Notes:    - that method is overloaded by all classes 
+                  which implement saga::object, and returns 
+                  a deep copy of the respective class type 
+                  (the method is only listed here).
+                - the method SHOULD NOT cause any backend 
+                  activity, but is supposed to clone the client
+                  side state only.
++               - the object id is not copied -- a new id MUST 
++                 be assigned instead.
+                - for deep copy semantics, see Section 2.
+ \end{myspec}
+ 
+ 
+ \subsubsection{Examples}
+ 
+ \begin{mycode}
+  // c++ example
+ 
+  // have 2 objects, streams and files, and do:
+  //  - read 100 bytes
+  //  - skip 100 bytes
+  //  - read 100 bytes
+ 
+  int  out;
+  char data1[100];
+  char data2[100];
+  char data[100];
+ 
+  saga::buffer buf1 (data1, 100);
+  saga::buffer buf2 (data2, 100);
+  saga::buffer buf;
+ 
+  // create objects
+  saga::file   f (url[1]);
+  saga::stream s (url[2]);
+ 
+  // f is opened at creation, s needs to be connected
+  s.connect ();
+ 
+  // create tasks for reading first 100 bytes ...
+  saga::task t1 = f.read <saga::task> (100, buf1);
+  saga::task t2 = s.read <saga::task> (100, buf2);
+ 
+  // create and fill the task container ...
+  saga::task_container tc;
+ 
+  tc.add (t1);
+  tc.add (t2);
+ 
+  // ... and wait who gets done first
+  while ( saga::task t = tc.wait (saga::task::Any) )
+  {
+     // depending on type, skip 100 bytes then create a
+     // new task for the next read, and re-add to the tc
+ 
+     switch ( t.get_object().get_type () )
+     {
+       case saga::object::File :
+         // point buf to results
+         buf = buf1;
+ 
+         // get back file object
+         saga::file f = saga::file (t.get_object ());
+ 
+         // skip for file type (sync seek)
+         saga::file (f.seek (100, SEEK_SET);
+ 
+         // create a new read task
+         saga::task t2 = f.read <saga::task> (100, buf1));
+ 
+         // add the task to the container again
+         tc.add (t2);
+ 
+         break;
+ 
+       case saga::object::Stream :
+         // point buf to results
+         buf = buf2;
+ 
+         // get back stream object
+         saga::stream s = saga::stream (t.get_object ());
+ 
+         // skip for stream type (sync read and ignore)
+         saga::stream (s.read (100, buf2);
+ 
+         // create a new read task
+         saga::task t2 = s.read <saga::task> (100, buf2));
+ 
+         // add the task to the container again
+         tc.add (t2);
+ 
+         break;
+ 
+       default:
+         throw exception ("Something is terribly wrong!");
+     }
+ 
+     std::cout << "found: '" << out << " bytes: " 
+                             << buf.get_data () 
+                             << std::endl;
+ 
+     // tc is filled again, we run forever, read/seeking from
+     // whatever we find after the wait.
+  }
+ \end{mycode}
+ 
+ 
+ % \subsubsection{Notes}
+ % 
+ %   The |saga::object| interface will be much more useful once the
+ %   SAGA API supports serialization and deserialization of saga object
+ %   instances.  Such functionality was discussed in respect to
+ %   persistent information storage, and to task dependencies and
+ %   workflows, and will be revisited on respective future extensions.
+ 
+ 

@@ -7,13 +7,13 @@ saga::attributes::attributes  (std::set <std::string> ro_s,
                                std::set <std::string> rw_s, 
                                std::set <std::string> rw_v, 
                                bool             extensible)
-  : attr_impl_ (new saga::impl::attributes (ro_s, ro_v, rw_s, rw_v, extensible))
+  : attr_impl_ (new impl_type (ro_s, ro_v, rw_s, rw_v, extensible))
 {
 }
 
 // copy c'tor (shallow copy)
-saga::attributes::attributes (saga::impl::attributes * impl)
-  : attr_impl_ (impl)
+saga::attributes::attributes (impl_type * impl)
+: attr_impl_ (impl)
 {
 }
 
@@ -25,7 +25,7 @@ saga::attributes::attributes (saga::util::shared_ptr <impl::attributes> impl)
 
 // copy c'tor (shallow copy)
 saga::attributes::attributes (const attributes & src)
-  : attr_impl_ (src.get_attr_impl ())
+  : attr_impl_ (src.get_attr_impl <saga::attributes::impl_type> ())
 {
 }
 
@@ -81,8 +81,14 @@ bool saga::attributes::attribute_is_vector (std::string key)
   return attr_impl_->attribute_is_vector (key);
 }
 
-saga::util::shared_ptr <saga::impl::attributes> saga::attributes::get_attr_impl (void) const
+template <class T>
+saga::util::shared_ptr <saga::attributes::impl_type> saga::attributes::get_attr_impl (void) const
 { 
   return attr_impl_;
 }
 
+template <class T>
+saga::util::shared_ptr <saga::attributes::impl_type> saga::attributes::get_impl (void) const
+{ 
+  return get_attr_impl <saga::attributes::impl_type> ();
+}

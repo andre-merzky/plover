@@ -9,25 +9,28 @@
 
 namespace saga
 {
+  namespace impl
+  {
+    class context;
+  }
+
   class context : public object, 
                   public attributes
   {
+    typedef saga::impl::context impl_type;
+
     friend class saga::impl::context;
 
-    private:
-      // default context impl
-      static saga::impl::context * default_;
 
     protected:
       // create context from impl
-      context (saga::impl::context * impl);
-
-      // create context from impl
-      context (saga::util::shared_ptr <saga::impl::context> impl);
+      context (                        impl_type * impl);
+      context (saga::util::shared_ptr <impl_type>  impl);
 
       // get impl from base classes
-      saga::util::shared_ptr <saga::impl::context> get_obj_impl  (void) const;
-      saga::util::shared_ptr <saga::impl::context> get_attr_impl (void) const;
+      template <class base_type>
+      saga::util::shared_ptr <impl_type> get_impl (void) const;
+
 
     public:
       context  (void);
@@ -35,8 +38,6 @@ namespace saga
 
       // copy c'tor
       context  (const saga::context & src);
-
-      static context default_context (void);
   };
 }
 

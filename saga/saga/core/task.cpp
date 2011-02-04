@@ -25,8 +25,8 @@ saga::task::task (saga::util::shared_ptr <saga::impl::task> impl)
 
 // copy c'tor (shallow copy)
 saga::task::task (const task & src)
-  : saga::object      (src.get_obj_impl     ()),
-    saga::monitorable (src.get_monitor_impl ())
+  : saga::object      (src.get_impl <saga::object>      ()),
+    saga::monitorable (src.get_impl <saga::monitorable> ())
 {
 }
 
@@ -35,27 +35,13 @@ saga::task::~task (void)
 {
 }
 
-saga::util::shared_ptr <saga::impl::task> saga::task::get_obj_impl (void) const
+template <class base_type>
+saga::util::shared_ptr <impl_type> saga::task::get_impl (void) const
 { 
-  // from where should we get the impl?  (base class)
-  typedef saga::object base_type;
-
-  // type should the impl have?
-  typedef saga::impl::task impl_type;
-
-  // get impl from base class, and cast into correct type
-  return boost::static_pointer_cast <impl_type> (this->base_type::get_obj_impl ());
-}
-
-saga::util::shared_ptr <saga::impl::task> saga::task::get_monitor_impl (void) const
-{ 
-  // from where should we get the impl?  (base class)
-  typedef saga::monitorable base_type;
-
-  // type should the impl have?
-  typedef saga::impl::task impl_type;
-
-  // get impl from base class, and cast into correct type
-  return boost::static_pointer_cast <impl_type> (this->base_type::get_monitor_impl ());
+  // get impl from base class, and cast into type of this's implementation
+  saga::util::shared_ptr <base_type> bp = this->base_type::get_impl <base_type> ();
+  saga::util::shared_ptr <impl_type> ip = bp.static_pointer_cast    <impl_type> ();
+  
+  return ip;
 }
 

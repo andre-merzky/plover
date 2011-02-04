@@ -17,44 +17,32 @@ namespace saga
     {
       private:
         pthread_mutex_t * mtx_;
-        bool              shared_;
+         
 
 
       public:
         mutex (void)
-            : shared_ (false)
         {
-          shared_ = false;
           mtx_    = new pthread_mutex_t;
           pthread_mutex_init (mtx_, NULL);
-        }
-
-        // share mutex with another uti::mutex instance
-        mutex (const mutex & l)
-            : mtx_    (l.mtx_),
-              shared_ (true)
-        {
         }
 
         // dtor
         ~mutex () 
         {
-          if ( ! shared_ )
-          {
-            pthread_mutex_destroy (mtx_);
-          }
+          pthread_mutex_destroy (mtx_);
         }
 
         void lock (void) 
         {
-          // std::cerr << "lock!\n";
+          // std::cerr << "mutex lock\n";
           pthread_mutex_lock (mtx_);
         }
 
         void unlock (void) 
         {
           pthread_mutex_unlock (mtx_);
-          // std::cerr << "unlock!\n";
+          // std::cerr << "mutex unlock\n";
         }
     };
 

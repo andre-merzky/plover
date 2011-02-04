@@ -1,0 +1,294 @@
+ 
+  The \T{saga::context} class provides the
+  functionality of a security information container. A context
+  gets created, and attached to a session handle.  As such it is
+  available to all objects instantiated in that session.
+  Multiple contexts can co-exist in one session -- it is up to
+  the implementation to choose the correct context for a
+  specific method call.  Also, a single \T{saga::context}
+  instance can be shared between multiple
+  sessions.  SAGA objects created from other SAGA objects
+  inherit its session and thus also its context(s).
+  Section~\ref{ssec:session} contains more information about the
+  \T{saga::session} class, and also about the management and
+  lifetime of \T{saga::context} instances associated with a SAGA
+  session.
+ 
+  A typical usage scenario is:
+ 
+  \begin{mycode}
+   // context usage scenario in c++
+ 
+   saga::context c_1, c_2;
+ 
+   // c_1 will use a Globus proxy.  Set the type to Globus, pick
+   // up the default Globus settings, and then identify the proxy
+   // to be used
+   c_1.set_attribute ("Type", "Globus");
+   c_1.set_attribute ("UserProxy", "/tmp/special_x509up_u500");
+ 
+   // c_2 will be used as ssh context, and will just pick up the
+   // public/private key from $HOME/.ssh
+   c_2.set_attribute ("Type", "ssh");
+ 
+   // a saga session gets created, and uses both contexts
+   saga::session s;
+   s.add_context (c_1);
+   s.add_context (c_2);
+ 
+   // a remote file in this session can now be accessed via 
+   // gridftp or ssh
+   saga::file f (s, "any://remote.net/tmp/data.txt");
+   f.copy ("data.bak");
+  \end{mycode}
+ 
+  A context has a set of attributes which can be
+  set/get via the SAGA attributes interface.  Exactly which
+  attributes a context actually evaluates, depends upon its type
+  (see documentation to the \T{set\_defaults()} method.
+ 
+ \newpage
+  
+  An implementation CAN implement multiple types of
+  contexts.  The implementation MUST document which context types
+  it supports, and which values to the \T{Type} attribute are used
+  to identify these context types.  Also, the implementation
+  MUST document what default values it supports for the various
+  context types, and which attributes need to be or can be set by
+  the application.
+ 
+  The lifetime of \T{saga::context} instances is
+  defined by the lifetime of those \T{saga::session} instances
+  the contexts are associated with, and of those SAGA objects
+  which have been created in these sessions.  For detailed
+  information about lifetime management, see 
+  Section~\ref{ssec:lifetime}, and the description of
+  the SAGA session class in Section~\ref{ssec:session}.
+ 
+  For application level Authorization (e.g. for
+  streams, monitoring, steering),  contexts are
+  used to inform the application about the requestor's
+  identity.  These contexts represent the security
+  information that has been used to initiate the connection to
+  the SAGA application.  To support that mechanism, a number of specific
+  attributes are available, as specified below.  They are named
+  \T{"Remote<attribute>"}.  An implementation MUST at
+  least set the \T{Type} attribute for such contexts, and SHOULD
+  provide as many attribute values as possible.
+ 
+  For example, a SAGA application \I{A} creates a
+  \T{saga::stream\_server} instance.  A SAGA application \I{B}
+  creates a 'globus' type context, and, with a session using
+  that context, creates a \T{saga::stream} instance connecting
+  to the stream server of \I{A}.  \I{A} should then obtain a
+  context upon connection accept (see Sections on
+  Monitoring,~\ref{ssec:monitoring}, and
+  Streams,~\ref{ssec:stream}, for details).  That context should
+  then also have the type 'globus', its 'RemoteID' attribute
+  should contain the distinguished name of the user  certificate,
+  and its attributes 'RemoteHost' and 'RemotePort' should have
+  the appropriate values.
+ 
+  Note that \T{UserID}s SHOULD be formatted so that they
+  can be used as user identifiers in the SAGA permission model
+  -- see Section~\ref{ssec:permission} for details.
+ 
+ 
+ \subsubsection{Specification}
+ 
+ \begin{myspec}
+  package saga.context
+  {
+    class context : implements   saga::object
+                    implements   saga::attributes
+                 // from object  saga::error_handler
+    {
+      CONSTRUCTOR      (in  string       type = "",
+                        out context      obj);
+      DESTRUCTOR       (in  context      obj);
+ 
+-     set_defaults     (void);                   
+-
+      // Attributes:
+      //
+      //   name:  Type
+      //   desc:  type of context
+      //   mode:  ReadWrite
+      //   type:  String
+      //   value: naming conventions as described above apply
+      //
+      //   name:  Server
+      //   desc:  server which manages the context
+      //   mode:  ReadWrite
+      //   type:  String
+      //   value: -
+      //   note:  - a typical example would be the contact
+      //            information for a MyProxy server, such as 
+      //            'myproxy.remote.net:7512', for a 'myproxy'
+      //            type context.
+      //
+      //   name:  CertRepository
+      //   desc:  location of certificates and CA signatures
+      //   mode:  ReadWrite
+      //   type:  String
+      //   value: -
+      //   note:  - a typical example for a globus type context 
+      //            would be "/etc/grid-security/certificates/".
+      //
+      //   name:  UserProxy
+      //   desc:  location of an existing certificate proxy to
+      //          be used
+      //   mode:  ReadWrite
+      //   type:  String
+      //   value: -
+      //   note:  - a typical example for a globus type context 
+      //            would be "/tmp/x509up_u<uid>".
+      //
+      //   name:  UserCert
+      //   desc:  location of a user certificate to use
+      //   mode:  ReadWrite
+      //   type:  String
+      //   value: -
+      //   note:  - a typical example for a globus type context 
+      //            would be "$HOME/.globus/usercert.pem".
+      //
+      //   name:  UserKey
+      //   desc:  location of a user key to use
+      //   mode:  ReadWrite
+      //   type:  String
+      //   value: -
+      //   note:  - a typical example for a globus type context 
+      //            would be "$HOME/.globus/userkey.pem".
+      //
+      //   name:  UserID
+      //   desc:  user id or user name to use
+      //   mode:  ReadWrite
+      //   type:  String
+      //   value: -
+      //   note:  - a typical example for a ftp type context 
+      //            would be "anonymous".
+      //
+      //   name:  UserPass
+      //   desc:  password to use
+      //   mode:  ReadWrite
+      //   type:  String
+      //   value: -
+      //   note:  - a typical example for a ftp type context 
+      //            would be "anonymous@localhost".
+      //
+      //   name:  UserVO
+      //   desc:  the VO the context belongs to
+      //   mode:  ReadWrite
+      //   type:  String
+      //   value: -
+      //   note:  - a typical example for a globus type context 
+      //            would be "O=dutchgrid".
+      //
+      //   name:  LifeTime
+      //   desc:  time up to which this context is valid
+      //   mode:  ReadWrite
+      //   type:  Int
+      //   value: -1
+      //   note:  - format: time and date specified in number of 
+      //            seconds since epoch
+      //          - a value of -1 indicates an infinite lifetime.
+      //
+      //   name:  RemoteID
+      //   desc:  user ID for an remote user, who is identified
+      //          by this context.
+      //   mode:  ReadOnly
+      //   type:  String
+      //   value: -
+      //   note:  - a typical example for a globus type context 
+      //            would be
+      //            "/O=dutchgrid/O=users/O=vu/OU=cs/CN=Joe Doe".
+      //
+      //   name:  RemoteHost
+      //   desc:  the hostname where the connection origininates
+      //          which is identified by this context.
+      //   mode:  ReadOnly
+      //   type:  String
+      //   value: -
+      //
+      //   name:  RemotePort
+      //   desc:  the port used for the connection which is
+      //          identified by this context.
+      //   mode:  ReadOnly
+      //   type:  String
+      //   value: -
+      //
+    }
+  }
+ \end{myspec}
+ 
+ 
+ \subsubsection{Specification Details}
+ 
+ \subsubsection*{Class \T{context}}
+ 
+ \begin{myspec}
+ 
+    - CONSTRUCTOR
+      Purpose:  create a security context
+      Format:   CONSTRUCTOR          (in  stringt type = "",
+                                      out context obj);
+      Inputs:   type:                 initial type of context
+      InOuts:   -
+      Outputs:  obj:                  the newly created object
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+-     Throws:   NotImplemented
+!     Throws:   IncorrectState
+                Timeout
+                NoSuccess
++     Notes:    - 
+-     Notes:    - if type is given (i.e. non-empty), then the
+-                 CONSTRUCTOR internally calls set_defaults().
+-                 The notes to set_defaults apply.
+ 
+    - DESTRUCTOR
+      Purpose:  destroy a security context
+      Format:   DESTRUCTOR           (in context obj);
+      Inputs:   obj:                  the object to destroy
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - See notes about lifetime management 
+                  in Section 2
+      Perms:    -
+      Throws:   -
+      Notes:    -
+-
+-   - set_defaults
+-     Purpose:  set default values for specified context type
+-     Format:   set_defaults         (void);                 
+-     Inputs:   -
+-     InOuts:   -
+-     Outputs:  -
+-     PreCond:  -
+-     PostCond: - the context is valid, and can be used for 
+-                 authorization.
+-     Perms:    -
+-     Throws:   NotImplemented
+-     Throws:   IncorrectState
+-               Timeout
+-               NoSuccess
+-     Notes:    - the method evaluates the value of the 'Type'
+-                 attribute, and of all other non-empty
+-                 attributes, and, based on that information, 
+-                 tries to set sensible default values for all 
+-                 previously empty attributes.
+-               - if the 'Type' attribute has an empty value, an
+-                 'IncorrectState' exception is thrown.
+-               - this method can be called more than once on
+-                 a context instance.
+-               - if the implementation cannot create valid
+-                 default values based on the available
+-                 information, an 'NoSuccess' exception is
+-                 thrown, and a detailed error message is given,
+-                 describing why no default values could be
+-                 set.
+ \end{myspec}
+ 
+ 

@@ -1,9 +1,3 @@
-#
-#   Copyright (c) 2008 João Abecasis
-#
-#   Distributed under the Boost Software License, Version 1.0. (See accompanying
-#   file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
-#
 
 ifndef SAGA_MK_INC_TEST
        SAGA_MK_INC_TEST = yes
@@ -38,15 +32,10 @@ else
   SAGA_LD_LIBRARY_PATH   = $(LD_LIBRARY_PATH)
 endif
 
-SAGA_LD_LIBRARY_PATH    += :$(SAGA_BOOST_LOCATION)/lib
 SAGA_LD_LIBRARY_PATH    += :$(SAGA_ROOT)/saga/impl/engine
 
 PACKAGE_DIRS             = $(wildcard $(SAGA_ROOT)/saga/impl/packages/*/)
 SAGA_LD_LIBRARY_PATH    += $(foreach PACKAGE_DIR,$(PACKAGE_DIRS),:$(PACKAGE_DIR))
-
-ifneq "x$(SAGA_BOOST_HAVE_SYSTEM)" "xyes"
-  SAGA_LD_LIBRARY_PATH  += :$(SAGA_ROOT)/external/boost/system/libs/system/src
-endif
 
 -include $(SAGA_MAKE_INCLUDE_ROOT)/saga.test.env.mk
 

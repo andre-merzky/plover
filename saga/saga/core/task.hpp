@@ -9,19 +9,28 @@
 
 namespace saga
 {
+  namespace impl
+  {
+    class task;
+  }
+
   class task : public object, 
                public monitorable
   {
+    typedef saga::impl::task impl_type;
+
     friend class saga::impl::task;
+
 
     protected:
       // create task from impl
-      task (                   saga::impl::task * impl);
-      task (saga::util::shared_ptr <saga::impl::task>  impl);
+      task (                        impl_type * impl);
+      task (saga::util::shared_ptr <impl_type>  impl);
 
       // get impl from base classes
-      saga::util::shared_ptr <saga::impl::task> get_obj_impl  (void) const;
-      saga::util::shared_ptr <saga::impl::task> get_monitor_impl (void) const;
+      template <class base_type>
+      saga::util::shared_ptr <impl_type> get_impl  (void) const;
+
 
     public:
       task  (void);
@@ -33,7 +42,7 @@ namespace saga
       // member methods
 
       // inspection
-      void         get_state  (void);
+      void                    get_state  (void);
       template <typename T> T get_result (void);
       template <typename T> T get_object (void);
 

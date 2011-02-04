@@ -1,0 +1,2325 @@
+ 
+  Several SAGA packages share the notion of name spaces and
+  operations on these name spaces.  In order to increase
+  consistency in the API, these packages share the same
+  API paradigms.  This section describes those paradigms, and
+  these classes which operate on arbitrary hierarchical
+  name spaces, such as used in physical, virtual, and logical file
+  systems, and in information systems.
+ 
+  The API is inspired by the POSIX standard, which defines tools
+  and calls to handle the name space of physical files
+  and directories.  The methods listed for the interfaces
+  have POSIX-like syntax and semantics.
+ 
+  While POSIX has an iterative interface to directory listing
+  (i.e. opendir, telldir, seekdir, readdir), the corresponding
+  part of the interface included here deviates significantly
+  from the POSIX version: it has fewer calls, with a different
+  syntax, but identical semantics.
+ 
+  Please note that 'stat'-like API calls are \I{not} covered
+  here -- they are rather meaningless on a name space per se,
+  but belong to the specific implementations, e.g.  physical
+  files, which inherit the |namespace| classes.
+ 
+  \subsubsection{Definitions}
+ 
+   The Grid File System Working Group in OGF has defined a
+   Resource Name\-space Service (RNS~\cite{rns}).  The SAGA Core
+   API specification follows the definition of a name space from
+   that document.
+ 
+   \paragraph{Directory:}
+ 
+     A 'Directory' represents what~\cite{rns} defines as 'Virtual
+     Directory':
+ 
+     \up
+     \begin{quote}
+ 
+       \small \it
+ 
+       ``A virtual directory is an RNS entry that is represented
+       as a non-leaf node in the hierarchical name space tree.
+       When rendered by a name space service client, a virtual
+       directory functions similar to that of a standard
+       filesystem directory or registry key. It is considered
+       virtual because it does not have any corresponding
+       representation outside of the name space. A virtual
+       directory, therefore, is purely a name space entity that
+       functions in much the same way as a conventional
+       filesystem directory or registry key by maintaining a
+       list of subentries, which thereby demonstrate a
+       hierarchical relationship. There are no restrictions
+       regarding the layout of the name space tree; both virtual
+       directories and junctions can be nested within nested
+       virtual directories recursively.
+ 
+       A virtual directory may be considered analogous to a
+       collection, category, or context -- to the extent that
+       these terms are used in most directory, registry, or
+       catalogue contexts. Virtual directories do not have any
+       time or space existence outside of the name space and
+       strictly serve to facilitate hierarchy.  Name space
+       hierarchies offer categorization or grouping of entries,
+       by presenting the illusion of compartments, which may
+       contain sub-compartments as well as junctions.''
+     
+     \end{quote}
+ 
+ 
+   \paragraph{Directory Entry:}
+ 
+     A \I{directory entry} or \I{entry} represent
+     what~\cite{rns} defines as 'Junction'.  Note that any type
+     of junction defined there could be used:
+ 
+     \up
+     \begin{quote}
+ 
+       \small \it
+ 
+       ``A junction is an RNS entry that interconnects a
+       reference to an existing resource into the hierarchical
+       name space. Junctions represent a name-to-resource mapping
+       that is composed of a human oriented index key or `name'
+       that maps to an endpoint reference. The endpoint
+       reference may refer to any addressable resource, which
+       includes other name space entries, as well as names or
+       unique identifiers to be resolved by other resolution
+       service, as well as definitive target consumable
+       resource. All compliant RNS implementations MUST embody
+       the target information of a name space junction within a
+       valid WS-Addressing [\dots] Endpoint Reference (EPR).''
+ 
+     \end{quote}
+ 
+   \paragraph{Pathnames:}
+ 
+     A \I{pathname} as accepted by this specification MUST be
+     either formatted as URLs or MUST follow the specification
+     of entry names as described
+     in~\cite{rns}, Section 1.2.2.1 ``Entry Name Restrictions''
+     (formatting changed):
+ 
+     \begin{quote}
+ 
+       \small \it
+ 
+      ``Entry names are composed of a simple string of human
+      readable characters. Since certain characters serve
+      special purposes both within the name space service and
+      within a number of systems that may use this service, this
+      section describes the mandatory restrictions for all entry
+      names:\\
+ 
+      Names MUST NOT...
+
+        \begin{shortlist}
+         \item Contain any of the following characters: 
+               \verb'/ : ; * ? " < > |'
+         \item Contain any non-readable characters, such as the
+               carriage return (ANSI 13) or line feed (ANSI 10) 
+               or tab (ANSI 9)
+         \item Be greater than 255 characters in length
+               (Unicode)\\
+        \end{shortlist}
+ 
+       Names SHOULD...
+          
+        \begin{shortlist}
+         \item Accommodate Unicode characters
+         \item Be easily readable by a human user, suggesting 
+               less than 32 characters per name\\
+        \end{shortlist}
+ 
+      Names MAY...
+ 
+        \begin{shortlist}
+         \item Contain space (ANSI 32) characters\\
+        \end{shortlist}
+ 
+      Notice these restrictions apply to entry names and are not
+      describing paths. Paths are constructed of one or more
+      entry names separated by the forward slash character (|/|)''.
+ 
+     \end{quote}
+ 
+     Note that, in fact, pathnames as specified above \I{are}
+     syntactically valid URLs, and this specification is
+     therefore only referring to URLs.  Both, SAGA
+     implementations and SAGA usage SHOULD, however, strive for
+     compliance with~\cite{rns}.  An exception is the use of
+     relative pathnames which, in SAGA, can contain wildcards
+     (see below).
+ 
+     All method arguments which are named |name|, |source| or
+     |target| are considered pathnames.  These pathnames can
+     always be relative pathnames (i.e. they can be relative to
+     the current working directory (|cwd|) of the object
+     instance the operation is performed upon, e.g. when they
+     start with |'./'| or |'../'|).  
+
+     \XAdd[4]{Note that relative path elements are not always
+     resolvable during URL construction.  Instead, resolution
+     may be delayed until the URL is being used, and further may
+     need to be performed differently on each use of the URL,
+     depending on the context of usage:}
+
+
+     \shift |saga::url u0 ("ftp://localhost/tmp/data/test.txt");|\\
+     \shift |saga::url u1 ("gridftp://localhost/tmp/data/test.txt");|\\
+     \shift |saga::url u2 ("../test.txt");|
+
+     \shift |saga::file f0 (u0);|\\
+     \shift |saga::file f1 (u1);|
+
+     \shift |f0.move (u2);  // resolve u2 relative to u0|\\
+     \shift |f1.move (u2);  // resolve u2 relative to u1|
+
+     \XMark[9]
+ 
+     Note that the comments from Section~\ref{ssec:urlprob},
+     apply here.  In particular, an implementation MAY throw an
+     |IncorrectURL| exception if it is unable to handle a given
+     URL, e.g. because of its scheme.
+ 
+ 
+   \paragraph{Current Working Directory (cwd)}
+ 
+     Every |saga::ns_entry| instance has an associate current
+     working directory (cwd), which forms the implicit base for
+     all operations on relative pathnames.  For
+     |saga::ns_directory| instances, that cwd can be changed
+     with the |change_dir| method.  Otherwise, cwd only changes
+     if the entry itself is |move()|'d.
+ 
+ 
+   \paragraph{Links:}
+ 
+     \I{Links} in this specification are considered \I{symbolic
+     links}, i.e. they can break if the entry they point to is
+     removed.  An implementation MAY support links, as not all
+     backends can support links, and others might support links
+     only in specific circumstances (e.g. if entry and link live
+     on the same file system).
+ 
+     The 'Dereference' flag allows methods to operate on the
+     link target instead of the link -- only one level of
+     reference is resolved though.  The |read_link()| method
+     does also resolve only one link level, and returns a URL
+     pointing to the link target.
+ 
+     At the moment, \cite{rns} does not have a notion
+     of symbolic links.  However, an RNS 'junction' which is
+     associated with another RNS junction can be regarded as
+     a symbolic link.
+ 
+ 
+  \paragraph{Wildcards:}
+ 
+    The API supports wildcards for a
+    number of calls, as listed below, and thereby follows the POSIX
+    standard~\cite{posix1,posix2,posix3} for shell
+    wildcards.  Available wildcard patterns are:
+ 
+    \begin{tabbing}
+    xxxxxxx \= xxxxxxx  \= \kill
+            \> |*     | \> : matches any string\\
+            \> |?     | \> : matches a single character\\
+            \> |[abc] | \> : matches any  of a set of characters\\
+            \> |[a-z] | \> : matches any  of a range of characters\\
+            \> |[!abc]| \> : matches none of a range of characters\\
+            \> |[!a-z]| \> : matches none of a range of characters\\
+            \> |{a,bc}| \> : matches any  of a set of strings\\
+    \end{tabbing}
+ 
+    See the POSIX standard~\cite{posix1,posix2,posix3} for
+    more details.  In the SAGA API, wildcards are allowed
+    in all pathnames where they can be used in the respective
+    shell commands, as:
+ 
+      \shift |copy   *.txt dir|\\
+      \shift |move   *.txt dir|\\
+      \shift |link   *.txt dir|\\
+      \shift |ls     *.txt|\\
+      \shift |remove *.txt|\\
+ 
+ 
+    Note that only those methods MUST support
+    wildcards for which this is explicitly specified here.  Other
+    methods MUST NOT support wildcards, as this would not be
+    meaningful.  Flags MUST be applied to all elements of a wildcard
+    expansion, even if that raises an exception for any reason.
+ 
+    For the use of wildcards, separate calls are provided
+    which accept strings instead of URLs.  The reason for this is that
+    RFC~3986~\cite{rfc-3986}, which defines the syntax of URLs,
+    explicitly forbids most POSIX wildcard characters as part of a
+    URL.  Also, we feel that wildcards make most sense in relative
+    pathnames (i.e. relative to a working directory). Strings in these
+    separate calls thus MUST be relative paths, and thus MUST only
+    contain URL path elements, whereby the path element MUST NOT start
+    with an \texttt{'/'}.  Apart from that, the semantics of the
+    wildcard-enabled string method versions of the calls are identical
+    to the semantics of their respective URL counterparts.  If the
+    method encounters any error condition on any one of the expanded
+    URLs, an exception is thrown, and the state of the other (valid or
+    invalid) expanded URL targets remains undefined.
+ 
+ 
+ 
+  \paragraph{Opening and Closing Name Space Entries:}
+ 
+   If a |ns_entry| object instance gets created, it is also
+   opened.  Hence, the semantics and all notes of the
+   respective |open()| call also apply to the
+   constructor.  The same holds for all classes that inherit
+   |ns_entry|.
+ 
+   In accordance with Section~\ref{ssec:garbage}, the
+   |saga::ns_entry| class has a |close()| method, which allows
+   to enforce a timely release of used (local and remote)
+   resources.  After a |ns_entry| instance was closed, all
+   method calls on that instance (apart from the
+   |DESTRUCTOR|) MUST throw an |IncorrectState| exception.
+   A destruction of an entry implies the respective |close()|
+   semantics.  The same holds for all classes that inherit
+   |ns_entry|.
+ 
+   If an entry gets successfully opened without specifying
+   'Lock' as open flag, its state may get corrupted if some
+   other backend operation removes or moves the opened entity,
+   or changes its state.  In that case, any subsequent operation
+   on the object instance can fail unexpectedly.  An
+   |IncorrectState| exception describing the type of state
+   change SHOULD be thrown if such a state change is detected
+   and causes an operation to fail. Otherwise, the normal
+   exception indicating the type of error which occurred
+   SHOULD be thrown.  The |IncorrectState|
+   exception is thus listed on most method calls below,
+   but not individually motivated unless it is also used in any
+   other semantic context.
+ 
+ 
+ \subsubsection{Specification}
+ 
+ \begin{myspec}
+  package saga.namespace
+  {
+    enum flags
+    {
+      None            =    0,
+      Overwrite       =    1,
+      Recursive       =    2,
+      Dereference     =    4,
+      Create          =    8,
+      Exclusive       =   16,
+      Lock            =   32,
+      CreateParents   =   64,
+!     //                 128,    reserved for Truncate
+!     //                 256,    reserved for Append
+!     Read            =  512,
+!     Write           = 1024,
+!     ReadWrite       = 1536  // Read | Write
+    }
+ 
+ 
+    class ns_entry : implements   saga::object,
+                     implements   saga::async
+                     implements   saga::permissions
+                  // from object  saga::error_handler
+    {
+      CONSTRUCTOR        (in  session        s,
+                          in  saga::url      name,
+                          in  int            flags   = None,
+                          out ns_entry       obj     );
+      DESTRUCTOR         (in  ns_entry       obj     );
+ 
+      // basic properties
+      get_url            (out saga::url      url     );
+      get_cwd            (out saga::url      cwd     );
+      get_name           (out saga::url      name    );
+ 
+      // navigation/query methods
+      is_dir             (out boolean        test    );
+      is_entry           (out boolean        test    );
+      is_link            (out boolean        test    );
+      read_link          (out saga::url      link    );
++     get_mtime          (out int            time    );
+ 
+      // management methods
+      copy               (in  saga::url      target,
+                          in  int            flags = None);
+      link               (in  saga::url      target,
+                          in  int            flags = None);
+      move               (in  saga::url      target,
+                          in  int            flags = None);
+      remove             (in  int            flags = None);
+      close              (in  float          timeout = 0.0);
+ 
+ 
+      // permissions with flags
+      permissions_allow  (in  string         id,
+                          in  permission     perm, 
+                          in  int            flags = None);
+      permissions_deny   (in  string         id,
+                          in  permission     perm, 
+                          in  int            flags = None);
+    }
+ 
+ 
+    class ns_directory : extends        saga::ns_entry
+                         // from ns_entry  saga::object
+                         // from ns_entry  saga::async
+                         // from ns_entry  saga::permissions
+                         // from object    saga::error_handler
+    {
+      CONSTRUCTOR        (in  session        s,
+                          in  saga::url      name,
+                          in  int            flags = None,
+                          out ns_directory   obj     );
+      DESTRUCTOR         (in  ns_directory   obj     );
+ 
+      // navigation/query methods
+      change_dir         (in  saga::url      dir     );
+      list               (in  string         name_pattern = ".",
+                          in  int            flags   = None, 
+                          out array<saga::url> names   );
+      find               (in  string         name_pattern,
+                          in  int            flags = Recursive,
+                          out array<saga::url> names   );
+      exists             (in  saga::url      name,
+                          out boolean        exists  );
+      is_dir             (in  saga::url      name,
+                          out boolean        test    );
+      is_entry           (in  saga::url      name,
+                          out boolean        test    );
+      is_link            (in  saga::url      name,
+                          out boolean        test    );
+      read_link          (in  saga::url      name,
+                          out saga::url      link    );
++     get_mtime          (in  saga::url      name,
++                         out int            time    );
+ 
+      // manage entries by number
+      get_num_entries    (out int            num     );
+      get_entry          (in  int            entry,
+                          out saga::url      name    );
+ 
+      // management methods
+      copy               (in  saga::url      source,
+                          in  saga::url      target,
+                          in  int            flags = None);
+      link               (in  saga::url      source,
+                          in  saga::url      target,
+                          in  int            flags = None);
+      move               (in  saga::url      source,
+                          in  saga::url      target,
+                          in  int            flags = None);
+      remove             (in  saga::url      target,
+                          in  int            flags = None);
+      make_dir           (in  saga::url      target,
+                          in  int            flags = None);
+ 
+      // management methods - wildcard versions
+      copy               (in  string         source,
+                          in  saga::url      target,
+                          in  int            flags = None);
+      link               (in  string         source,
+                          in  saga::url      target,
+                          in  int            flags = None);
+      move               (in  string         source,
+                          in  saga::url      target,
+                          in  int            flags = None);
+      remove             (in  string         target,
+                          in  int            flags = None);
+ 
+      // factory methods
+      open               (in  saga::url      name,
+!                         in  int            flags = Read,
+                          out ns_entry       entry   );
+      open_dir            (in  saga::url     name,
+!                         in  int            flags = Read,
+                          out ns_directory   dir     );
+ 
+ 
+      // permissions with flags
+      permissions_allow  (in  saga::url      target,
+                          in  string         id,
+                          in  int            perm, 
+                          in  int            flags = None);
+      permissions_deny   (in  saga::url      target,
+                          in  string         id,
+                          in  int            perm, 
+                          in  int            flags = None);
+ 
+      // permissions with flags - wildcard versions
+      permissions_allow  (in  string         target,
+                          in  string         id,
+                          in  int            perm, 
+                          in  int            flags = None);
+      permissions_deny   (in  string         target,
+                          in  string         id,
+                          in  int            perm, 
+                          in  int            flags = None);
+    }
+  }
+ \end{myspec}
+ 
+ 
+ \subsubsection{Specification Details}
+ 
+  \subsubsection*{Enum \T{flags}}
+ 
+  The \T{flags} describe the properties of several
+  operations on namespace entries.  Packages which inherit from
+  the namespace package use the same flag semantics unless
+  specified otherwise, but will, in general, add additional flags
+  to some operations.
+  
+    |None|\\[0.3mm]
+    \begin{tabular}{cp{110mm}}
+      ~~ & indicates the absence of flags, and thus also
+           implies that the default flags for an operation do 
+           not apply, either.
+    \end{tabular}
+ 
+    |Overwrite|\\[0.3mm]
+    \begin{tabular}{cp{110mm}}
+      ~~ & enforces an operation which creates a new
+           namespace entry to continue even if the target entry 
+           does already exist -- if that flag is not given, an 
+           \T{'AlreadyExists'} exception would result from 
+           such an operation.
+    \end{tabular}
+ 
+    |Recursive|\\[0.3mm]
+    \begin{tabular}{cp{110mm}}
+      ~~ & enforces an operation to apply recursively on a
+           directory tree -- if that flag is not given, the same
+           operation would only apply to the given directory,
+           and not to its children.
+    \end{tabular}
+ 
+    |Dereference|\\[0.3mm]
+    \begin{tabular}{cp{110mm}}
+      ~~ & enforces an operation to apply not to the entry
+           pointed to by the target name, but to the link target
+           of that entry -- if that flag is not given, the same
+           operation would apply to the entry directly, and its
+           link target stays unaffected.
+    \end{tabular}
+ 
+    |Create|\\[0.3mm]
+    \begin{tabular}{cp{110mm}}
+      ~~ & allows a namespace entry to be created while 
+           opening it, if it does not already exist -- if that 
+           flag is not given, the same open operation would 
+           cause a \T{'DoesNotExist'} exception.  If the entry 
+           exists, the flag is ignored.  \XAddn{This flag implies
+           the \T{'Write'} flag.}
+    \end{tabular}
+ 
+    |Exclusive|\\[0.3mm]
+    \begin{tabular}{cp{110mm}}
+      ~~ & implies a modification to the meaning of the
+           \T{Create} flag: if the entry already exists, the
+           \T{Create} flag is is no longer silently ignored, but
+           causes an \T{'AlreadyExists'} exception.
+    \end{tabular}
+ 
+    |Lock|\\[0.3mm]
+    \begin{tabular}{cp{110mm}}
+      ~~ & enforces a lock on the name space entry when
+            it is opened.  Locks are advisory in SAGA, semantic 
+            details for locking are defined in the description 
+            of the \T{open()} call.
+    \end{tabular}
+ 
+    |CreateParents|\\[0.3em]
+    \begin{tabular}{cp{110mm}}
+      ~~ & An operation which would create a name space 
+           entry would normally fail if any path element in the
+           targets name does not yet exist.  If this flag is
+           given, such an operation would not fail, but would
+           imply that the missing path elements are created on
+           the fly.  \XAddn{This flag implies the \T{'Create'} 
+           flag.}
+    \end{tabular}
+ 
+    |Read|\\[0.3mm]
+    \begin{tabular}{cp{110mm}}
+      ~~ & \XAddn{The entry or directory is opened for reading 
+           -- that does not imply the ability to write to the 
+           entry or directory.}
+    \end{tabular}
+    \XMark[2]
+ 
+    |Write|\\[0.3mm]
+    \begin{tabular}{cp{110mm}}
+      ~~ & \XAddn{The entry or directory is opened for writing 
+           -- that does not imply the ability to read from the 
+           entry or directory.}
+    \end{tabular}
+    \XMark[2]
+ 
+    |ReadWrite|\\[0.3mm]
+    \begin{tabular}{cp{110mm}}
+      ~~ & \XAddn{The entry or directory is opened for reading 
+           and writing.}
+    \end{tabular}
+    \XMark
+ 
+ 
+  \subsubsection*{Class \T{ns\_entry}}
+ 
+    |ns_entry| defines methods which serve the inspection of the
+    entry itself, methods which allows to manage the entry (e.g.
+    to copy, move, or remove it),  and methods to manipulate the
+    entry's access control lists.
+ 
+    In general, multiple such URLs might be valid to identify an
+    entry:
+ 
+    \up\up
+    \begin{myspec}
+       ftp://ftp.host.net/pub/data/test.txt
+      http://www.host.net/ftp/data/test.txt
+      http://www.host.net/ftp/data/./test.txt
+      http://www.host.net/ftp/data/../data/test.txt
+    \end{myspec}
+    \up
+ 
+ 
+    Any valid URL can be returned on |get_url()|, but it SHOULD
+    not contain |'..'| or |'.'| \XAddn{as non-leading} path
+    \XRep{elements}{components}, i.e.  \XSpelln{SHOULD} have
+    a normalized path element.  The URL returned on |get_url()|
+    should serve as base for the return values on |get_cwd()|
+    and |get_name()|: In general it should hold \XAdd{that}:
+    
+    \shift\T{get\_url() == get\_cwd() + '/' + get\_name()}
+    \XMark
+
+    
+    \XAdd{Note that \T{get\_cwd()} behaves like the unix command
+    \T{'dirname'}.}
+
+ 
+ \begin{myspec}
+    - CONSTRUCTOR
+      Purpose:  create the object
+      Format:   CONSTRUCTOR          (in  session   s, 
+                                      in  saga::url name,
+!                                     in  int       flags = Read,
+                                      out ns_entry obj)
+      Inputs:   s:                    session handle
+                name:                 initial working dir
+                flags:                open mode
+      InOuts:   -
+      Outputs:  obj:                  the newly created object
+      PreCond:  -
+      PostCond: - the entry is opened.
+                - 'Owner' of target is the id of the context
+                  use to perform the operation, if the entry 
+                  gets created.
+      Perms:    Exec  for parent directory.
+                Write for parent directory if Create is set.
+                Write for name if Write is set.
+                Read  for name if Read  is set.
+      Throws:   NotImplemented
+                IncorrectURL
+                BadParameter
+                DoesNotExist
+                AlreadyExists
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+!     Notes:    - the default flag set is 'Read'.
+                - the constructor performs an open of the 
+                  entry - all notes to the respective open 
+                  call (on namespace_directory) apply.
+ 
+ 
+    - DESTRUCTOR
+      Purpose:  destroy the object
+      Format:   DESTRUCTOR           (in  ns_entry     obj)
+      Inputs:   obj:                  the object to destroy
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - the entry is closed.
+      Perms:    -
+      Throws:   - 
+      Notes:    - if the instance was not closed before, the 
+                  destructor performs a close() on the instance,
+                  and all notes to close() apply.
+ 
+ 
+ 
+    Methods for inspecting ns_entry:
+    --------------------------------
+ 
+    - get_url
+      Purpose:  obtain the complete url pointing to the entry
+      Format:   get_url            (out  saga::url url);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  url                 url pointing to the entry
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+      Throws:   NotImplemented
+                IncorrectState
+                Timeout
+                NoSuccess
+      Notes:    -
+ 
+ 
+ 
+    - get_cwd
+      Purpose:  obtain the current working directory for the
+                entry
+      Format:   get_cwd            (out saga::url cwd);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  cwd                 current working directory
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+      Throws:   NotImplemented
+                IncorrectState
+                Timeout
+                NoSuccess
+      Notes:    -
+                - returns the directory part of the url path
+                  element.
+ 
+ 
+ 
+    - get_name
+      Purpose:  obtain the name part of the url path element
+      Format:   get_name           (out  saga::url name);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  name                last part of path element
+      PreCond:  -
+      PostCond: -
+      Perms:    -
+      Throws:   NotImplemented
+                IncorrectState
+                Timeout
+                NoSuccess
+      Notes:    -
+ 
+ 
+ 
+    - is_dir
+      Purpose:  tests the entry for being a directory
+      Format:   is_dir             (out boolean test);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  test:               boolean indicating if entry
+                                    is a directory
+      PreCond:  -
+      PostCond: -
+      Perms:    Query
+                Query for parent directory.
+      Throws:   NotImplemented
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - returns true if entry is a directory, false
+                  otherwise
+                - similar to 'test -d' as defined by POSIX.
+ 
+ 
+    - is_entry
+      Purpose:  tests the entry for being an ns_entry
+      Format:   is_entry           (out boolean test);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  test:               boolean indicating if entry
+                                    is an ns_entry
+      PreCond:  -
+      PostCond: -
+      Perms:    Query
+                Query for parent directory.
+      Throws:   NotImplemented
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - the method returns false if the entry is a
+                  link or a directory (although an ns_directory
+                  IS_A ns_entry, false is returned on a test on 
+                  an ns_directory) - otherwise true is returned.
+                - similar to 'test -f' as defined by POSIX.
+ 
+ 
+    - is_link
+      Purpose:  tests the entry for being a link
+      Format:   is_link            (out boolean test);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  test:               boolean indicating if
+                                    entry is a link
+      PreCond:  -
+      PostCond: -
+      Perms:    Query
+                Query for parent directory.
+      Throws:   NotImplemented
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - returns true if the entry is a link, false
+                  otherwise
+!               - similar to libc's 'readlink' as defined by
++                 POSIX, but with only one level of redirection
++                 resolved.
+ 
+ 
+    - read_link 
+      Purpose:  returns the name of the link target
+      Format:   read_link          (out saga::url link);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  link:               resolved name
+      PreCond:  -
+      PostCond: -
+      Perms:    Query
+                Query for parent directory.
+      Throws:   NotImplemented
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - the returned name MUST be sufficient to
+                  access the link target entry
+                - resolves one link level only
+                - if the entry instance this method is called
+                  upon does not point to a link, an
+                  'IncorrectState' exception is thrown.
+!               - similar to libc's 'readlink' as defined by
++                 POSIX, but with only one level of redirection
++                 resolved.
+ 
++
++   - get_mtime
++     Purpose:  returns the last modification time
++     Format:   get_time           (out int time);
++     Inputs:   -
++     InOuts:   -
++     Outputs:  time:               time of last modification
++     PreCond:  -
++     PostCond: -
++     Perms:    Query
++               Query for parent directory.
++     Throws:   NotImplemented
++               IncorrectState
++               PermissionDenied
++               AuthorizationFailed
++               AuthenticationFailed
++               Timeout
++               NoSuccess
++     Notes:    - the returned number represents the time of
++                 last modification in seconds since epoch
++                 (01.01.1970)
++               - similar to the 'st_mtimespec' element of the
++                 stat strucure used in the POSIX stat() call.
++
+ 
+    Methods for managing the name space entry:
+    -------------------------------------------
+ 
+    - copy
+      Purpose:  copy the entry to another part of the name space
+      Format:   copy               (in  saga::url target,
+                                    in  int       flags = None);
+      Inputs:   target:             name to copy to
+                flags:              flags defining the operation
+                                    modus
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - an identical copy exists at target.
+                - 'Owner' of target is the id of the context
+                  use to perform the operation, if target gets
+                  created.
+      Perms:    Query 
+                Exec  for parent directory.
+                Query for target.
+                Query for target's parent directory.
+                Exec  for target's parent directory.
+                Write for target
+                      if  target does exist.
+                Write for target's parent directory 
+                      if  target does not exist.
+      Throws:   NotImplemented
+                IncorrectURL
+                BadParameter
+                DoesNotExist
+                AlreadyExists
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - if the target is a directory, the source entry
+                  is copied into that directory
+                - a 'BadParameter' exception is thrown if the 
+                  source is a directory and the 'Recursive' flag 
+                  is not set.
+                - a 'BadParameter' exception is thrown if the 
+                  source is not a directory and the 'Recursive' 
+                  flag is set.
+                - if the target lies in a non-existing part of
+                  the name space, a 'DoesNotExist' exception is
+                  thrown, unless the 'CreateParents' flag is
+                  given - then that part of the name space must
+                  be created.
+                - if the target already exists, it will be
+                  overwritten if the 'Overwrite' flag is set,
+                  otherwise it is an 'AlreadyExists' exception.
+                - if a directory is to be copied recursively,
+                  but the target exists and is not a directory,
+                  and not a link to a directory, an
+                  'AlreadyExists' exception is thrown even if
+                  the 'Overwrite' flag is set. 
+                - if the instance points at an symbolic link, 
+                  the source is deeply dereferenced before copy.
+                  If derefencing is impossible (e.g. on a broken 
+                  link), an 'IncorrectState' exception is thrown.
+                - other flags are not allowed, and cause a
+                  'BadParameter' exception.
+                - the default flags are 'None' (0).
+                - similar to 'cp' as defined by POSIX.
+ 
+ 
+    - link
+      Purpose:  create a symbolic link from the target entry to
+                the source entry ( this entry) so that any reference 
+                to the target refers to the source entry
+      Format:   link               (in  saga::url target,
+                                    in  int       flags = None);
+      Inputs:   target:             name to link to
+                flags:              flags defining the operation
+                                    modus
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - a symbolic link to the entry exists at target.
+                - 'Owner' of target is the id of the context
+                  use to perform the operation if target gets
+                  created.
+      Perms:    Query 
+                Exec  for parent directory.
+                Query for target.
+                Query for target's parent directory.
+                Exec  for target's parent directory.
+                Write for target
+                      if  target does exist.
+                Write for target's parent directory 
+                      if  target does not exist.
+      Throws:   NotImplemented
+                IncorrectURL
+                BadParameter
+                DoesNotExist
+                AlreadyExists
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - if the target is a directory, the source entry
+                  is linked into that directory
+                - if the source is a directory, and the
+                  'Recursive' flag is set, the source directory
+                  is recursively linked to the target (which must
+                  be a directory as well - otherwise a
+                  'BadParameter' exception is thrown).  The
+                  method then behaves similar to lndir.  If the
+                  'Recursive' flag is not set, the source entry
+                  itself is linked.  
+                - a 'BadParameter' exception is thrown if the 
+                  source is not a directory and the 'Recursive' 
+                  flag is set.
+                - if the target lies in a non-existing part of
+                  the name space, a 'DoesNotExist' exception is
+                  thrown, unless the 'CreateParents' flag is
+                  given - then that part of the name space must
+                  be created.
+                - if the target already exists, it will be
+                  overwritten if the 'Overwrite' flag is set,
+                  otherwise it is an 'AlreadyExists' exception.
+                - if a directory is to be moved, but the target
+                  exists and is not a directory, and not a link 
+                  to a directory, an 'AlreadyExists' exception 
+                  is thrown even if the 'Overwrite' flag is set. 
+                - if the instance points at an symbolic link, 
+                  the source is not dereferenced before linking, 
+                  unless the 'Dereference' flag is given.  If
+                  derefencing is impossible (e.g. on a broken 
+                  link), an 'IncorrectState' exception is thrown.
+                - other flags are not allowed, and cause a
+                  'BadParameter' exception.
+                - the default flags are 'None' (0).
+                - similar to 'ln' as defined by POSIX.
+ 
+ 
+    - move
+      Purpose:  rename source to target, or move source to
+                target if target is a directory.
+      Format:   move               (in  saga::url target,
+                                    in  int       flags = None);
+      Inputs:   target:             name to move to
+                flags:              flags defining the operation
+                                    modus
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+!     PostCond: - the entry exists at the target url.
+!               - no entry exists at the original url.
++               - the object instance is not closed.
+                - 'Owner' of target is the id of the context
+                  use to perform the operation, if target gets
+                  created.
+      Perms:    Query 
+                Write 
+                Exec  for parent directory.
+                Write for parent directory.
+                Query for target.
+                Exec  for target's parent directory.
+                Write for target
+                      if  target does exist.
+                Write for target's parent directory 
+                      if  target does not exist.
+      Throws:   NotImplemented
+                IncorrectURL
+                BadParameter
+                DoesNotExist
+                AlreadyExists
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - if the target is a directory, the source entry
+                  is moved into that directory.
+                - a 'BadParameter' exception is thrown if the 
+                  source is a directory and the 'Recursive' flag 
+                  is not set.
+                - a 'BadParameter' exception is thrown if the 
+                  source is not a directory and the 'Recursive' 
+                  flag is set.
+                - if the target lies in a non-existing part of
+                  the name space, a 'DoesNotExist' exception is
+                  thrown, unless the 'CreateParents' flag is
+!                 given - then that part of the name space MUST
+                  be created.
+                - if the target already exists, it will be
+                  overwritten if the 'Overwrite' flag is set,
+                  otherwise it is an 'AlreadyExists' exception.
+                - if the instance points at an symbolic link, 
+                  the source is not dereferenced before moving,
+                  unless the 'Dereference' flag is given.
+                  If derefencing is impossible (e.g. on a broken 
+                  link), an 'IncorrectState' exception is thrown.
+                - other flags are not allowed, and cause a
+                  'BadParameter' exception.
+                - the default flags are 'None' (0).
+                - similar to 'mv' as defined by POSIX.
+ 
+ 
+    - remove
+      Purpose:  removes this entry, and closes it
+      Format:   remove             (in  int  flags = None);
+      Inputs:   target:             entry to be removed
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - the original entry is closed and removed.
+      Perms:    Query 
+                Write 
+                Exec  for parent directory.
+                Write for parent directory.
+      Throws:   NotImplemented
+                BadParameter
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - a 'BadParameter' exception is thrown if the 
+!                 entry is a non-empty directory and the 
+!                 'Recursive' flag is not set.
++               - if the 'Recursive' flag is defined, the target
++                 is recursively removed if it is a directory;
++                 otherwise this flag is ignored.
++               - if the 'Dereference' flag is specified, the
++                 method applies to the link target of target.
++                 The flag causes a 'BadParameter' exception if
++                 target is not a link.
+                - a 'BadParameter' exception is thrown if the 
+!                 entry is not a directory and the 'Recursive' 
+                  flag is set.
+-               - the entry will not be dereferenced unless the
+-                 'Dereference' flag is given.  If derefencing is
+-                 impossible (e.g. on a broken link), an
+-                 'IncorrectState' exception is thrown.
+                - other flags are not allowed, and cause a
+                  'BadParameter' exception.
+                - the default flags are 'None' (0).
+                - if the instance was not closed before, this
+                  call performs a close() on the instance, and 
+                  all notes to close() apply.
+                - similar to 'rm' as defined by POSIX.
+ 
+ 
+    - close
+      Purpose:  closes the object
+      Format:   close              (in  float timeout = 0.0);
+      Inputs:   timeout             seconds to wait
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - the entry instance is closed.
+      Perms:    -
+      Throws:   NotImplemented
+-               IncorrectState
+                NoSuccess
+      Notes:    - any subsequent method call on the object
+                  MUST raise an 'IncorrectState' exception
+                  (apart from DESTRUCTOR and close()).
+                - close() can be called multiple times, with no
+                  side effects.
+                - if close() is implicitly called in the
+                  DESTRUCTOR, it will never throw an exception.
+                - for resource deallocation semantics, see 
+                  Section 2.
+                - for timeout semantics, see Section 2.
+ 
+ 
+    // overload permissions because of namespace specific flags
+ 
+    - permissions_allow
+      Purpose:  enable a permission 
+      Format:   permissions_allow    (in  string  id,
+                                      in  int     perm, 
+                                      in  int     flags = None);
+      Inputs:   id:                   id to set permission for
+                perm:                 permission to enable
+                flags:                mode of operation
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - the permissions are enabled.
+      Perms:    Owner
+      Throws:   NotImplemented
+                BadParameter
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - all notes to permissions_allow from the
+                  saga::permissions interface apply.
+                - allowed flags are: 'Recursive', 'Dereference'.
+                  All other flags cause a 'BadParameter'
+                  exception.
+                - specifying 'Recursive' for a non-directory
+                  causes a 'BadParameter' exception.
+ 
+ 
+    - permissions_deny
+      Purpose:  disable a permission flag
+      Format:   permissions_deny     (in  string     id,
+                                      in  int        perm,
+                                      in  int        flags);
+      Inputs:   id:                   id to set permission for
+                perm:                 permission to disable
+                flags:                mode of operation
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - the permissions are disabled.
+      Perms:    Owner
+      Throws:   NotImplemented
+                BadParameter
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - all notes to permissions_deny from the
+                  saga::permissions interface apply.
+                - allowed flags are: 'Recursive', 'Dereference'.
+                  All other flags cause a 'BadParameter'
+                  exception.
+                - specifying 'Recursive' for a non-directory
+                  causes a 'BadParameter' exception.
+ \end{myspec}
+ 
+ 
+  \subsubsection*{Class \T{ns\_directory}}
+ 
+    |ns_directory| inherits all navigation and manipulation
+    methods from |ns_entry|, but adds some more methods to these
+    sets: instead of |dir.copy (target)| they allow, for
+    example, to do |dir.copy (source, target)|.  Other methods
+    added allow to change the cwd of the instance (which changes
+    the values returned by the |get_name()|, |get_cwd()| and
+    |get_url()| inspection methods), and others allow to open
+    new |ns_entry| and |ns_directory| instances (|open()| and
+    |open_dir()|).
+ 
+    For all methods which have the same name as in the
+    |ns_entry| class, the descriptions and semantics defined in
+    |ns_entry| apply, unless noted here otherwise.
+ 
+ 
+ \begin{myspec}
+    - CONSTRUCTOR
+      Purpose:  create the object
+      Format:   CONSTRUCTOR          (in  session   s,
+                                      in  saga::url name,
+!                                     in  int       flags = Read,
+                                      out ns_directory obj)
+      Inputs:   name:                 initial working dir
+                flags:                open mode
+                s:                    session handle for
+                                      object creation
+      InOuts:   -
+      Outputs:  obj:                  the newly created object
+      PreCond:  -
+      PostCond: - the directory is opened.
+                - 'Owner' of target is the id of the context
+                  use to perform the operation, if the
+                  directory gets created.
+      Perms:    Exec  for parent directory.
+                Write for parent directory if Create is set.
+                Write for name if Write is set.
+                Read  for name if Read  is set.
+      Throws:   NotImplemented
+                IncorrectURL
+                BadParameter
+                DoesNotExist
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - the semantics of the inherited constructors
+                  apply
+                - the constructor performs an open of the 
+                  entry - all notes to the respective open 
+                  call apply.
+!               - the default flag set is 'Read'.
+ 
+ 
+    - DESTRUCTOR
+      Purpose:  destroy the object
+      Format:   DESTRUCTOR           (in  ns_directory obj)
+      Inputs:   obj:                  the object to destroy
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - the directory is closed.
+      Perms:    -
+      Throws:   - 
+      Notes:    - the semantics of the inherited destructors
+                  apply
+ 
+ 
+    Methods for navigation in the name space hierarchy:
+    ---------------------------------------------------
+ 
+    - change_dir
+      Purpose:  change the working directory
+      Format:   change_dir         (in  saga::url  dir);
+      Inputs:   dir:                directory to change to
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - dir is the directory the instance represents.
+      Perms:    Exec for dir.
+      Throws:   NotImplemented
+                IncorrectURL
+                BadParameter
+                DoesNotExist
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - if 'dir' can be parsed as URL, but contains an
+                  invalid directory name, a 'BadParameter'
+                  exception is thrown.
+                - if 'dir' does not exist, a 'DoesNotExist'
+                  exception is thrown.
+                - similar to the 'cd' command in the POSIX 
+                  shell.
+ 
+ 
+    - list
+      Purpose:  list entries in this directory
+      Format:   list               (in  string name_pattern = ".",
+                                    in  int    flags        = None
+                                    out array<saga::url> names);
+      Inputs:   flags:              flags defining the operation
+                                    modus
+                name_pattern:       name or pattern to list
+      InOuts:   -
+      Outputs:  names:              array of names matching the
+                                    name_pattern
+      PreCond:  -
+      PostCond: -
+      Perms:    Query for entries specified by name_pattern.
+                Exec  for parent directories of these entries.
+                Query for parent directories of these entries.
+                Read  for directories specified by name_pattern.
+                Exec  for directories specified by name_pattern.
+                Exec  for parent directories of these directories.
+                Query for parent directories of these directories.
+      Throws:   NotImplemented
+                IncorrectURL
+                BadParameter
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - if name_pattern is not given (i.e. is an empty 
+                  string), all entries in the current working 
+                  directory are listed.
+                - if name_pattern is given and points to a 
+                  directory, the contents of that directory 
+                  are listed.
+                - the name_pattern follows the standard POSIX 
+                  shell wildcard specification, as described 
+                  above.
+                - list does not follow symbolically linked
+                  directories, unless the 'Dereference' flag
+                  is specified - otherwise list lists symbolic 
+                  link entries with a matching name.
+                - if the 'DeReference' flag is set, list 
+                  returns the name of link targets, not of the
+                  link entry itself.
+                - the default flags are 'None' (0).
+                - other flags are not allowed, and cause a
+                  'BadParameter' exception.
+                - if the name_pattern cannot be parsed, a
+                  'BadParameter' exception with a descriptive
+                  error message is thrown.
+                - if the name_pattern does not match any entry,
+                  an empty list is returned, but no exception is
+                  raised.
+                - similar to 'ls' as defined by POSIX.
+ 
+ 
+    - find
+      Purpose:  find entries in the current directory and below
+      Format:   find               (in  string  name_pattern,
+                                    in  int     flags = Recursive,
+                                    out array<saga::url> names);
+      Inputs:   name_pattern:       pattern for names of
+                                    entries to be found
+                flags:              flags defining the operation
+                                    modus
+      InOuts:   -
+      Outputs:  names:              array of names matching the
+                                    name_pattern
+      PreCond:  -
+      PostCond: -
+      Perms:    Read  for cwd.
+                Query for entries specified by name_pattern.
+                Exec  for parent directories of these entries.
+                Query for parent directories of these entries.
+                Read  for directories specified by name_pattern.
+                Exec  for directories specified by name_pattern.
+                Exec  for parent directories of these directories.
+                Query for parent directories of these directories.
+      Throws:   NotImplemented
+                BadParameter
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - find operates recursively below the current
+                  working directory if the 'Recursive' flag is
+                  specified (default)
+                - find does not follow symbolically linked
+                  directories, unless the 'Dereference' flag
+                  is specified - otherwise find lists symbolic 
+                  link entries with a matching name.
+                - the default flags are 'Recursive' (1).
+                - other flags are not allowed, and cause a
+                  'BadParameter' exception.
+                - the name_pattern follows the standard POSIX 
+                  shell wildcard specification, as described 
+                  above.
+                - the matching entries returned are path names 
+                  relative to cwd.
+                - similar to 'find' as defined by POSIX, but
+                  limited to the -name option.
+ 
+ 
+    - exists
+      Purpose:  returns true if entry exists, false otherwise
+      Format:   exists             (in  saga::url name,
+                                    out boolean  exists);
+      Inputs:   name:               name to be tested for
+                                    existence
+      InOuts:   -
+      Outputs:  exists:             boolean indicating existence
+                                    of name
+      PreCond:  -
+      PostCond: -
+      Perms:    Query for name.
+                Exec  for name's parent directory.
+                Read  for name's parent directory.
+      Throws:   NotImplemented
+                IncorrectURL
+                BadParameter
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - if 'name' can be parsed as URL, but contains 
+                  an invalid entry name, an 'BadParameter'
+                  exception is thrown.
+                - note that no exception is thrown if the entry
+                  does not exist - the method just returns
+                  'false' in this case.
+                - similar to 'test -e' as defined by POSIX.
+ 
+ 
+    - is_dir
+      Purpose:  tests name for being a directory
+      Format:   is_dir             (in  saga::url name,
+                                    out boolean test);
+      Inputs:   name:               name to be tested
+      InOuts:   -
+      Outputs:  test:               boolean indicating if name
+                                    is a directory
+      PreCond:  -
+      PostCond: -
+      Perms:    Query for name.
+                Exec  for name's parent directory.
+                Read  for name's parent directory.
+      Throws:   NotImplemented
+                IncorrectURL
+                BadParameter
+                DoesNotExist
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - returns true if the instance represents
+                  a directory entry, false otherwise
+!               - all notes to the ns_entry::is_dir() method 
+                  apply.
+                - if 'name' can be parsed as URL, but contains 
+                  an invalid entry name, an 'BadParameter'
+                  exception is thrown.
+                - if 'name' is a valid entry name but the entry
+                  does not exist, a 'DoesNotExist' exception is
+                  thrown.
+                - similar to 'test -d' as defined by POSIX.
+ 
+ 
+    - is_entry
+      Purpose:  tests name for being an ns_entry
+      Format:   is_entry           (in  saga::url name,
+                                    out boolean   test);
+      Inputs:   name:               name to be tested
+      InOuts:   -
+      Outputs:  test:               boolean indicating if name
+                                    is a non-directory entry
+      PreCond:  -
+      PostCond: -
+      Perms:    Query for name.
+                Exec  for name's parent directory.
+                Read  for name's parent directory.
+      Throws:   NotImplemented
+                IncorrectURL
+                BadParameter
+                DoesNotExist
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+!     Notes:    - all notes to the ns_entry::is_entry() method 
+                  apply.
+                - if 'name' can be parsed as URL, but contains 
+                  an invalid entry name, a 'BadParameter'
+                  exception is thrown.
+                - if 'name' is a valid entry name but the entry
+                  does not exist, a 'DoesNotExist' exception is
+                  thrown.
+                - similar to 'test -f' as defined by POSIX.
+ 
+ 
+    - is_link
+      Purpose:  tests name for being a symbolic link
+      Format:   is_link            (in  saga::url name,
+                                    out boolean   test);
+      Inputs:   name:               name to be tested
+      InOuts:   -
+      Outputs:  test:               boolean indicating if name
+                                    is a link
+      PreCond:  -
+      PostCond: -
+      Perms:    Query for name.
+                Exec  for name's parent directory.
+                Read  for name's parent directory.
+      Throws:   NotImplemented
+                IncorrectURL
+                BadParameter
+                IncorrectState
+                DoesNotExist
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+!     Notes:    - all notes to the ns_entry::is_link() method 
+                  apply.
+                - if 'name' can be parsed as URL, but contains 
+                  an invalid entry name, a 'BadParameter'
+                  exception is thrown.
+                - if 'name' is a valid entry name but the entry
+                  does not exist, a 'DoesNotExist' exception is
+                  thrown.
+                - similar to 'test -L' as defined by POSIX.
+ 
+ 
+    - read_link 
+      Purpose:  returns the name of the link target
+      Format:   read_link          (in  saga::url name,
+                                    out saga::url link);
+      Inputs:   name:               name to be resolved
+      InOuts:   -
+      Outputs:  link:               resolved name
+      PreCond:  -
+      PostCond: -
+      Perms:    Query for name.
+                Exec  for name's parent directory.
+                Read  for name's parent directory.
+      Throws:   NotImplemented
+                IncorrectURL
+                BadParameter
+                DoesNotExist
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - all notes to ns_entry::read_link() apply
+                - if 'name' can be parsed as URL, but contains 
+                  an invalid entry name, a 'BadParameter'
+                  exception is thrown.
+                - if 'name' does not exist, a 'DoesNotExist'
+                  exception is thrown.
+ 
++
++   - get_mtime
++     Purpose:  returns the last modification time
++     Format:   get_time           (in  saga::url name,
++                                   out int time);
++     Inputs:   name:               name to be checked
++     InOuts:   -
++     Outputs:  time:               time of last modification
++     PreCond:  -
++     PostCond: -
++     Perms:    Query for name.
++               Query for name's parent directory.
++     Throws:   NotImplemented
++               IncorrectURL
++               BadParameter
++               DoesNotExist
++               IncorrectState
++               PermissionDenied
++               AuthorizationFailed
++               AuthenticationFailed
++               Timeout
++               NoSuccess
++     Notes:    - all notes to ns_entry::get_mtime() apply.
++               - if 'name' can be parsed as URL, but contains 
++                 an invalid entry name, a 'BadParameter'
++                 exception is thrown.
++               - if 'name' does not exist, a 'DoesNotExist'
++                 exception is thrown.
++
+ 
+ 
+    Iterate over large directories:
+    -------------------------------
+ 
+    - get_num_entries
+      Purpose:  gives the number of entries in the directory
+      Format:   get_num_entries    (out int   num);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  num:                number of entries in the
+                                    directory
+      PreCond:  -
+      PostCond: -
+      Perms:    Query for cwd.
+                Exec  for cwd.
+                Read  for cwd.
+      Throws:   NotImplemented
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - at the time of using the result of this call,
+                  the actual number of entries may already have
+                  changed (no locking is implied)
+                - vaguely similar to 'opendir'/'readdir' (2) as
+                  defined by POSIX.
+ 
+ 
+    - get_entry 
+      Purpose:  gives the name of an entry in the directory
+                based upon the enumeration defined by
+                get_num_entries
+      Format:   get_entry          (in  int       entry,
+                                    out saga::url name);
+      Inputs:   entry:              index of entry to get
+      InOuts:   -
+      Outputs:  name:               name of entry at index
+      PreCond:  -
+      PostCond: -
+      Perms:    Query for cwd.
+                Exec  for cwd.
+                Read  for cwd.
+      Throws:   NotImplemented
+                IncorrectState
+                DoesNotExist
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - '0' is the first entry
+                - there is no sort order implied by the
+                  enumeration, however an underlying
+                  implementation MAY choose to sort the entries
+                - subsequent calls to get_entry and/or
+                  get_num_entries may return inconsistent data,
+                  i.e. no locking or state tracking is implied.
+                  In particular, an index may be invalid - a
+                  'DoesNotExist' exception is then thrown (not a
+                  'BadParameter' exception).
+                - vaguely similar to 'opendir'/'readdir' (2) as
+                  defined by POSIX.
+ 
+ 
+    Management of name space entries:
+    ---------------------------------
+ 
+    - copy
+      Purpose:  copy the entry to another part of the name space
+      Format:   copy               (in  saga::url  source,
+                                    in  saga::url  target,
+                                    in  int     flags = None);
+      Inputs:   source:             name to copy
+                target:             name to copy to
+                flags:              flags defining the operation
+                                    modus
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - an identical copy of source exists at target.
+                - 'Owner' of target is the id of the context
+                  used to perform the operation if target gets
+                  created.
+      Perms:    Query for source.
+                Exec  for source's parent directory.
+                Query for target.
+                Query for target's parent directory.
+                Exec  for target's parent directory.
+                Write for target
+                      if  target does exist.
+                Write for target's parent directory 
+                      if  target does not exist.
+      Throws:   NotImplemented
+                IncorrectURL
+                BadParameter
+                AlreadyExists
+                DoesNotExist
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - all notes to the ns_entry::copy() method
+                  apply.
+                - the default flags are 'None' (0).
+!               - if 'source' or 'target' can be parsed as URL, 
+                  but contain an invalid entry name, a 
+                  'BadParameter' exception is thrown.
+!               - if 'source' or 'target' are valid entry names 
+                  but the entry does not exist, a 'DoesNotExist'
+                  exception is thrown.
+ 
+ 
+    - link
+      Purpose:  create a symbolic link from the target entry to
+                the source entry so that any reference to the
+                target refers to the source entry
+      Format:   link               (in  saga::url  source,
+                                    in  saga::url  target,
+                                    in  int     flags = None);
+      Inputs:   source:             name to link
+                target:             name to link to
+                flags:              flags defining the operation
+                                    modus
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - a symbolic link to source exists at target.
+                - 'Owner' of target is the id of the context
+                  used to perform the operation if target gets
+                  created.
+      Perms:    Query for source.
+                Exec  for source's parent directory.
+                Query for target.
+                Query for target's parent directory.
+                Exec  for target's parent directory.
+                Write for target
+                      if  target does exist.
+                Write for target's parent directory 
+                      if  target does not exist.
+      Throws:   NotImplemented
+                IncorrectURL
+                BadParameter
+                AlreadyExists
+                DoesNotExist
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - all notes to the ns_entry::link() method
+                  apply.
+-               - if the 'Recursive' flag is defined, the source
+-                 is recursively linked if it is a directory;
+-                 otherwise this flag is ignored.
+-               - if the 'Dereference' flag is specified, the
+-                 method applies to the link target of source.
+-                 The flag causes a 'BadParameter' exception if
+-                 source is not a link.
+-               - if the the target already exists, the 
+-                 'Overwrite' flag must be specified, otherwise
+-                 an 'AlreadyExists' exception is thrown.
+                - the default flags are 'None' (0).
+                - other flags are not allowed on this method, 
+                  and cause a 'BadParameter' exception.
+                - if 'source' can be parsed as URL, but contains 
+                  an invalid entry name, a 'BadParameter'
+                  exception is thrown.
+                - if 'source' is a valid entry name but the entry
+                  does not exist, a 'DoesNotExist' exception is
+                  thrown.
+ 
+ 
+    - move
+      Purpose:  rename source to target, or move source to
+                target if target is a directory.
+      Format:   move               (in  saga::url  source,
+                                    in  saga::url  target,
+                                    in  int     flags = None);
+      Inputs:   source:             name to move
+                target:             name to move to
+                flags:              flags defining the operation
+                                    modus
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+!     PostCond: - the entry exists at the target url.
+!               - no entry exists at the original url.
++               - the object instance is not closed.
+                - 'Owner' of target is the id of the context
+                  used to perform the operation if target gets
+                  created.
+      Perms:    Query for source.
+                Write for source.
+                Exec  for source's parent directory.
+                Write for source's parent directory.
+                Query for target.
+                Exec  for target's parent directory.
+                Write for target
+                      if  target does exist.
+                Write for target's parent directory 
+                      if  target does not exist.
+      Throws:   NotImplemented
+                IncorrectURL
+                BadParameter
+                AlreadyExists
+                DoesNotExist
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - all notes to the ns_entry::move() method
+                  apply.
+ -              - if the 'Recursive' flag is defined, the source
+ -                is recursively copied if it is a directory;
+ -                otherwise this flag is ignored.
+ -              - if the 'Dereference' flag is specified, the
+ -                method applies to the link target of source.
+ -                The flag causes a 'BadParameter' exception if
+ -                source is not a link.
+ -              - if the the target already exists, the 
+ -                'Overwrite' flag must be specified, otherwise
+ -                an 'AlreadyExists' exception is thrown.
+                - the default flags are 'None' (0).
+                - other flags are not allowed on this method, 
+                  and cause a 'BadParameter' exception.
+                - if 'source' can be parsed as URL, but contains 
+                  an invalid entry name, a 'BadParameter'
+                  exception is thrown.
+                - if 'source' is a valid entry name but the entry
+                  does not exist, a 'DoesNotExist' exception is
+                  thrown.
+                - moving any parent or the current directory 
+                  (e.g.  '.', '..' etc.) is not allowed, and 
+                  throws a 'BadParameter' exception
+ 
+ 
+    - remove
+      Purpose:  removes the entry
+      Format:   remove             (in  saga::url  target,
+                                    in  int     flags = None);
+      Inputs:   target:             entry to be removed
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+!     PostCond: - target is removed.
+!               - target is closed if it refers to the cwd.
+!     Perms:    Query for target.
+!               Write for target.
+!               Exec  for target's parent directory.
+!               Write for target's parent directory.
+      Throws:   NotImplemented
+                IncorrectURL
+                BadParameter
+                AlreadyExists
+                DoesNotExist
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - all notes to the ns_entry::remove() method
+                  apply.
+-               - if the 'Recursive' flag is defined, the target
+-                 is recursively removed if it is a directory;
+-                 otherwise this flag is ignored.
+-               - if the 'Dereference' flag is specified, the
+-                 method applies to the link target of target.
+-                 The flag causes a 'BadParameter' exception if
+-                 target is not a link.
+                - the default flags are 'None' (0).
+                - other flags are not allowed on this method, 
+                  and cause a 'BadParameter' exception.
+!               - if 'target' can be parsed as URL, but contains 
+                  an invalid entry name, a 'BadParameter'
+                  exception is thrown.
+!               - if 'target' is a valid entry name but the entry
+                  does not exist, a 'DoesNotExist' exception is
+                  thrown.
++               - if the instance was not closed before, this
++                 call performs a close() on the instance, and 
++                 all notes to close() apply.
+                - removing any parent or the current directory 
+                  (e.g.  '.', '..' etc.) is not allowed, and 
+                  throws a 'BadParameter' exception
+ 
+ 
+    - make_dir
+      Purpose:  creates a new directory
+      Format:   make_dir           (in  saga::url  target,
+                                    in  int     flags = None);
+      Inputs:   target:             directory to create
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - 'Owner' of target is the id of the context
+                  used to perform the operation if target gets
+                  created.
+      Perms:    Exec  for target's parent directory.
+                Write for target's parent directory.
+                Write for target if Write is set.
+                Read  for target if Read  is set.
+      Throws:   NotImplemented
+                IncorrectURL
+                BadParameter
+                AlreadyExists
+                DoesNotExist
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - if the parent directory or directories do not
+                  exist, the 'CreateParents' flag must be set 
+                  or a 'DoesNotExist' exception is thrown.  
+                  If set, the parent directories are created as 
+                  well.
+                - an 'AlreadyExists' exception is thrown if the
+                  directory already exists and the 'Exclusive' 
+                  flag is given.
+                - the default flags are 'None' (0).
+                - other flags are not allowed on this method, 
+                  and cause a 'BadParameter' exception.
+                - if 'target' can be parsed as URL, but contains 
+                  an invalid entry name, a 'BadParameter'
+                  exception is thrown.
+                - similar to 'mkdir' (2) as defined by POSIX.
+ 
+ 
+    - open_dir
+      Purpose:  creates a new ns_directory instance
+      Format:   open_dir           (in  saga::url name,
+!                                   in  int       flags = Read,
+                                    out ns_directory dir);
+      Inputs:   name:               directory to open
+                flags:              flags defining the operation
+                                    modus
+      InOuts:   -
+      Outputs:  dir:                opened directory instance
+      PreCond:  -
+      PostCond: - the session of the returned instance is that of
+                  the calling instance.
+                - 'Owner' of name is the id of the context
+                  used to perform the operation if name gets
+                  created.
+                - the namespace directory is created if it
+                  does not yet exist, and the Create is set.
+      Perms:    Exec  for name's parent directory.
+                Write for name's parent directory if Create is set.
+                Write for name if Write is set.
+                Read  for name if Read  is set.
+      Throws:   NotImplemented
+                IncorrectURL
+                BadParameter
+                AlreadyExists
+                DoesNotExist
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - the cwd of the new dir object instance is set
+                  to 'name'
+                - a 'DoesNotExist' exception is thrown if 'name'
+                  does not exist and the 'Create' flag is not
+                  given.
+                - a 'AlreadyExist' exception is thrown if 'name'
+                  does exist and the 'Create' flag and the
+                 'Exclusive' flag are given.
+                - no exception is thrown if 'name' does exist and 
+                  the 'Create' flag is given, and the 'Exclusive' 
+                  flag is not given.
+                - if the 'Create' flag is given, all notes to the
+                  ns_directory::make_dir() method apply.
+!               - the default flag set is 'Read'.
+!               - the flags 'Overwrite', 'Recursive' and
+!                 'Dereference' are not allowed on this method, 
+!                 and cause a 'BadParameter' exception.
+                - 'name' is always deeply dereferenced, however,
+                  the cwd is still set to 'name', and not to the
+                  value of the link target.
+                - parent directories are created on the fly if
+                  the 'CreateParents' and 'Create' flag are both
+                  given, if they don't exist.
+                - if 'name' can be parsed as URL, but contains 
+                  an invalid directory name, a 'BadParameter'
+                  exception is thrown.
+ 
+ 
+    - open
+      Purpose:  creates a new ns_entry instance
+      Format:   open               (in  saga::url name,
+!                                   in  int       flags = Read,
+                                    out ns_entry  entry);
+      Inputs:   name:               entry
+                flags:              flags defining the operation
+                                    modus
+      InOuts:   -
+      Outputs:  entry:              opened entry instance
+      PreCond:  -
+      PostCond: - the session of the returned instance is that
+                  of the calling instance.
+                - 'Owner' of name is the id of the context
+                  used to perform the operation if name gets
+                  created.
+                - the namespace entry is created if it does not 
+                  yet exist, and the CREATE flag is specified.
+      Perms:    Exec  for name's parent directory.
+                Write for name's parent directory if Create is set.
+                Write for name if Write is set.
+                Read  for name if Read  is set.
+      Throws:   NotImplemented
+                IncorrectURL
+                BadParameter
+                AlreadyExists
+                DoesNotExist
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - a 'BadParameter' exception is thrown if 'name'
+!                 is an invalid entry name.
+                - a 'DoesNotExist' exception is thrown if 'name'
+                  does not exist, and the 'Create' flag is not
+                  given.
+                - a 'AlreadyExists' exception is thrown if 'name'
+                  does exist, and the 'Create' and 'Exclusive' 
+                  flags are given.
+                - 'name' is always deeply dereferenced, the cwd,
+                  however, is not changed to the link targets
+                  cwd.
+                - parent directories are created on the fly if
+                  the 'CreateParents' and 'Create' flag are both
+                  given, if they don't exist.
+                - the entry is locked on open if the 'Lock' flag
+                  is given.  If the entry is already in a locked
+                  state, the open will fail and a descriptive
+                  error will be issued.  If a entry is opened in
+                  locked mode, any other open on that entry MUST
+                  fail with a 'NoSuccess' exception if the 'Lock'
+                  flag is given.  Note that a entry can be opened
+                  in unlocked mode, and then in locked mode,
+                  without an error getting raised.  The
+                  application programmer must take precautions
+                  to avoid such situations.  The lock will get
+                  removed on destruction of the entry object, and
+                  also on close.  If an implementation does not
+                  support locking, a descriptive 'BadParameter'
+                  exception MUST get thrown if the 'Lock' flag 
+                  is given.  Read-locks and Write-locks are not
+                  distinguished.
+!               - the default flag set is 'Read'.
+!               - the flags 'Recursive' and 'Dereference' are 
+!                 not allowed on this method, and cause a 
+!                 'BadParameter' exception.
+                - similar to 'open' (2) as defined by POSIX.
+ 
+ 
+    Management of name space entries - wildcard versions:
+    -----------------------------------------------------
+ 
+    - copy
+      Purpose:  copy the entry to another part of the name space
+      Format:   copy               (in  string     source,
+                                    in  saga::url  target,
+                                    in  int        flags = None);
+      Notes:    - the syntax and semantics of this call is 
+                  identical to its URL based counterpart.  
+                - the 'source' string can contain wildcards, as
+                  described above.
+                - on error conditions on any of the expanded 
+                  list of source entries, the respective error 
+                  described in the URL version of the method is 
+                  thrown - the state of the operations on the 
+                  other elements of the expanded entry list is 
+                  undefined.
+                - if source expands to multiple entries, then the
+                  target URL MUST specify a directory -
+                  otherwise a 'BadParameter' exception is thrown.
+ 
+ 
+    - link
+      Purpose:  create a symbolic link from the target entry to
+                the source entry so that any reference to the
+                target refers to the source entry
+      Format:   link               (in  string     source,
+                                    in  saga::url  target,
+                                    in  int        flags = None);
+      Notes:    - the syntax and semantics of this call is 
+                  identical to its URL based counterpart.  
+                - the 'source' string can contain wildcards, as
+                  described above.
+                - on error conditions on any of the expanded 
+                  list of source entries, the respective error 
+                  described in the URL version of the method is 
+                  thrown - the state of the operations on the 
+                  other elements of the expanded entry list is 
+                  undefined.
+                - if source expands to multiple entries, then the
+                  target URL MUST specify a directory -
+                  otherwise a 'BadParameter' exception is thrown.
+ 
+    - move
+      Purpose:  moves sources to a target directory.
+      Format:   move               (in  string     source,
+                                    in  saga::url  target,
+                                    in  int        flags = None);
+      Notes:    - the syntax and semantics of this call is 
+                  identical to its URL based counterpart.  
+                - the 'source' string can contain wildcards, as
+                  described above.
+                - on error conditions on any of the expanded 
+                  list of source entries, the respective error 
+                  described in the URL version of the method is 
+                  thrown - the state of the operations on the 
+                  other elements of the expanded entry list is 
+                  undefined.
+                - if source expands to multiple entries, then the
+                  target URL MUST specify a directory -
+                  otherwise a 'BadParameter' exception is thrown.
+ 
+    - remove
+      Purpose:  removes entries
+      Format:   remove             (in  string  target,
+                                    in  int     flags = None);
+      Notes:    - the syntax and semantics of this call is 
+                  identical to its URL based counterpart.  
+!               - the 'target' string can contain wildcards, as
+                  described above.
+                - on error conditions on any of the expanded 
+!                 list of target entries, the respective error 
+                  described in the URL version of the method is 
+                  thrown - the state of the operations on the 
+                  other elements of the expanded entry list is 
+                  undefined.
+ 
+ 
+    // overload permissions because of namespace specific flags
+ 
+    - permissions_allow
+      Purpose:  enable a permission 
+      Format:   permissions_allow    (in  saga::url target, 
+                                      in  string    id,
+                                      in  int       perm, 
+                                      in  int       flags = None);
+      Inputs:   target:               entry to set permissions for
+                id:                   id to set permission for
+                perm:                 permission to enable
+                flags:                mode of operation
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - the permissions are enabled.
+      Perms:    Owner of target
+      Throws:   NotImplemented
+                IncorrectURL
+                BadParameter
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - all notes to permissions_allow from the
+                  saga::permissions interface apply.
+                - allowed flags are: 'Recursive', 'Dereference'.
+                  All other flags cause a 'BadParameter'
+                  exception.
+                - specifying 'Recursive' for a non-directory
+                  causes a 'BadParameter' exception.
+ 
+ 
+    - permissions_deny
+      Purpose:  disable a permission flag
+      Format:   permissions_deny     (in  saga::url target, 
+                                      in  string    id,
+                                      in  int       perm,
+                                      in  int       flags = None);
+      Inputs:   target:               entry to set permissions for
+                id:                   id to set permission for
+                perm:                 permission to disable
+                flags:                mode of operation
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - the permissions are disabled.
+      Perms:    Owner of target
+      Throws:   NotImplemented
+                IncorrectURL
+                BadParameter
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - all notes to permissions_deny from the
+                  saga::permissions interface apply.
+                - allowed flags are: 'Recursive', 'Dereference'.
+                  All other flags cause a 'BadParameter'
+                  exception.
+                - specifying 'Recursive' for a non-directory
+                  causes a 'BadParameter' exception.
+ 
+ 
+    // permissions calls - wildcard versions
+ 
+    - permissions_allow
+      Purpose:  enable a permission 
+      Format:   permissions_allow    (in  string  target, 
+                                      in  string  id,
+                                      in  int     perm, 
+                                      in  int     flags = None);
+      Notes:    - the syntax and semantics of this call is 
+                  identical to its URL based counterpart.  
+                - the 'source' string can contain wildcards, as
+                  described above.
+                - on error conditions on any of the expanded 
+                  list of source entries, the respective error 
+                  described in the URL version of the method is 
+                  thrown - the state of the operations on the 
+                  other elements of the expanded entry list is 
+                  undefined.
+ 
+ 
+    - permissions_deny
+      Purpose:  disable a permission flag
+      Format:   permissions_deny     (in  string  target, 
+                                      in  string  id,
+                                      in  int     perm,
+                                      in  int     flags = None);
+      Notes:    - the syntax and semantics of this call is 
+                  identical to its URL based counterpart.  
+                - the 'source' string can contain wildcards, as
+                  described above.
+                - on error conditions on any of the expanded 
+                  list of source entries, the respective error 
+                  described in the URL version of the method is 
+                  thrown - the state of the operations on the 
+                  other elements of the expanded entry list is 
+                  undefined.
+ \end{myspec}
+ 
+ 
+ \subsubsection{Examples:}
+ 
+ \begin{mycode}
+  More examples are given in the File and Logical_File packages.
+ 
+  Example: provide recursive directory listing for a given
+           directory
+ 
+  Note:    - check for '.' and '..' recursion are left as an
+             exercise to the reader.
+           - string operations and printf statements are
+             obviously simplified.
+ 
+  +-------------------------------------------------------------+
+   // c++ example
+   std::string indent (int indent)
+   {
+     std::string s = "  ";
+ 
+     for (int i = 0; i < indent; i++, s += "  ");
+ 
+     return (s);
+   }
+ 
+   void list_dir (saga::url url,
+                  int       indent = 0)
+   {
+     try
+     {
+       // create directory and iterate over entries
+       saga::ns_dir dir (url);
+ 
+       printf ("\n%s ---> %s\n", indent (indent), url.get_url ());
+ 
+       for ( int i = 0; i < dir.get_num_entries (); i++ )
+       {
+         char   type = '?';
+         string info = "";
+ 
+         // get name of next entry
+         saga::url name = dir.get_entry (i);
+ 
+         // get type and other info
+         if ( dir.is_link (name) )
+         {
+           // check where link points to
+           if (dir.exists(dir.read_link (name))){info=" ---> ";}
+           else                                 {info=" -|-> ";}
+           info += dir.read_link (name);
+           type  = 'l';
+         }
+         else if (dir.is_entry(name)){ type = 'f';            }
+         else if (dir.is_dir  (name)){ type = 'd'; info = "/";}
+ 
+         printf ("%s > %3d - %s - %s%s\n",
+                 indent (indent), i + 1,
+                 type, name.get_cstr (), info);
+ 
+         // recursion on directories
+         if ( dir.is_dir (name) )
+         {
+           list_dir (name, indent++);
+         }
+       }
+ 
+       printf ("\n%s <--- %s\n", indent (indent), url.get_url ());
+     }
+ 
+     // catch all errors - see elsewhere for better examples
+     // of error handling in SAGA
+     catch ( const saga::exception & e )
+     {
+       std::cerr << "Oops! SAGA exception: "
+                 << e.get_message () 
+                 << std::endl;
+     }
+ 
+     return;
+   }
+ \end{mycode}
+ 
+ 
+ 
+ 
+ 

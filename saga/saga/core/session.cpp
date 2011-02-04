@@ -2,21 +2,32 @@
 #include <saga/saga/core/session.hpp>
 #include <saga/impl/core/session.hpp>
 
+// static session instances
+impl_type * saga::session::none_    = NULL;
+impl_type * saga::session::default_ = NULL;
+
+
 // c'tor
 saga::session::session ()
-  : saga::object (new saga::impl::session ())
+  : saga::object (new impl_type ())
 {
 }
 
-// copy c'tor (shallow copy)
-saga::session::session (saga::impl::session * impl)
+// c'tor from impl
+saga::session::session (impl_type * impl)
   : saga::object (impl)
 {
 }
 
+saga::session::session (saga::util::shared_ptr <impl_type> impl)
+  : saga::object (impl)
+{
+}
+
+
 // copy c'tor (shallow copy)
 saga::session::session (const session & src)
-  : saga::object (src.get_obj_impl ())
+  : saga::object (src.get_impl <saga::object> ())
 {
 }
 
@@ -25,47 +36,38 @@ saga::session::~session (void)
 {
 }
 
-saga::impl::session * saga::session::none_    = NULL;
-saga::impl::session * saga::session::default_ = NULL;
-
 saga::session saga::session::no_session ()
 {
- // return new saga session with the default impl
- return saga::session (none_);
+  // return new saga session with the default impl
+  // no contexts are attached
+  return saga::session (none_);
 }
 
 saga::session saga::session::default_session ()
 {
- // FIXME
- //
- // // if we get called the first time, create a default session
- // if ( NULL == default_ )
- // {
- //   default_ = new saga::impl::session ();
- // 
- //   // initialize default session
- //   // default_->get_default_contexts ();
- // }
- // 
- // // return new saga session with the default impl
- return saga::session (default_);
+  // FIXME
+  //
+  // // if we get called the first time, create a default session
+  // if ( NULL == default_ )
+  // {
+  //   default_ = new impl_type ();
+  // 
+  //   // initialize default session
+  //   // default_->get_default_contexts ();
+  // }
+  // 
+  // // return new saga session with the default impl
+  return saga::session (default_);
 }
 
-saga::util::shared_ptr <saga::impl::session> saga::session::get_obj_impl (void) const
+
+template <class base_type>
+saga::util::shared_ptr <impl_type> saga::task::get_impl (void) const
 { 
-  // from where should we get the impl?  (base class)
-  typedef saga::object base_type;
+  // get impl from base class, and cast into type of this's implementation
+  saga::util::shared_ptr <base_type> bp = this->base_type::get_impl <base_type> ();
+  saga::util::shared_ptr <impl_type> ip = bp.static_pointer_cast    <impl_type> ();
 
-  // type should the impl have?
-  typedef saga::impl::session impl_type;
-
-  // get impl from base class, and cast into correct type
-  return boost::static_pointer_cast <impl_type> (this->base_type::get_obj_impl ());
-}
-
-
-saga::session::session (saga::util::shared_ptr <saga::impl::session> impl)
-  : object (impl)
-{
+  return ip;
 }
 

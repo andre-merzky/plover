@@ -1,0 +1,116 @@
+
+  This appendix lists the errata changes which have been applied to
+  the originally published SAGA Core API specification.  As most
+  changes are not breaking backward compatibility, the version number
+  of this document has not been changed, and remains 1.0.
+
+
+  \subsection*{Errata to SAGA Core API Version 1.0}
+
+  \begin{shortlist}
+
+  \item The |context| c'tor does not call |set_defaults()| anymore.
+  In fact, the method |set_defaults()| is gone, and its functionality
+  is now performed on |session.add_context()| -- the original context
+  is left untouched (as it is specified that |add_context()| performs
+  a deep copy on the context to be added).  \B{This is the only change
+  which breakes backward compatibility.}
+  
+  % complicates usage if default ctx cannot be initialized.
+  
+  \item Typos, spelling and grammar have been fixed in several
+  places.  These fixes are not listed individually.
+
+  \item The biggest change is that saga exceptions are now
+  recursive objects, i.e. they can provide a list of lower
+  level exceptions.  That change is backward compatible, and
+  is introduced mainly for the sake of late binding
+  implementations.  At the same time, the stricly prescribed
+  exception precedence has been relaxed, and can be changed by
+  the implementation.  The |NotImplemented| exception now has
+  lowest precedence.  This change is also backward compatible.
+
+  \item It has been clarified what \LF classes MUST be implemented,
+  and when |NotImplemented| exceptions MAY be thrown.
+
+  \item The |read_v()| method now throws |BadParameter| when "out of
+  bounds": when  no |len_in| is specified, the buffer size is used
+  instead as |len_in|.  If, in this case, |offset > 0|, a
+  |BadParameter| exception is thrown.
+
+  \item |write_v| method now throws |BadParameter| when "out of
+  bounds": when  no |len_in| is specified, the buffer size is used
+  instead as |len_in|.  If, in this case, |offset > 0|, a
+  |BadParameter| exception is thrown.
+
+  \item The default flag for file |open()| is now |Read|.
+
+  \item The |Create| flag now implies |Write|.
+
+  \item The |CreateParents| flag now implies |Create|.
+
+  \item Callbacks now can remove conditions to be called again, i.e.
+  shut down the metric, read more than one message, etc.
+  Implementations MUST be able to handle this.
+
+  \item The  URL behaviour for relative path elements, and their time
+  of expansion, has been clarified.
+
+  \item |task.get_result()| now calls |rethrow()| if the task is in
+  |Failed| state.
+
+  \item The |url.get_xxxx()| methods return an empty string on
+  undefined or unknown values, or |-1| for |get_port()|.
+  
+  \item |JobProject| and |WallTimeLimit| have been added to the
+  |job_description| attributes.
+  
+  \item The |run()| postcondition is now 'left New state' instead of
+  'is in Running state', to avoid races with jobs entering a final
+  state immediately.
+  
+  \item The url class was added to the list of \LF packages/classes in
+  paragraph 6 on page 17.
+  
+  \item The behaviour of |get_link()| has been clarifies: it resolves
+  only one level.
+  
+  \item The |namespace| package got |Read| and |Write| flags, as they
+  are needed for directories.
+  
+  \item URL escaping has been clarified, and a |get_escaped()|
+  method has been added, to enforce character escaping.
+  
+  \item |close()| is not throwing |IncorrectState| anymore.
+  
+  \item |object.clone()| does not copy the object id anymore, but
+  assigns a new, unique one.
+  
+  \item On page 225, the notes of |NSDirectory.copy (source, target, flags)| 
+  have been fixed.
+  
+  \item The RPC c'tor signature has been fixed (parameter name).
+  
+  \item The signature for |task_container.wait ()| has been fixed
+  (default timeout value was missing).
+  
+  \item The |url| class was added to the class diagram, and the
+  |iovec| and |parameter| classes have been moved into their
+  respective packages.
+  
+  \item The size parameter in the |rpc| c'tor has been fixed.
+  
+  \item |Exception| has been removed from |object::type| enum.
+  
+  \item A |saga::job| now provides the |ServiceURL| attribute which
+  allows the re-creation of the |job::service| instance which handles
+  the job.
+  
+  \item A |url::translate()| variant with explicit session parameter
+  has been added.
+  
+  \item |session.list_contexts()| now returns deep copies of session
+  contexts, not shallow copies.  
+
+  \end{shortlist}
+

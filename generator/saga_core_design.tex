@@ -1,0 +1,1530 @@
+
+ This section addresses those aspects of the SAGA API specification
+ common to most or all of the SAGA packages as defined in
+ Sections~\ref{sec:nonfunc} and~\ref{sec:func}.
+
+  \subsection{API Scope and Design Process}
+  
+  The scope and requirements of the SAGA API have been defined by
+  OGF's \emph{Simple API for Grid Applications Research Group}
+  (SAGA-RG).  The SAGA-RG has collected as broad as possible a set of
+  use cases which has been published as GFD.70~\cite{saga-uc}.
+ The requirements for the SAGA API were
+    derived from this use cases document, an analysis of which has
+    been published as GFD.71~\cite{saga-req}.  The formal specification and
+    resulting document is the work of the \emph{SAGA-CORE Working
+      Group} which was spawned from the SAGA-RG.
+
+  \subsubsection{Requirements from the SAGA Requirement
+  Analysis}
+  
+ The SAGA Requirement Analysis~\cite{saga-req} lists the following
+ functional and non-functional requirements of the SAGA API:
+
+  \subsubsection*{Functional Requirements}
+
+  \begin{itemize}
+
+   \item{Job submission and management should be supported by the SAGA API.}
+
+   \item{Resource discovery should be supported by the SAGA API.}
+
+   \item{Data management should be supported by the SAGA API.}
+
+   \item{Efficient data access should be supported by the SAGA API.}
+
+   \item{Data replication should be supported by the SAGA API.}
+
+   \item{Persistent storage of application specific information should
+         be supported by the SAGA API.}
+
+   \item{Streaming of data should be supported by the SAGA API.}
+
+   \item{Support for messages on top of the streaming API should be
+          considered by the SAGA API.}
+
+   
+
+   \item{Asynchronous notification should be supported by the SAGA API.}
+
+   \item{Application level event generation and delivery should be
+         supported by the SAGA API.}
+
+   \item{Application steering should be supported by the SAGA API, but
+         more use cases would be useful.}
+
+   \item{GridRPC should be supported by the SAGA API.}
+
+   \item{Further communication schemes should be considered as additional
+         use cases are submitted to the group.}
+       
+     \item{Access to data-bases does not currently require explicit
+         support in the SAGA API.}
+
+  \end{itemize}
+
+  \subsubsection*{Non-functional Requirements}
+
+  \begin{itemize}
+
+   \item{Asynchronous operations should be supported by the API.}
+
+   \item{Bulk operations should be supported by the API.}
+
+   \item{The exception handling of the API should allow
+         for \emph{application level} error recovery strategies.}
+
+   \item{The SAGA API should be implementable on a variety of security
+         infrastructures.}
+
+   \item{The SAGA API should expose only a minimum of security details,
+         if any at all.}
+
+   \item{Auditing, logging and accounting should not be exposed in the
+         API.}
+
+   \item{Workflows do not require explicit support on API level.}
+
+   \item{QoS does not require explicit support on API level.}
+
+   \item{Transactions do not require explicit support on API level.}
+
+  \end{itemize}
+
+
+ \subsubsection{Requirement Adoption Strategy}
+ 
+ The use cases expressed the above requirements 
+ different levels of importance or urgency. This reflects the fact
+ that some functionality is considered more important or even vital
+ (like file access and job submission) while other functionality is
+ seen as "nice to have" by many use cases (like application steering).
+ Also, the group of active people in the SAGA specification process
+ constitutes a specific set of expertise and interest -- and this set
+ is, to some extent, reflected in the selection of SAGA packages
+ specified in this document.
+ 
+ For example, as there were no use cases from the enterprise user
+ community, nor was there any active participation from that community
+ in the SAGA standardization process, no enterprise specific API
+ package is included here.  This does not imply that we consider them
+ unnecessary, but rather reflects the wish and need to derive the API
+ on real use cases, and to avoid the creation of an API from perceived
+ use cases, and  half-baked expertise.
+
+  \subsubsection*{Scope of the SAGA API}
+  
+  As various sides expressed their need for the availability of a
+  useful (i.e. implementable and usable) API specification as quickly
+  as possible, the SAGA-CORE-WG decided to follow a two-phase
+  approach.  The SAGA API, as described in this document, covers all
+  requirements that are considered both urgent and sufficiently well
+  understood to produce an API.  Addressing the other the less
+    urgent or well understood requirements is deferred to future
+  versions, or extensions, of the SAGA API.  Based upon this
+  reasoning, areas of functionality (from now on referred to as
+  \I{packages}) that are included in SAGA API are the following:
+
+  \begin{shortlist}
+   \item jobs
+   \item files (and logical files)
+   \item streams
+   \item remote procedure calls~\cite{gridrpc}
+   \item auxiliary API's for\\[-0.7em]
+    \begin{shortlist}
+      \item session handle and security context
+      \item asynchronous method calls (tasks)
+      \item access control lists
+      \item attributes
+      \item monitoring
+      \item error handling
+    \end{shortlist}
+  \end{shortlist}
+
+
+  Possible extensions to be included in future SAGA versions or
+  extensions are:
+
+  \begin{shortlist}
+    \item steering and extended monitoring
+    \item possibly combining logical/physical files (read on logical
+          files)
+    \item persistent information storage (see, e.g.  
+          the GAT Advert Service~\cite{gat})
+    \item GridCPR~\cite{gridcpr}
+    \item task dependencies (simple work flows and task batches)
+    \item extensions to existing classes, based on new use cases
+  \end{shortlist}
+
+  The packages as listed above do not imply a hierarchy of API
+  interfaces: all packages are motivated by their use cases; there is
+  no split into 'lower level' and 'higher level' packages. The only
+  exception is the group of auxiliary APIs, which is
+  considered orthogonal to the non-auxiliary SAGA packages.
+
+  Dependencies between packages have been kept to a minimum, so as to allow each package to be used
+  independently of any other; this will also allow
+  partially compliant API implementations (see below).
+  
+  The term \I{CORE} in SAGA CORE refers to the fact that the scope of
+  the API encompasses an initial required set of API objects and
+  methods, which is perceived to be essential to the received
+  use cases.  It is important to reiterate, that the term,
+  , does not imply any hierarchy of API packages, such as
+  CORE and SHELL packages etc. We will drop the use of  CORE
+  when referring to the API and use the term in the context of the
+  Working Group.
+
+
+ \subsubsection{Relation to OGSA}
+ 
+ The SAGA API specification effort has often been compared to, and
+ seen as overlapping in scope and functionality to the OGSA
+ standardization effort~\cite{ogsa-gfd}.  This perceived overlap in scope and
+   functionality is misleading for the following reasons:
+
+  \begin{itemize}
+
+    \item OGSA applies to the service and middleware level.
+
+          SAGA applies to the application level.
+
+
+    \item OGSA aims at service and middleware developers.
+
+          SAGA aims at application developers.
+
+
+    \item OGSA is an architecture.
+
+          SAGA is an API.
+
+
+    \item OGSA strives to be complete, and to fully cover any
+          potential grid service in its 
+          architectural frame.
+
+          SAGA is by definition incomplete (80:20 rule), and aims
+          to cover the mostly used grid
+          functionalities at the application level.
+          
+
+
+    \item OGSA cannot sensibly interface to SAGA.
+
+          SAGA implementations can interface to (a subset of)
+          OGSA compliant services (and in fact usually will do
+          so).
+
+  \end{itemize}
+
+
+  For these and more reasons we think that SAGA and OGSA are
+  complementary, but by no means competitive.  The only
+  commonality we are aware of is the breadth of
+  both approaches: both OGSA and SAGA strive to cover more than one
+  specific area of middleware and application functionality,
+  respectively.
+
+  There have been discussions between the SAGA and OGSA groups
+  of the OGF, which tried to ensure that the SAGA
+  specification does not imply any specific middleware properties, and
+  in particular does not imply any state management which would
+  contradict OGSA based middleware.  Until now, we are not aware of
+  any such conflict, and will continue to ensure seemless
+  implementability on OGSA based middleware.
+
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+ \subsection{The SIDL Interface Definition Language}
+ \label{ssec:sidl}
+
+  For the SAGA API, an object oriented (OO) approach was
+  adopted, as it is easier to produce a procedural API from an
+  OO API than the converse, and one of the goals of SAGA is to
+  provide APIs which are as natural as possible in each
+  implementation language.  Advanced OO features such as
+  polymorphism were avoided, both for simplicity and also to
+  avoid complications when mapping to procedural languages.
+
+  The design team chose to use SIDL, the \I{Scientific Interface
+  Definition Language}~\cite{sidl}, for specifying the
+  API.  This provides a programming-language neutral
+  representation of the API, but with well-defined syntax and
+  clear mapping to implementation languages.
+  
+  This document, however, slightly deviates from the original
+  SIDL language definition. This section gives a brief
+  introduction to SIDL, describes the respective deviations
+   used, and also contains a number of notes to
+  implementors on how to interpret this specification.
+
+  SIDL, from the Babel project, is similar to COM and CORBA IDL,
+  but has an emphasis on scientific computing, with support
+  for multi-dimensional arrays, etc.  Although the
+  SAGA specification does not use these features
+  extensively, the multilanguage scope of Babel for mappings
+  from SIDL to programming languages appealed to the authors of
+  this specification.
+
+  The key SIDL concepts used in this document are:
+  \upp
+  
+   \begin{tabbing}
+     XXXXXXXXXXXXXX       \= \kill
+     \shift |package:|    \> specifies a name space (see note below)\\
+     \shift |interface:|  \> set of methods\\
+     \shift |class:|      \> stateful object and the associated set of methods\\
+     \shift |method:|     \> service that can be invoked on a object\\
+     \shift |type:|       \> constraint to value of method parameters\\
+   \end{tabbing}
+
+  \up\upp
+  SIDL supports single inheritance of classes, and multiple
+  inheritance of interfaces.  
+  
+  Method definitions have signatures, which define which
+  parameters are accepted on method invocation.  These
+  parameters can be:
+
+   \begin{shortlist}
+     \item |in:|    input parameter, passed by value, assumed 
+                    constant
+     \item |out:|   output parameter, passed by reference
+     \item |inout:| input and output parameter, passed by reference
+   \end{shortlist}
+
+
+  \subsubsection{Deviations from SIDL in this Document}
+
+   SIDL has the notion of packages, which are equivalent to Java
+   packages or C++ name spaces.  Packages are used in this
+   specification, for the purpose of cross referencing different
+   API sections.  The packages are not required to show up
+   in the implementation's class names or name spaces,
+   apart from the top level 'saga' name space.
+
+   SIDL also has the notion of 'versions', which are actually
+   required on packages.  We do not use versions in this
+   specification, as the specification itself is versioned, and
+   we do not intend to introduce versioning on classes and
+   interfaces.
+
+   SIDL allows multi-dimensional arrays, in the form
+   |array<type,dim>|.  As SAGA uses only one-dimensional arrays,
+   this document uses the simplified notation |array<type>|.
+
+   SIDL defines a string to be a |char*|.  We feel, however,
+   that strings have more powerful and native expressions in
+   some languages (such as C++, Perl and Java), and use |string|
+   for these types.  |char*|, conventionally used for binary
+   inout memory chunks, is expressed in this document as
+   |array<byte>|.
+
+   This specification defines all method calls as |void| (or
+   rather does not specify any return type for method calls at
+   all).  Instead of explicit return values, we define |out|
+   parameters, which are in SIDL parameters which are passed by
+   reference.  However, for this specification we expect
+   language bindings to use the first specified output parameter
+   as return value of function calls where appropriate,
+   in particular for the synchronous versions of the function
+   calls.  The asynchronous versions will, by their very nature,
+   stick to the |out| parameter scheme, as described in
+   Section~\ref{ssec:tasks}.
+
+  \subsubsection{Default Parameter Values}
+
+   This document, in several places, adds default values in the
+   SIDL part of the API specification.  It is up to the language
+   bindings to exploit any native means for default parameter
+   values.  If this is not possible, the language binding CAN
+   abstain from default parameter values.  Also, if asynchronous
+   method calls require additional parameters, which might
+   affect the handling of default parameters in languages such
+   as C and C++, the language binding CAN deviate from this
+   document in that respect.
+
+  \subsubsection{Constness}
+
+   SIDL method parameters specified as |in| parameters are
+   considered to be |const|, and MUST NOT be changed by the
+   implementation.  The SAGA language bindings SHOULD utilize
+   language mechanisms to enforce constness of these parameters,
+   if possible.
+   
+   To our knowledge, SIDL does not allow the specification of
+   constness at method level.  This means, SIDL does
+   not permit a specification of which methods must leave the
+   state of the object unchanged.  We considered the
+   introduction of const modifiers, to achieve consistent
+   semantics over different implementations.  However, a short
+   analysis of various implementation techniques convinced us
+   that requiring method constness would raise significant
+   limitations to SAGA implementors (e.g. for implementations
+   with late binding), with no immediately visible advantage to
+   SAGA users.  Hence, we waived any method level constness
+   requirements for now, but this topic might get picked up in
+   future versions of the API, e.g. with respect to object
+   serialization (which implies known and consistent object
+   state at serialization points).  
+
+  \subsubsection{Attributes and Metrics}
+
+   The SIDL sections in this specification contain additional
+   normative information which are inserted as SIDL comments.
+   In particular these are definitions for \I{attributes} and
+   \I{metrics}.  Format definitions and meaning for
+   these entities and specifications can be found in
+   Section~\ref{ssec:attributes} \I{"SAGA Attributes
+   Interface"} and Section~\ref{ssec:monitoring} \I{"SAGA
+   Monitoring Model"}, respectively.
+
+  \subsubsection{Method Specification Details}
+
+    All methods defined in the SIDL specification sections are
+    further explained in the |'Specification Details'| sections
+    in this document.  These details to method specifications
+    are \I{normative}. They are formatted as follows (example
+    taken from the |saga::file| class):
+
+   \newpage
+
+   \begin{mysmallspec}
+    - read
+      Purpose:  reads up to len_in bytes from the file into
+                the buffer.
+      Format:   read               (inout buffer      buf,
+                                    in    int         len_in = -1,
+                                    out   int         len_out);
+      Inputs:   len_in:             number of bytes to be read
+      InOuts:   buf:                buffer to read data into
+      Outputs:  len_out:            number of bytes successfully 
+                                    read
+      PreCond:  -
+      PostCond: - the data from the file are available in the
+                  buffer.
+      Perms:    Read
+      Throws:   NotImplemented
+                BadParameter
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - the actual number of bytes read into buffer
+                  is returned in len_out.  It is not an error
+                  to read less bytes than requested, or in fact
+                  zero bytes, e.g. at the end of the file.
+                - errors are indicated by returning negative
+                  values for len_out, which correspond to
+                  negatives of the respective POSIX ERRNO error
+                  code.
+                - the file pointer is positioned at the end of
+                  the byte area successfully read during this 
+                  call.
+                - the given buffer must be large enough to
+                  store up to len_in bytes, or managed by the
+                  implementation - otherwise a 'BadParameter'
+                  exception is thrown.
+                - the notes about memory management from the
+                  buffer class apply.
+                - if the file was opened in write-only mode (i.e.
+                  no 'Read' or 'ReadWrite' flag was given), this
+                  method throws an 'PermissionDenied' exception.
+                - if len_in is smaller than 0, or not given, 
+                  the buffer size is used for len_in.
+                  If that is also not available, a
+                  'BadParameter' exception is thrown.
+                - similar to read (2) as specified by POSIX
+   \end{mysmallspec}
+   \newpage
+
+    The following sections are used in these detailed
+    specifications of class methods:
+
+    \begin{tabbing}
+     XXXX \= XXXXXXXXXX    \= \kill
+          \> |Purpose:|    \> the aim of the method\\
+          \> |Format:|     \> the SIDL prototype of the method\\
+          \> |Inputs:|     \> descriptions of |in|    parameters\\
+          \> |InOuts:|     \> descriptions of |inout| parameters\\
+          \> |Outputs:|    \> descriptions of |out|   parameters\\
+          \> |PreCond:|    \> conditions for successful invocation\\
+          \> |PostCond:|   \> effects of successful invocation\\
+          \> |Perms:|      \> permissions required for the method\\
+          \> |Throws:|     \> list of exceptions the method can throw\\
+          \> |Notes:|      \> other details
+    \end{tabbing}
+
+    |PreCond|'ition: an example for a precondition is a specific
+    object state.  An implementation MUST check these
+    Preconditions, and MUST refuse to execute the method if they
+    are not met, and throw an exception accordingly.
+
+    |PostCond|'tion:  an example for a postcondition is a
+    changed object state.  An implementation MUST
+    ensure that the postconditions are met upon successful
+    method invocation, and MUST flag an error otherwise.
+
+    \T{Throws:} the exceptions listed in this
+    section are the only SAGA exceptions which can be thrown by
+    the method.
+
+    \T{Perms:} this section lists the permissions
+    required to perform the method.  If that permission is not
+    available to the caller, a \T{PermissionDenied} exception
+    MUST be thrown by the implementation.
+
+    |Notes:| can contain, for example, references to the origin
+    and use of the method, conditions on which exceptions
+    are to be raised, semantic details of invocations,
+    consistency implications of invocations, and more.
+    These \T{Notes} are normative!
+
+
+ \subsubsection{Inheritance}
+
+  The SAGA API specification limits class inheritance to
+  \I{single inheritance} -- a class can, nevertheless, implement
+  multiple interfaces.  Similar to the original SIDL syntax,
+  this document uses the qualifiers |extends| to signal
+  inheritance relations of a class, and |implements| to signal
+  an interface to be provided by a class.
+
+  Almost all SAGA classes implement the |saga::object| interface
+  (which provides, for example, a unique instance id and the
+  |saga::error_handler| interface), but the classes usually
+  implement several other interfaces as well.
+
+  For inherited classes and implemented interfaces
+  holds: if methods are overloaded (i.e. redefined with the same
+  name), the semantics of the overloaded methods from the base class
+  still apply
+  (i.e.  all |Notes| given on the detailed method description
+  apply).  This  also holds
+  for |CONSTRUCTOR|s and
+  |DESTRUCTOR|s, and also, for example, for a |close()| which
+  is implicitly called on the base class' destruction.
+
+  \subsubsection{The SAGA Interfaces}
+
+   For some SAGA objects, such as for
+   \T{saga::logical\_file}, SAGA interfaces, like the attribute
+   interface, can allow access to remote entities.   These
+   methods should thus (a) also be available asynchronously, and
+   (b) allow to apply the permission interface.  However,
+   asynchronous method calls and permissions make no sense
+   for other, local SAGA objects, in particular on the SAGA
+   \LF level.
+
+   Thus, instead of implementing the \T{saga::async} and
+   \T{saga::permissions} interface in the various interfaces in
+   general, this specification defines that SAGA implementations
+   MUST apply the following rules:
+
+   \begin{shortlist}
+
+    \item SAGA classes and interfaces, which implement the
+    \T{saga::async} interface, and thus implement the SAGA task
+    model, MUST also implement that task model for the methods
+    defined in the following interfaces:
+    
+    \begin{shortlist}
+    
+     \item \T{saga::attributes}
+     \item \T{saga::permissions}
+     \item \T{saga::monitorable}
+     \item \T{saga::steerable}
+
+    \end{shortlist}
+
+
+    \item SAGA classes and interfaces, which implement the
+    \T{saga::permissions} interface, and thus implement the SAGA
+    permission model, MUST also implement that permission model for
+    the methods defined in the following interfaces:
+    
+    \begin{shortlist}
+    
+     \item \T{saga::attributes}
+     \item \T{saga::monitorable}
+     \item \T{saga::steerable}
+
+    \end{shortlist}
+
+
+  \end{shortlist}
+
+
+
+
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+  \subsection{Language Binding Issues}
+
+   The abstract SAGA API specification, as provided by this
+   document, is language independent, object oriented, and
+   specified in SIDL. Normative bindings for specific languages,
+   both object oriented and procedural, will be defined in
+   additional documents.
+
+   This document contains several examples illustrating the use
+   of the API, and these have naturally been shown in specific
+   languages, such as C++. These examples should not be taken as
+   normative, but merely as illustrative of the use of the API.
+   When normative language bindings are available, these
+   examples may be revised to reflect these bindings.  In order
+   to give an impression of the \LF in other languages,
+   Appendix~\ref{sec:examples} lists some of the examples in
+   different languages. Again, Appendix~\ref{sec:examples} is
+   illustrative, not normative.
+   
+   Language bindings of the SAGA API shall provide the typical
+   \LF of the respective programming language.  This comprises
+   the syntax for the entities (objects, methods, classes,
+   etc.), but also, to some degree, semantic details for which
+   it makes sense to vary them with the programming language.
+   We summarize the semantic details here.
+
+   \begin{itemize}
+
+   \item   
+   In this document, flags are denoted as bitfields
+   (specifically, integer enums which can be combined by logical
+   AND and OR). This is for notational convenience, and
+   a language binding should use the most natural mechanism
+   available.
+
+   \item 
+   Language bindings MAY want to express array style arguments
+   as variable argument lists, if that is appropriate.
+
+   \item    
+   This document specifies file lengths, buffer lengths and
+   offsets as |int| types.  We expect implementations
+   to use suitably large native data types, and to
+   stick to language specific types where possible (such as
+   |size_t| for buffer lengths in |C|, and |off_t| for file
+   lengths in |C|).  The SAGA language bindings MUST include the
+   types to be used by the implementations.  In particular, 64
+   bit types SHOULD be used if they are available.
+
+   \item    The SAGA attribute interface defines attribute keys
+   to be strings.  The SAGA monitorable interface defines metric
+   names to be strings.  At the same time, many attributes and
+   metrics are predefined in this specification.  In order to
+   avoid typos, and improve interoperability between multiple
+   implementations, we expect language bindings to exploit
+   native mechanisms to have these predefined
+   attributes and metric names specified as literal constants.
+   For example, in C/C++ we would expect the following defines
+   for the stream package (amongst others):
+
+   \shift |#define SAGA_METRIC_STATE    "state"|\\
+   \shift |#define SAGA_STREAM_NODELAY  "nodelay"|
+
+   \item Language bindings MAY define additional constants
+   for special parameter values.  For example, in C/C++ we would
+   expect the following defines for timeout values (amongst
+   others):
+
+   \shift |#define SAGA_WAIT_FOREVER    -1.0|\\
+   \shift |#define SAGA_NOWAIT           0.0|
+
+   \item 
+   Object lifetime management may be language specific.
+   See Section~\ref{ssec:lifetime}.
+
+   \item 
+   Concurrency control may be language specific.  See
+   Section~\ref{ssec:concurrency}.
+
+   \item 
+   Thread safety may be language specific.  See
+   Section~\ref{ssec:threads}.
+
+   \end{itemize}
+
+
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+ \subsection{Compliant Implementations}
+  \label{ssec:compliance}
+
+  A SAGA implementation MUST follow the SAGA API specification,
+  and the language binding(s) for its respective programming
+  language(s), both syntactically and semantically.  
+  With respect to syntax, the language binding documents overrule this
+  document, in case of contradictions.
+  This means that any method MUST be implemented with the syntax and with
+  the semantics specified in this document and the applicable language
+  bindings, or not be implemented at all (i.e. MUST then throw the
+  |NotImplemented| exception).
+
+  The |NotImplemented| exception MUST, however, be used only in
+  necessary cases, for example if an underlying grid
+  middleware does not provide some capability, and if this
+  capability can also not be emulated.  The implementation MUST
+  carefully document and motivate the use of the
+  |NotImplemented| exception.
+
+  An implementation of the SAGA API is a \I{``SAGA
+  compliant \XAdd{implementation}''} if it implements all objects and methods of the
+  SAGA API specification, possibly using the |NotImplemented|
+  exception, as outlined above.
+  
+  An implementation of the SAGA API is a \I{``\XRemn{partially}
+  SAGA compliant \XAdd[2]{partial implementation}''} if it implements only some packages, but
+  implements those completely. It is, as with compliant
+  implementations, acceptable to have methods that are not
+  implemented at all (and thus throw a |NotImplemented| error).
+
+  All other implementations of the SAGA API are \I{``not SAGA
+  compliant \XAdd{implementations}''}.
+
+  The SAGA \LF classes and interfaces (see
+  Section~\ref{sec:nonfunc}) (|exception|,
+  \T{er\-ror\_\-handler}, \T{ob\-ject}, \XAdd{\T{url}},
+  |session|, |context|, \T{permissions}, \T{buffer},
+  \T{attri\-butes}, |callback|, |metric|, \T{moni\-torable},
+  \T{steer\-able}, |async|, |task|, and \T{task\_\-container})
+  \XRep{MUST}{SHOULD} be implemented completely for an
+  implementation to be compliant.  A partially compliant
+  implementation \XRep{MUST}{SHOULD} implement those SAGA
+  \LF classes and interfaces which are used by the
+  packages the implementation intends to provide.  
+  
+  \XAdd[7]{It may, however, not always be possible to implement the
+  \LF classes completely independent from the middleware, at
+  least to a full extent.  In particular \T{permis\-sions},
+  \T{attri\-butes}, \T{moni\-torable}, \T{steer\-able},
+  \T{async}, and \T{task} may need explicit support from the
+  backend system, when used by functional API packages.  In such
+  cases, methods in these four packages MAY throw
+  a \T{NotImplemented} exception.  In all other cases in the
+  SAGA \LF MUST NOT throw a \T{NotImplemented} exception.}
+  
+
+  Note that the exposure of additional (e.g. backend specific)
+  classes, methods, or attributes within the SAGA API (e.g.
+  within the |saga| name space) is considered to \I{break SAGA
+  compliance}, unless \I{explicitly} allowed by this
+  specification, as such extensions would bind applications to
+  this specific implementation, and limit their portability,
+  the latter being a declared goal of the SAGA approach.
+
+  The SAGA CORE Working Group will strive to provide, along with
+  the language binding documents, compliance tests for
+  implementors.  It should also be noted that the SAGA language
+  binding documents MAY specify deviations from the API syntax
+  and semantics specified in this documents.  In this case, the
+  language binding specification supersedes this language
+  independent specification.  The language binding
+  specifications MUST  strive to keep the set
+  of differences to this specification as small as possible.
+
+
+  \subsubsection{Early versus late binding}
+
+   An implementation may choose to use late binding to
+   middleware.  This means that the middleware binding might
+   change between subsequent SAGA calls.  For example, a
+   |file.open()| might be performed via the HTTP binding, but a
+   subsequent |read()| on this file might fail, and instead
+   be performed with GridFTP.
+   
+   Late binding has some advantages in terms of flexibility and
+   error recovery.  However, it implies a certain amount of
+   object state to be kept on client side, which might have
+   semantic consequences.  For example, a |read()| operation
+   might fail on HTTP for some reasons, but might succeed via
+   GridFTP.  The situation might be reversed for |write()|.  In
+   order to allow alternating access via both protocols, the
+   file pointer information (e.g. the file object state) must be
+   held on client side.
+   
+   It is left to a later experience document about the SAGA API
+   implementations to discuss potential problems arising from
+   early/late binding implementations, with respect to semantic
+   conformance to the SAGA API specification.  It should be
+   noted here that method-level constness would represent a
+   major obstacle for late binding implementations.
+
+   Late binding MUST NOT delay the check of error conditions if
+   this is semantically required by the specification.  For
+   example, a |file.open()| should check for the existence
+   of the file, even if the implementation may bind to a
+   different middleware on subsequent operations on this file.
+
+
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+ \subsection{Object Management}
+
+ The API specification in Sections~\ref{sec:nonfunc}
+ and~\ref{sec:func} defines various kinds of objects.  Here, we
+ describe generic design considerations about managing these objects.
+
+  \subsubsection{Session Management}
+
+   The specification introduces a |saga::session| object, which
+   acts as session handle.  A session thereby identifies objects
+   and operations which are sharing information, such as
+   security details.  Also, objects and methods from
+   different sessions MUST
+   NOT share any information.   This will allow an
+   application to communicate with different grids and
+   VOs at the same time, or to assume different IDs at the same
+   time.  Many applications, however, will have no need for
+   explicit session handling. For those cases, a default SAGA
+   session is used if no explicit |saga::session| object is
+   created and used.
+
+   Any SAGA object is associated with a session at creation
+   time, by using the respective |saga::session| instance as
+   first argument to the constructor.  If the session argument
+   is omitted, the object is associated with the
+   default session.  SAGA objects created from other SAGA
+   objects (such as a |saga::file| instance created by calling
+   |open()| on a |saga::directory| instance) inherit the
+   parent's session.  The remainder of the document
+   refers to the default session instance as |theSession|.
+
+   A |saga::context| instance is used to encapsulate a virtual
+   identity, such as a Globus certificate or an ssh key pair.
+   Multiple context instances can be associated with one
+   session, and only that context information MUST be
+   used to perform any operation in this session (i.e. on
+   objects associated with this session).  If no |saga::context|
+   instances are explicitly added to a SAGA session, the SAGA
+   implementation MAY associate one or more default contexts
+   with any new session, including the default session.  In
+   fact, the default session can ONLY use these default
+   contexts.
+
+
+
+  \subsubsection{Shallow versus Deep Copy}
+  \label{ssec:shallowdeep}
+
+   Copy operations on SAGA objects are, by default, shallow.
+   This applies, for example, when SAGA objects are passed by
+   value, or by assignment operations.  Shallow copy means that
+   the original object instance and the new (copied) instance
+   share state.  For example, the following code snippet
+
+   \begin{mycode}
+   saga::file f1 (url);        // file pointer is at 0
+   saga::file f2 = f1;         // shallow copy
+ 
+   cout << "f1 is at " << f1.seek (0, Current) << "\n";
+   cout << "f2 is at " << f2.seek (0, Current) << "\n";
+
+   f1.seek (10, Current);      // change state
+
+   cout << "f1 is at " << f1.seek (0, Current) << "\n";
+   cout << "f2 is at " << f2.seek (0, Current) << "\n";
+   \end{mycode}
+
+   would yield the following output (comments added):
+
+   \begin{myio}
+   f1 is at 0 
+   f2 is at 0   -> shallow copy of f1
+
+   f1 is at 10  -> state of f1 changes
+   f2 is at 10  -> state of f2 changes too: it is shared
+   \end{myio}
+   
+   The SAGA API allows, however, to perform deep copies on all
+   SAGA objects, by explicitly using the |clone()| method.  The
+   changed code snippet:
+
+   \begin{mycode}
+   saga::file f1 (url);        // file pointer is at 0
+   saga::file f2 = f1.clone(); // deep copy
+ 
+   cout << "f1 is at " << f1.seek (0, Current) << "\n";
+   cout << "f2 is at " << f2.seek (0, Current) << "\n";
+
+   f1.seek (10, Current);      // change state
+
+   cout << "f1 is at " << f1.seek (0, Current) << "\n";
+   cout << "f2 is at " << f2.seek (0, Current) << "\n";
+   \end{mycode}
+
+   would then yield the following output (comments added):
+
+   \begin{myio}
+   f1 is at 0 
+   f2 is at 0   -> deep copy of f1
+
+   f1 is at 10  -> state of f1 changes
+   f2 is at 0   -> state of f2 did not change, it is not shared
+   \end{myio}
+
+   SAGA language bindings MAY deviate from these semantics if
+   (and only if) these semantics would be non-intuitive in the
+   target language.
+
+   If a SAGA object gets (deeply) copied by the |clone| method,
+   its complete state is copied, with the exception of:
+
+   \begin{itemize}
+     \item \XAdd{the object id
+           (a new id is assigned, see Section~\ref{ssec:object}),}
+     \item information about previous error conditions
+           (is not copied, see Section~\ref{ssec:error}),
+     \item callbacks on metrics
+           (are not copied, see Section~\ref{ssec:monitoring}).
+     \item the session the object was created in
+           (is shallow copied, see Section~\ref{ssec:session}),
+   \end{itemize}
+
+   Not copying previous error conditions disambiguates error
+   handling.  Not copying the session ensures that the same
+   session is continued to be shared between objects in that
+   session, as intended.  Not copying registered callbacks is
+   required to ensure proper functioning of the callback
+   invocation mechanism, as callbacks have an inherent mechanism
+   to allow callbacks to be called \I{exactly} once.  Copying
+   callbacks would undermine that mechanism, as callbacks could
+   be called more than once (once on the original metric, once
+   on the copied metric). 
+   
+   Note that a copied object will, in general, point to the same
+   remote instance.  For example, the copy of a |saga::job|
+   instance will not cause the spawning of a new remote job, but
+   will merely create a new handle to the same remote process
+   the first instance pointed to.  The new object instance is
+   just a new handle which is in the same state as the original
+   handle -- from then on, the two handles have a life of their
+   own.  Obviously, operations on one SAGA object instance may
+   still in fact influence the copied instance, e.g. if
+   |cancel()| is called on either one.
+
+   Note also, that the deep/shallow copy semantics is the same
+   for synchronous and asynchronous versions of any SAGA method
+   call.  \XAdd[3]{If not otherwise specified by the language
+   binding, the copy occurs at the point where the SAGA method
+   is called.}
+
+   \XAdd[2]{Note also, that instances of the following SAGA
+   classes are always deep copied: \T{url}, \T{context},
+   \T{metric}, \T{exception}, \T{job\_description} and
+   \T{task\_container}.}
+
+
+  \subsubsection{Object State Lifetime}
+   \label{ssec:lifetime}
+
+   In general, the lifetime of SAGA object instances is defined
+   as natively expected in the respective languages, so
+   it is usually explicitly managed, or implicitly
+   defined by scoping, or in some languages implicitly managed
+   by garbage collection mechanisms.
+
+   The SAGA API semantics, in particular asynchronous
+   operations, tasks, and monitoring metrics require, however,
+   that the state of certain objects must be able to survive the
+   lifetime of the context in which they were created.
+   As state in these situations is shared with the original
+   object instance, this may imply in some languages that the
+   respective objects must survive as well.
+
+   In particular, object state MUST be available in the
+   following situations:
+
+   \begin{itemize}
+
+     \item The state of a |saga::object| instance MUST 
+           be available to all tasks created on this object 
+           instance.
+
+     \item The state of a |saga::object| instance MUST 
+           be available to all metrics created on this object 
+           instance.
+
+     \item The state of a |saga::session| instance MUST 
+           be available to all objects created in this session.
+
+     \item The state of a |saga::context| instance MUST 
+           be available to all sessions this context instance 
+           was added to.
+
+     \item The state of the default session MUST be 
+           available to the first invocation of any SAGA API 
+           method, and SHOULD be available for the remaining 
+           lifetime of the SAGA application.
+
+   \end{itemize}
+
+   Due to the diversity of lifetime management used in existing
+   programming languages, this document can not prescribe a
+   single mechanism to implement objects or object states that
+   survive the context they were created in.  It is subject to
+   individual language binding documents to prescribe such
+   mechanisms, and to define responsibilities for object
+   creation and destruction, both for SAGA implementations and
+   for application programs, in order to match requirements and
+   common-sense in the respective languages.
+
+   The SAGA specification implies that object state is shared in
+   the following situations:
+
+   \begin{itemize}
+
+     \item an asynchronous operation is invoked on an object, 
+           creating a task instance;
+
+     \item a SAGA object is passed as argument to a 
+           (synchronous or asynchronous) method call.
+
+   \end{itemize}
+
+   Those method calls that deviate from these semantics denote
+   this in their |PostCond|'itions (e.g. prescribe
+   that a deep copy of state occurs).
+
+
+  \subsubsection{Freeing of Resources and Garbage Collection}
+  \label{ssec:garbage}
+
+   The destruction of objects in distributed systems has its own
+   subtle problems, as has the interruption of remote
+   operations.  In particular it cannot be assumed that a
+   destructor can both return timely \I{and} ensure the
+   de-allocation of all (local and remote) resources.  In
+   particular, as a remote connection breaks, no guarantees
+   whatsoever can be made about the de-allocation of remote
+   resources.
+
+   In particular for SAGA tasks, which represent asynchronous
+   remote operations, we expect implementations to run into this
+   problem space, for example if |cancel()| is invoked on this
+   task.  To have common semantic guidelines for resource
+   de-allocation, we define:
+
+   \begin{enumerate}
+
+     \item On explicit or implicit object destruction, and on
+     explicit or implicit interruption of synchronous and
+     asynchronous method invocations, SAGA implementations MUST
+     make a best-effort attempt to free associated resources
+     immediately\footnote{\I{Immediately} in the description
+     above means: within the expected response time of the
+     overall system, but not longer.}.
+   
+     \item If the immediate de-allocation of resources is not
+     possible, for whichever reasons, the respective
+     interrupting or destructing methods MUST return
+     immediately, but the resource de-allocation MAY be delayed
+     indefinitely.  However, as of (1), the best effort strategy
+     to free these resources eventually MUST stay in place.
+
+     \item Methods whose semantics depend on successful or
+     unsuccessful de-allo\-cation of resources (such as
+     |task.cancel()| or |file.close()|) allow for an optional
+     |float| argument, which defines a timeout for this operation
+     (see Section~\ref{ssec:timeout}).  If resource
+     de-allocation does not succeed within this timeout period,
+     a |NoSuccess| exception MUST be thrown.  Negative values
+     imply to wait forever. A value of zero (the default)
+     implies that the method can return immediately%
+     ; no exception is thrown, even if
+     some resources could not be de-allocated.  In any case, the
+     best-effort policy as described above applies.
+
+   \end{enumerate}
+
+   SAGA implementations MUST motivate and document any deviation
+   from this behavior. See also Section~\ref{ssec:compliance}
+   on compliant implementations.
+
+   \subsubsection{Destructors and \T{close()}}
+
+    Destructors are implying a call to |close()| of the
+    respective object (if a |close()| is defined for that
+    class), unless, as described above, tasks are still using
+    the respective resources -- then the close is
+    delayed until the last of these tasks is destroyed
+    (see~\ref{ssec:lifetime}).  It must be noted that, unlike
+    when using a direct call to |close()|, exceptions occurring
+    on such an implicit |close()| cannot be communicated to the
+    application: throwing exceptions in destructors is, in
+    general, considered unclean design, and is in many languages
+    outright forbidden. Thus, an explicit |close()| should be
+    used by the application if feedback about eventual error
+    conditions is required.  Otherwise, an implicit
+    |close()| on object destruction will silently discard such
+    error conditions (exceptions).
+
+    
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+ \subsection{Asynchronous Operations and Concurrency}
+ \label{ssec:async-etc}
+
+  In this section, we describe the general design considerations
+  related to asynchronous operations, concurrency control, and
+  multithreading.
+
+  \subsubsection{Asynchronous Function Calls}
+  
+   The need for asynchronous calls was explicitly stated by the
+   use cases, as reasonable synchronous behavior cannot always
+   be expected from grids. The SAGA task interface
+   allows the creation of an asynchronous version of each SAGA
+   API method call.  The SIDL specification lists only the
+   synchronous version of the API methods, but all
+   classes implementing the task interface MUST provide
+   the various asynchronous methods as well.  Please see
+   Section~\ref{ssec:tasks} for details on the task interface.
+
+  \subsubsection{Asynchronous Notification}
+
+   Related to this topic, the group also discussed the merits of
+   callback and polling mechanisms and agreed that a callback
+   mechanism should be used in SAGA to allow for asynchronous
+   notification.  In particular, this mechanism should allow for
+   notification on the completion of asynchronous operations,
+   i.e.  task state changes.  However, polling for states and
+   other events is also supported.
+
+  \subsubsection{Timeouts}
+   \label{ssec:timeout}
+
+   Several methods in the SAGA API support the synchronization
+   of concurrent operations.  Often, those methods accept a
+   |float| timeout parameter.  The semantics of this 
+   parameter MUST be as follows:
+
+   \shift |timeout < 0.0 | -- wait forever\\
+   \shift |timeout = 0.0 | -- return immediately\\
+   \shift |timeout > 0.0 | -- wait for this many seconds
+
+   These methods  MUST not cause a |Timeout| exception
+   as the timeout period passes, but MUST return silently.  For
+   a description of the |Timeout| exception, see
+   Section~\ref{ssec:error}.
+
+   The various methods often define \I{different} default
+   timeouts.  For timeouts on |close()| methods, the description
+   of resource de-allocation policies in
+   Section~\ref{ssec:garbage} is also relevant.
+
+
+  \subsubsection{Concurrency Control}
+  \label{ssec:concurrency}
+
+   Although limited, SAGA defines a de-facto concurrent
+   programming model, via the task model and the asynchronous
+   notification mechanism. Sharing of object state among
+   concurrent units (e.g. tasks) is intentional and necessary
+   for addressing the needs of various use cases. Concurrent use
+   of shared state, however, requires concurrency control to
+   avoid unpredictable behavior.
+
+   (Un)fortunately, a large variety of concurrency control
+   mechanisms exist, with different programming languages
+   lending themselves to certain flavors, like object locks and
+   monitors in Java, or POSIX mutexes in C-like languages. For
+   some use cases of SAGA, enforced concurrency control
+   mechanisms might be both unnecessary and counter productive,
+   leading to increased programming complexity and runtime
+   overheads.
+   
+   Because of these constraints, SAGA does not enforce
+   concurrency control mechanisms on its implementations. Instead, it is
+   the responsibility of the application programmer to ensure
+   that her program will execute correctly in all possible
+   orderings and interleavings of the concurrent units. The
+   application programmer is free to use any concurrency control
+   scheme (like locks, mutexes, or monitors) in addition to the
+   SAGA API.
+
+  \subsubsection{Thread Safety}
+  \label{ssec:threads}
+
+   We expect implementations of the SAGA API to be thread safe.
+   Otherwise, the SAGA task model would be difficult to
+   implement, and would also be close to useless.  However, we
+   acknowledge that specific languages might have trouble with
+   (a) expressing the task model as it stands, and (b) might
+   actually be successful to implement the API single threaded,
+   and non-thread safe.  Hence, we expect the language bindings
+   to define if compliant implementations in this language MUST
+   or CAN be thread safe -- with MUST being the default, and CAN
+   requiring good motivation.
+
+
+  \subsection{State Diagrams}
+
+    Several objects in SAGA have a \I{state} attribute or
+    metric, which implies a state diagram for these objects.
+    That means, that instances of these objects can undergo well
+    defined state transitions, which are either triggered by
+    calling specific methods on these object instances, or by
+    calling methods on other object instances affecting these
+    instances, or are triggered by internal events, for example
+    by backend activities.  State diagrams as shown in
+    Figure~\ref{fig:states} are used to define the available
+    states, and the allowed state transitions.  These
+    diagrams are \I{normative}.
+
+    \myfig{states}{\footnotesize The SAGA state diagrams follow
+    the notations shown here.}
+
+
+  \subsection{Execution Semantics and Consistency Model}
+
+   A topic related to concurrency control concerns execution
+   semantics of the operations invoked via SAGA's API calls.
+   Unlike Section~\ref{ssec:async-etc}, here we are dealing with
+   the complete execution ``chain,'' reaching from the client
+   API to the server side, based on whichever service or
+   middleware layer is providing access to the server itself.
+
+   SAGA API calls on a single service or server can occur
+   concurrently with (a) other tasks from the same SAGA
+   application, (b) tasks from other SAGA applications, or also
+   (c) calls from other, independently developed (non-SAGA)
+   applications.  This means that the user of the SAGA API
+   should not rely on any specific execution order of concurrent
+   API calls.  However, implementations MUST guarantee that a
+   synchronous method is indeed finished when the method
+   returns, and that an asynchronous method is indeed finished
+   when the task instance representing this method is in
+  a final state.  Further control of execution
+   order, if needed, has to be enforced via separate concurrency
+   control mechanisms, preferably provided by the services
+   themselves, or on application level.
+
+   Most SAGA calls will invoke services that are remote to the
+   application program, hence becoming vulnerable to errors
+   caused by remote (network-based) invocation. Therefore,
+   implementors SHOULD strive to implement ``At Most Once''
+   semantics, enforcing that, in case of failures, an API call
+   either fails (does not get executed), or succeeds, but never
+   gets executed more than once.  This seems to be (a) generally
+   supported by most grid middleware, (b) implementable
+   in distributed systems with reasonable effort, and (c) useful
+   and intuitively expected by most end users.  Any deviation
+   from these semantics MUST be carefully documented by the
+   implementation.
+
+   Beyond this, the SAGA API specification does \I{not}
+   prescribe any consistency model for its operations, as we
+   feel that this would be very hard to implement across
+   different middleware platforms.  A SAGA implementation MAY
+   specify some consistency model, which MUST be documented.  A
+   SAGA implementation SHOULD always allow for application level
+   consistency enforcement, for example by use of of application
+   level locks and mutexes.
+
+
+  \subsection{Optimizing Implementations, Latency Hiding}
+  \label{ssec:optimization}
+
+   Distributed applications are usually very sensitive to
+   communication latencies.  Several use cases in SAGA
+   explicitly address this topic, and require the SAGA API to
+   support (a) asynchronous operations, and (b) bulk operations,
+   as both are commonly accepted latency hiding techniques.  The
+   SAGA task model (see Section~\ref{ssec:tasks}) provides
+   asynchronous operations for the SAGA API.  Bulk operations
+   have no explicit expression in SAGA.  Instead, we think that
+   implementations should be able to exploit the concurrency
+   information available in the SAGA task model to transparently
+   support bulk optimizations.  In particular, the
+   |saga::task_container| allows the application to run multiple
+   asynchronous operations at the same time -- implementations
+   are encouraged to apply bulk optimizations in that situation.
+   A proof-of-concept implementation in C++ demonstrates that
+   bulk optimizations for task containers are indeed
+   implementable, and perform very well~\cite{saga-a-bulks}.  We
+   feel that this leaves the SAGA API simple, and at the same
+   time allows for performance critical use cases.
+
+   Other optimizations are more explicit in the API, most
+   notably the additional I/O operations for the |saga::file|
+   class -- those are described in more detail in
+   Section~\ref{ssec:files}.
+
+   Implementations are encouraged to exploit further
+   optimizations; these MUST NOT change the semantics of the
+   SAGA API though.
+
+  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+ \subsection{Configuration Management}
+
+   Defining deployment and
+   configuration related parts of an API normatively raises a
+   number of issues, such as:
+
+   \begin{itemize}
+
+     \item As different SAGA implementations bind to different
+     middleware, that middleware might need configuration
+     information, such as the location of a GridRPC config file
+     (see~\cite{gridrpc}), or the location of a service
+     endpoint.
+
+     \item If such configuration information is to be
+     provided by the end user, the end user might face,
+     eventually, a plethora of SAGA implementation and
+     middleware specific configuration files, or environment
+     variables, or other configuration mechanisms, which
+     would break the SAGA abstraction from the middleware
+     for the end user.
+
+     \item Defining a SAGA configuration file format might
+     succeed syntactically (e.g. ini file format), but must
+     fail semantically, as it will be impossible to foresee on
+     which middleware SAGA gets implemented, and to know which
+     configuration information that middleware requires.
+
+   \end{itemize}
+
+   This leaves the dilemma that a configuration mechanism seems
+   impossible to define generically, but by leaving it
+   undefined, we break the abstraction SAGA is supposed to
+   provide to the end user.
+
+   For the time being,  this problem is
+   left to (a) the middleware developers, (b) to the SAGA
+   implementors, and (c) to the SAGA deployment (i.e. system
+   administrators).   Experience gathered by
+   these groups will hopefully allow  to revise
+   this topic, and to define a generic, simple, \I{and} abstract
+   approach to the configuration problem.
+
+
+  \subsection{The 'URL Problem'}
+  \label{ssec:urlprob}
+
+  The end user might expect the SAGA API, as a high level and
+  simple API, to handle protocol specific issues transparently.
+  In particular, she might expect that SAGA gracefully and
+  intelligently handles a URL such as
+
+   \shift |http://host.net//tmp/file|
+
+  even if HTTP as a protocol is, in fact, not available
+  at |host.net|, but for example the FTP protocol is.
+
+  However, this innocently looking problem has far reaching
+  consequences, and in fact is, to the best of our knowledge,
+  unresolved.  Consider the following server setup on host.net:
+
+    \shift FTP  server root: ~~~~\, |/var/ftp/pub/| \\
+    \shift HTTP server root: ~~ |/var/http/htdocs/|
+
+  The entities described by the two URLs
+
+    \shift |http://host.net//tmp/file|\\
+    \shift |ftp://host.net//tmp/file|
+
+  hence refer to different files on host.net!  Even worse: it
+  might be (and often is) impossible to access the HTTP file
+  space via the FTP service, and vice versa.
+
+  Similar considerations hold  for file names relative to the user's home directory.
+  Consider:
+
+    \shift |http://host.net/~user/tmp/file|
+
+  This URL may point to
+
+    \shift |file:////home/user/public_html/tmp/file|
+
+  and not, as could have been expected, to
+
+    \shift |file:////home/user/tmp/file|
+
+  Hence, a reliable translation of URLs between different
+  protocols (or protocol schemes) is only possible, if
+  the exact server setup of all affected protocol serving
+  services is known.  This knowledge is often not available.
+
+  Further, even if a correct translation of protocols and hence
+  URLs succeeds, there is no guarantee that the referred file is
+  actually available via this protocol, with the same
+  permissions etc. -- this again depends on the service
+  configuration.
+
+
+  \subsubsection*{SAGA 'solution' to the 'URL Problem'}
+
+  \begin{enumerate}
+
+   \item A SAGA compliant implementation MAY be able to
+   transparently translate URLs, but is not required to do so.
+   Further, this behavior CAN vary during the runtime of the
+   program.
+
+   \item A SAGA compliant implementation MUST provide
+   the \T{translate} method as part of the \T{saga::url} class.
+   That method allows the end user to check if a specific URL
+   translation can be performed.
+
+   \item The SAGA API specification allows the use of the
+   placeholder 'any' (as in |any://host.net/tmp/file|).  A SAGA
+   compliant implementation MAY be able to choose a suitable
+   protocol automatically, but CAN decline the URL with an
+   |IncorrectURL| exception.
+
+   \item Abstract name spaces, such as the name space used by
+   replica systems, or by grid file systems, hide this problem
+   efficiently and transparently from the end user.  We
+   encourage implementations to use such name spaces.
+
+   \item A URL which cannot be handled for the stated reasons
+   MUST cause the exception |IncorrectURL| to be thrown.  Note
+   that this holds only for those cases where a given URL cannot
+   be handled \I{as such}, e.g. because the protocol is
+   unsupported, |any://| cannot be handled, or a necessary URL
+   translation failed.  The detailed error message SHOULD give
+   advice to the end user which protocols are supported, and
+   which types of URL translations can or cannot be expected to
+   work.  The \T{IncorrectURL} exception is thus listed on
+   all methods which handle URLs as parameters, but is not
+   individually motivated in the detailed method
+   specifications.
+
+   \item Any other error related to the URL (e.g. invalid file name) MUST be
+   indicated by the exceptions as listed in the method
+   specifications in this document  (in most cases a
+   \T{BadParameter} exception) is applicable.  
+
+  \end{enumerate}
+
+  %   - convert
+  %     Purpose:  converts url into a different name space
+  %     Format:   convert            (in  string  url,
+  %                                   in  string  template,
+  %                                   out string  new_url);
+  %     Inputs:   url:                url to translate
+  %               template:           template for new url
+  %     InOuts:   -
+  %     Outputs:  new_url:            translated url
+  %     PreCond:  -
+  %     PostCond: -
+  %     Perms:    -
+  %     Throws:   -
+  %     Notes:    - the method translates a url into a different
+  %                 URL which MUST point at the same endpoint
+  %               - the form of the new URL is determined by
+  %                 the given template
+  %               - the template gives the part of the new url
+  %                 which is known.
+  %               - the template has to present a complete URL
+  %                 _beginning_, e.g.  "http://" or
+  %                 "http://host.net:123/", but not "host.net".
+  %               - if convert cannot determine a url in the name
+  %                 space given by the template which points to the
+  %                 same endpoint, an empty string is returned.
+
+  We are aware that this 'solution' is sub-optimal, but we also
+  think that, if cleverly implemented with the help of
+  information services, service level setup information, and
+  global name spaces, this approach can simplify the use of the
+  SAGA API significantly.  We will carefully watch the work of
+  related OGF groups, such as the global naming efforts in the
+  Grid FileSystem Working Group (GFS-WG), and will revise this
+  specification if any standard proposal is put forward to
+  address the described problem.
+
+
+  % Additionally, SAGA implementations SHOULD follow the
+  % following convention: if a URL is parsed as
+  % \T{schema://<host>/<path>}, then \T{path} is considered an
+  % absolute path when it starts with a slash (\T{/}), and is
+  % considered to be a relative path otherwise.  Thus, the
+  % following two URLs point, in general, to different entities:
+
+  Note that SAGA, unlike other Grid APIs such as the
+  GAT\cite{gat}, is fully adopting RFC 3986\cite{rfc-3986}: URLs
+  which include a scheme can, according to that RFC, not express
+  relative locations.  The following two URLs are thus expected
+  to point to the same location:
+
+  \shift |gridftp://remote.host.net/bin/date|\\
+  \shift |gridftp://remote.host.net//bin/date|
+
+
+
+  \subsection{Miscellaneous Issues}
+
+  \subsubsection{File Open Flags}
+
+   For files, flags are used to specify if   an |open| is
+   truncating, creating, and/or appending to an existing entity.
+   For jobs, and in particular for file staging, the LSF scheme
+   is used (e.g.  |'url| |>>| |local_file'| for appending a
+   remote file to a local one after staging).  We are aware of
+   this seeming inconsistency.  However, we think that a
+   forceful unification of both schemes would be more awkward to
+   use, and at the same time less useful.
+
+  \subsubsection{Byte Ordering}
+
+   Applications on grids as inherent
+   homogeneous environments will often face different native
+   byte orders on different resources.  In general, SAGA always
+   operates in the locally native byte ordering scheme, unless
+   explicitly notified.  The byte oriented I/O interfaces
+   (files and streams) are naturally ignorant to the byte
+   ordering.  Finally, any byte order conversion on data
+   exchange between two SAGA applications, e.g. by using files,
+   streams or remote procedure calls, must be taken care of in
+   application space, unless noted otherwise.
+
+
+   % Several consistency models are known and used in APIs
+   % (see~\cite{consistency} for an overview).  Also, the term
+   % \I{POSIX consistency} is widely used, but not well defined,
+   % and is, in our opinion, synonymous with \I{'Strict
+   % Consistency'}.
+
+   % In general, a consistency model \I{``specifies a contract
+   % between programmer and system, wherein the system
+   % guarantees that if the programmer follows the rules, memory
+   % will be consistent and the results of memory operations
+   % will be predictable''}\cite{consistency}.
+
+   % The SAGA API specification does \I{not} prescribe any
+   % persistency model, as we feel that (a) POSIX consistency is
+   % not achievable within reasonable effort/performance, (b) if
+   % the user assumes the worst (no consistency), he will still
+   % be able to make good use of the API, and (c) reality will
+   % be somewhere in the middle.
+   % 
+   % That means, that the user of the API should not rely on any
+   % specific order of execution of concurrent API calls.
+   % However, implementations MUST guarantee that a synchronous
+   % method invocation are indeed finished when the method
+   % returns, and that an asynchronous method invocation is
+   % indeed finished when the task instance representing that
+   % method is in |Finished| or |Done| state.
+
+   % A SAGA implementation MAY specify a more stringent
+   % consistency model, which MUST be documented.  A SAGA
+   % implementation SHOULD always allow for application level
+   % consistency enforcement, for example by use of of
+   % application level locks and mutexes.
+
+   % Also, implementors SHOULD strive to implement ``At Most
+   % Once'' semantics, as this seems (a) to be generally
+   % supported by most grid middleware, (b) implementable in
+   % distributed systems with reasonable effort, and (c) useful
+   % and intuitively expected by most end users.  Any dev iation
+   % from this semantics MUST be carefully documented by the
+   % implementation.
+
+
+
+

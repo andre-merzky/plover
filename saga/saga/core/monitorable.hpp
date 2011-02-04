@@ -12,6 +12,11 @@
 
 namespace saga
 {
+  namespace impl
+  {
+    class monitorable;
+  }
+
   class monitorable 
   {
     friend class impl::monitorable;
