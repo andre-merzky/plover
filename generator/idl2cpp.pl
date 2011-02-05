@@ -71,7 +71,7 @@ PACKAGE:
                         \s+
                         (\S+)                  # element name
                         \s*
-                        ([^\{\}]*?)?           # optional qualifiers
+                        (?::\s*([^\{\}]*?))?   # optional qualifiers
                         \s*
                         \{(.+?)\}              # element idl txt
                         \s*
@@ -85,7 +85,30 @@ PACKAGE:
         my $etxt    = $5;
            $ptxt    = $6 || "";
 
+        print "   element \t: $ename ($etype)\n";
+
+        my %elem = ();
+
+        $elem{'name'} = $ename;
+        $elem{'type'} = $etype;
+        $elem{'idx'}  = $eidx;
+        $eidx++;
+  
+
+        # parse inheritance qualifiers
         $equal =~ s/^\s*\/\/.*$//iomg;
+        my @equallines = split (/\n/, $equal);
+        foreach my $equalline ( @equallines ) {
+          if ( $equalline =~ /^\s*implements\s+(\S+?)\s*$/io ) {
+            push (@{$elem{'impl'}}, $1);
+          }
+          elsif ( $equalline =~ /^\s*extends\s+(\S+?)\s*$/io ) {
+            push (@{$elem{'base'}}, $1);
+          }
+          else {
+            die "Cannot parse qualifier in line '$equalline'\n";
+          }
+        }
 
         # validate comment
         my @ecommlines = split (/\n/, $ecomm);
@@ -100,18 +123,9 @@ PACKAGE:
             die "Cannot parse package text in line '$ecommline'\n";
           }
         }
-
-
-        print "   element \t: $ename ($etype)\n";
-
-        my %elem = ();
-
-        $elem{'name'} = $ename;
-        $elem{'type'} = $etype;
         $elem{'comm'} = $ecomm;
-        $elem{'idx'}  = $eidx;
-        $eidx++;
-  
+
+
         if ( $etype eq "class"     ||
              $etype eq "interface" )
         {

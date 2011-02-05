@@ -1,0 +1,99 @@
+
+This SAGA implementation makes heavy use of the PIMPL mechanism, to
+
+  - allow for easy shallow copies of high level API objects
+  - leightweight object construction
+  - separation of API object semantics and engine/adaptor object semantics
+
+The pimpl mechanism works as follows:
+
+  - each SAGA class is implemented as a very simple container for a (shared)
+    pointer to the 'real' implementation.  
+
+    class saga::context
+    {
+      private:
+        shared_ptr <saga::impl::context> impl_;
+      public:
+        void add_context (const saga::context & c);
+    }
+
+  - that container is often called 'facade'
+  
+  - the facade object forwards all method calls to the impl pointer
+
+    void saga::context::add_context (const saga::context & c)
+    {
+      impl_->add_context (c);
+    }
+
+  - only befriended classes are allowed to access the impl_ pointer, via
+    get_impl.
+
+
+The SAGA API includes several classes with multiple inheritance.  In order to
+support that in the PIMPL paradigm, we use the following mechanism:
+
+  class base_a
+  {
+    shared_ptr <impl::base_a> impl_;
+    shared_ptr <impl::base_a> get_b_impl () { return impl_; }
+    template <base_t> shared_ptr <base_t> get_impl ();
+  }
+  class base_b
+  {
+    shared_ptr <impl::base_b> impl_;
+    shared_ptr <impl::base_b> get_b_impl () { return impl_; }
+    template <base_t> shared_ptr <base_t> get_impl ();
+  }
+
+  The get_impl methods above are then explicitely implemented, as
+
+    template   <impl::base_a>
+    shared_ptr <impl::base_a> get_impl () {return impl_;}
+
+  The derived class does not hold an impl pointer, and forwards get_impl calls
+  to the repective base class
+
+  class derived : public base_a, public base_b
+  {
+    template <base_t> shared_ptr <base_t> get_impl ()
+    {
+      return base_t::get_impl ();
+    };
+  }
+
+  So, class derived effectively supports
+
+    shared_ptr <impl::base_a> impl = get_impl <impl::base_a> ();
+    shared_ptr <impl::base_b> impl = get_impl <impl::base_b> ();
+
+  but not
+
+    shared_ptr <impl::base_c> impl = get_impl <impl::base_c> ();
+ 
+  nor 
+
+    shared_ptr <impl::base_a> impl = get_impl ();
+    shared_ptr <impl::base_b> impl = get_impl ();
+
+  nor
+
+    shared_ptr <impl::derived> impl = get_impl ();
+
+
+Now, that scheme above would only allow for the following impl classes:
+impl::base_a, impl::base_b.
+
+It would not allow to use impl::derived anywhere.  But this is necessary if one
+wants to re-create the saga API object hierarchy in the impl namespace.  We thus
+change the above scheme, with the following:
+
+  - the impl_ ptr is assigned on construction (or initialization, see async ops
+    documentation).
+  - for derived classes, the impl ptr of the impl::derived class is created, and
+    given to both the base classes, but is being downcasted during that process.  
+  - as the impl hierarchy mirrors the facade hierarchy, that is intrinsicly
+    possible.
+
+
