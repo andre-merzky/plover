@@ -20,14 +20,6 @@ class my_exception : public std::exception
 
 //////////////////////////////////////////////////////////////////////
 //
-// tagging class to allow for c'tors with no impl pointer which will not be used
-//
-class NO_IMPL
-{
-};
-
-//////////////////////////////////////////////////////////////////////
-//
 // impl classes
 //
 
@@ -36,7 +28,11 @@ class NO_IMPL
 // anchor for all impl classes.  That way we can reflect the polymorph
 // inheritance hierarchy of the facade side, and ensure that dynamic_cast's up
 // and down that hierarchy function as expected.
-class pimpl_impl {
+//
+// Note that polymorphism is only used on the impl side of the hierarchy - the
+// facade end is not intented for up-and-down casting that way.
+class pimpl_impl 
+{
   public:
     // the pimpl_impl class needs to be polymorphic for the up/down casting of
     // its, and its decendents pointers to work (via dynamic_cast).
@@ -49,14 +45,16 @@ class pimpl_impl {
 //////////////////////////////////////////////////////////////////////
 // other impl classes *must*, directly or indirectly, inherit pimpl_impl as
 // 'virtual public base class', to profit from its polymorphism properties.
-class impl_object  : public virtual pimpl_impl {
+class impl_object  : public virtual pimpl_impl 
+{
   public:
     void polymorph    (void) { return; }
     void object_test  (void) { std::cout << " object  test impl" << std::endl; }
 };
 
 //////////////////////////////////////////////////////////////////////
-class impl_attribs : public virtual pimpl_impl {
+class impl_attribs : public virtual pimpl_impl 
+{
   public:
     void polymorph    (void) { return; }
     void attribs_test (void) { std::cout << " attribs test impl" << std::endl; }
@@ -65,8 +63,9 @@ class impl_attribs : public virtual pimpl_impl {
 //////////////////////////////////////////////////////////////////////
 // in order to keep the pimpl hierarchy intact beyond the API's own scope, it is
 // adevisable to consistently use 'virtual public' inheriatance.
-class impl_context : public virtual impl_object, 
-                     public virtual impl_attribs {
+class impl_context : public virtual impl_object
+                   , public virtual impl_attribs 
+{
   public:
     void polymorph    (void) { return; }
     void context_test (void) { std::cout << " context test impl" << std::endl; }
@@ -93,12 +92,23 @@ class impl_context : public virtual impl_object,
 //
 // This class is not an actual part of the API!
 // 
-class pimpl {
-  pimpl_impl * impl_;
+class pimpl 
+{
+  public:
+    // enum to tag c'tors without impl pointer
+    enum pimpl_enum
+    {
+      NO_IMPL = 0
+    };
+
+  private:
+    // here we keep the pointer to the impl instance, cast to it's base type
+    pimpl_impl * impl_;
+
   public:
     pimpl (void)              : impl_ (NULL)      { std::cout << " pimpl   c'tor" << std::endl; }
-    pimpl (NO_IMPL * ni)                          { std::cout << " pimpl   c'tor (no impl)" << std::endl; 
-                                                    base_test   (); }
+    pimpl (pimpl_enum)                            { std::cout << " pimpl   c'tor (no impl)" << std::endl; 
+                                                    base_test (); }
     pimpl (pimpl_impl * impl) : impl_ (impl)      { std::cout << " pimpl   c'tor (impl)" << std::endl; 
                                                     base_test (); }
 
@@ -154,17 +164,17 @@ class pimpl {
       return (ret);
     }
 
-    virtual void polymorph    (void)              { return; }
-    void         base_test    (void)              { get_impl <pimpl_impl> ()->base_test (); }
+    void  base_test (void) { get_impl <pimpl_impl> ()->base_test (); }
 };
 
 //////////////////////////////////////////////////////////////////////
-class object : public virtual pimpl {
+class object : public virtual pimpl 
+{
   public:
     object (void) : pimpl (new impl_object ())    { std::cout << " object  c'tor" << std::endl; 
                                                     base_test   ();
                                                     object_test (); }
-    object (NO_IMPL * ni) : pimpl (ni)            { std::cout << " object  c'tor (no impl)" << std::endl; 
+    object (pimpl_enum pe) : pimpl (pe)           { std::cout << " object  c'tor (no impl)" << std::endl; 
                                                     base_test   ();
                                                     object_test (); }
     object (impl_object * impl) : pimpl (impl)    { std::cout << " object  c'tor (impl)" << std::endl; 
@@ -175,7 +185,8 @@ class object : public virtual pimpl {
 };
 
 //////////////////////////////////////////////////////////////////////
-class attribs : public virtual pimpl {
+class attribs : public virtual pimpl 
+{
   public:
     attribs                   (void)              { std::cout << " attribs c'tor" << std::endl; 
                                                     base_test    ();
@@ -185,10 +196,11 @@ class attribs : public virtual pimpl {
 };
 
 //////////////////////////////////////////////////////////////////////
-class context : public object, public attribs {
+class context : public object, public attribs 
+{
   public:
-    context (void) : pimpl (new impl_context ())
-                   , object (new NO_IMPL ())      { std::cout << " context c'tor" << std::endl; 
+    context (void) : pimpl  (new impl_context ())
+                   , object (pimpl::NO_IMPL)      { std::cout << " context c'tor" << std::endl; 
                                                     base_test    ();
                                                     object_test  ();
                                                     attribs_test ();
