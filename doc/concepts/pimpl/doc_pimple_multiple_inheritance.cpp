@@ -70,10 +70,14 @@ class impl_pimpl
     }
 
   public:
+    // just for debugging
+    impl_pimpl (void) { std::cout << " impl    pimpl   c'tor" << std::endl; }
+
     // we need a virtual d'tor, too.  Note that all d'tors in derived classes
     // will automatically be virtual now - no need to declare that again
     virtual ~impl_pimpl (void) 
     {
+      std::cout << " impl    pimpl   d'tor" << std::endl; 
     }
 
     // other methods do not need to be virtual (but can be if needed).  In
@@ -81,7 +85,7 @@ class impl_pimpl
     // polymorphic impl base) more obvious.
     void impl_test (void) 
     {
-      std::cout << " pimpl   test impl" << std::endl; 
+      std::cout << " impl    pimpl   test" << std::endl; 
     }
 };
 
@@ -92,10 +96,10 @@ class impl_pimpl
 class impl_object  : public virtual impl_pimpl 
 {
   public:
-    void object_test (void) 
-    {
-      std::cout << " object  test impl" << std::endl; 
-    }
+    // just for debugging
+     impl_object     (void) { std::cout << " impl    object  c'tor" << std::endl; }
+    ~impl_object     (void) { std::cout << " impl    object  d'tor" << std::endl; }
+    void object_test (void) { std::cout << " impl    object  test"  << std::endl; }
 };
 
 
@@ -103,10 +107,10 @@ class impl_object  : public virtual impl_pimpl
 class impl_attribs : public virtual impl_pimpl 
 {
   public:
-    void attribs_test (void) 
-    {
-      std::cout << " attribs test impl" << std::endl; 
-    }
+    // just for debugging
+     impl_attribs     (void) { std::cout << " impl    attribs c'tor" << std::endl; }
+    ~impl_attribs     (void) { std::cout << " impl    attribs d'tor" << std::endl; }
+    void attribs_test (void) { std::cout << " impl    attribs test"  << std::endl; }
 };
 
 
@@ -118,10 +122,10 @@ class impl_context : public virtual impl_object
                    , public virtual impl_attribs 
 {
   public:
-    void context_test (void) 
-    {
-      std::cout << " context test impl" << std::endl; 
-    }
+    // just for debugging
+     impl_context     (void) { std::cout << " impl    context c'tor" << std::endl; }
+    ~impl_context     (void) { std::cout << " impl    context d'tor" << std::endl; } 
+    void context_test (void) { std::cout << " impl    context test"  << std::endl; }
 };
 
 
@@ -181,13 +185,13 @@ class pimpl
     pimpl (noimpl_enum) 
       : impl_ (NULL)
     {
-      std::cout << " pimpl   c'tor (no impl)" << std::endl; 
+      std::cout << " facade  pimpl   c'tor (no impl)" << std::endl; 
       
       // if the facade hierarchy is spanned correctly, the following test
-      // should work anyway!  Reason is that before the no_impl c'tor of this
-      // base class is getting invoked, another branch of the hierarchy has
-      // already invoked the second c'tor, and has thus already stored a valid
-      // impl pointer.
+      // should work already!  Reason is that before the no_impl c'tor of this
+      // base class is getting invoked, the derived class has already invoked 
+      // the pimpl c'tor, and has thus already stored a valid impl pointer in
+      // the pimpl base class.
       impl_test (); 
     }
 
@@ -198,7 +202,7 @@ class pimpl
     pimpl (impl_pimpl * impl) 
       : impl_ (impl) 
     {
-      std::cout << " pimpl   c'tor (impl) - " << impl_ << " - " << typeid (*impl_).name () << std::endl; 
+      std::cout << " facade  pimpl   c'tor (impl) - " << impl_ << " - " << typeid (*impl_).name () << std::endl; 
       impl_test ();  // impl should be valid
     }
 
@@ -206,13 +210,13 @@ class pimpl
     // ~pimpl should be the only place where the impl pointer gets deleted
     virtual ~pimpl (void)
     {
-      std::cout << " pimpl   d'tor" << std::endl; 
+      std::cout << " facade  pimpl   d'tor" << std::endl; 
       
       impl_test ();
   
       if ( NULL != impl_ ) 
       {
-        std::cout << " pimpl   deletes impl_ - " << impl_ << " - " << typeid (*impl_).name () <<  std::endl;
+        std::cout << " facade  pimpl   deletes impl_ - " << impl_ << " - " << typeid (*impl_).name () <<  std::endl;
         delete (impl_);
         impl_ = NULL;
       }
@@ -235,7 +239,7 @@ class pimpl
       // the cast later on.
       if ( NULL == impl_ )
       {
-        throw std::string ("pimpl::get_impl() on NULL impl pointer!");
+        throw std::string (" pimpl::get_impl() on NULL impl pointer!");
       }
 
       // std::cout << " pimpl::get_impl " << impl_ << " - " << typeid(*impl_).name () << std::endl;  
@@ -246,7 +250,7 @@ class pimpl
       // if that fails, complain
       if ( NULL == ret )
       {
-        throw std::string ("pimpl::get_impl <")
+        throw std::string (" pimpl::get_impl <")
           + typeid (*ret).name ()
           + "> () cannot cast an " 
           + typeid (*impl_).name () 
@@ -283,7 +287,7 @@ class object : public virtual pimpl
     object (noimpl_enum noimpl) 
       : pimpl (noimpl)                
     { 
-      std::cout << " object  c'tor (no impl)" << std::endl; 
+      std::cout << " facade  object  c'tor (no impl)" << std::endl; 
       impl_test   ();
       object_test ();
     }
@@ -294,14 +298,14 @@ class object : public virtual pimpl
     object (void) 
       : pimpl (new impl_object ())    
     {
-      std::cout << " object  c'tor" << std::endl; 
+      std::cout << " facade  object  c'tor" << std::endl; 
       impl_test   ();
       object_test ();
     }
     
     ~object (void)
     {
-      std::cout << " object  d'tor" << std::endl; 
+      std::cout << " facade  object  d'tor" << std::endl; 
     }
     
     void object_test (void)  
@@ -324,14 +328,14 @@ class attribs : public virtual pimpl
     attribs (noimpl_enum noimpl) 
       : pimpl (noimpl)                
     { 
-      std::cout << " attribs c'tor (no impl)" << std::endl; 
+      std::cout << " facade  attribs c'tor (no impl)" << std::endl; 
       impl_test    ();
       attribs_test ();
     }
     
     ~attribs (void)
     {
-      std::cout << " attribs d'tor" << std::endl; 
+      std::cout << " facade  attribs d'tor" << std::endl; 
     }
 
 
@@ -358,7 +362,7 @@ class context : public object, public attribs
       , object  (pimpl::NO_IMPL)      // no impl pointer for the ...
       , attribs (pimpl::NO_IMPL)      // ... other base classes
     { 
-      std::cout << " context c'tor" << std::endl; 
+      std::cout << " facade  context c'tor" << std::endl; 
       impl_test    ();
       object_test  ();
       attribs_test ();
@@ -367,7 +371,7 @@ class context : public object, public attribs
     
     ~context (void) 
     {
-      std::cout << " context d'tor" << std::endl; 
+      std::cout << " facade  context d'tor" << std::endl; 
     }
     
     void context_test (void) 
