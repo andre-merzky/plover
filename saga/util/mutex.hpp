@@ -19,15 +19,13 @@ namespace saga
         pthread_mutex_t * mtx_;
          
 
-
       public:
         mutex (void)
         {
-          mtx_    = new pthread_mutex_t;
+          mtx_ = new pthread_mutex_t;
           pthread_mutex_init (mtx_, NULL);
         }
 
-        // dtor
         ~mutex () 
         {
           pthread_mutex_destroy (mtx_);
@@ -35,14 +33,14 @@ namespace saga
 
         void lock (void) 
         {
-          // std::cerr << "mutex lock\n";
           pthread_mutex_lock (mtx_);
+          // std::cerr << "mutex locked\n";
         }
 
         void unlock (void) 
         {
           pthread_mutex_unlock (mtx_);
-          // std::cerr << "mutex unlock\n";
+          // std::cerr << "mutex unlocked\n";
         }
     };
 

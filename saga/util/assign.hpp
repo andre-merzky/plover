@@ -8,6 +8,13 @@ namespace saga
 {
   namespace util
   {
+    ////////////////////////////////////////////////////////////////////////
+    //
+    // usage:
+    //
+    //   static std::set <std::string> attrib_ro_s = 
+    //          saga::util::assign_set <std::string> ("s1")("s2");
+    //
     template <class T> class assign_set : public std::set <T>
     {
       public:

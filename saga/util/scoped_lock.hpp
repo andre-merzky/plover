@@ -9,8 +9,7 @@ namespace saga
   namespace util
   {
     // This class provides a simple scoped lock, based on the
-    // saga::util::scoped_lock
-    // class.
+    // saga::util::mutex class.
     class scoped_lock 
     {
       private:

@@ -4,11 +4,15 @@
 
 #include <saga/util/scoped_lock.hpp>
 
+#include <exception> // for std exception types
+#include <iostream>  // for stdout/stderr
+
 namespace saga
 {
   namespace util
   {
-
+    //////////////////////////////////////////////////////////////////
+    //
     // the shared_ptr class is a pointer container which
     // performes reference counting for the pointer it holds.
     // The pointer is deleted whn the reference count reaches
@@ -24,13 +28,20 @@ namespace saga
     //   - refcounter is of long type, that obviously limits 
     //     the number of allowed copies
     //
-    //   - to obtain correct deletion semantics on casting of
-    //     shared pointers, the classes involved SHOULD have
+    //   - to obtain correct deletion semantics for pointers to
+    //     derived classes, the classes involved SHOULD have
     //     virtual destructors.
+    //
+    //   - needs a reset() and swap() method
+    //
+    //   - needs something like 'get_shared_from_this <U> ()', which 
+    //     allows to create another shared pointer instance, in 
+    //     particular one having a different template type, to 
+    //     share the same pointer.
     //
     template <class T> class shared_ptr 
     {
-      // allow for dynamic casts for other shared ptr types
+      // allow for dynamic casts to other shared ptr types
       template <class U> friend class shared_ptr;
 
 
@@ -40,7 +51,7 @@ namespace saga
 
 
         // Increment the reference count.  
-        // The counter is locked with a scoped lock.
+        // The counter is protected by a scoped lock.
         void inc_ (void)
         {
           saga::util::scoped_lock lck;
@@ -50,17 +61,20 @@ namespace saga
 
         // Decrement the reference count.   If ref count reaches zero, delete
         // the pointer.
-        // The counter is locked with a scoped lock.
+        // The counter is protected by a scoped lock.
         void dec_ (void)
         {
           saga::util::scoped_lock lck;
 
           (*cnt_) -= 1;
 
-          if ( 0 == *cnt_ )
+          if ( 0 == (*cnt_) )
           {
             delete (cnt_);
             delete (ptr_);
+
+            ptr_ = NULL;
+            cnt_ = NULL;
           }
         }
 
@@ -81,9 +95,10 @@ namespace saga
           {
             // can't do much if we don't even get a counter allocated
             delete (p);
-            throw;
+            throw; // FIXME: throw something sensible
           }
         }
+
 
         // copy ctor, increments ref count
         shared_ptr (const shared_ptr <T> & p)
@@ -93,7 +108,9 @@ namespace saga
           inc_ ();
         }
 
+
         // casting copy ctor, increments ref count
+        // FIXME: dynamic_cast can throw!
         template <class U> 
         shared_ptr (const shared_ptr <U> & p)
           : ptr_ (dynamic_cast <T*> (p.ptr_)), 
@@ -111,9 +128,12 @@ namespace saga
 
 
         // assignment
+        // FIXME: do we need locking here?  What if someone else decrements
+        // between the dec/inc below, for the same pointer?  It will be gone
+        // before the inc...
         shared_ptr <T> & operator= (const shared_ptr <T> & p) 
         {
-          // got really new pointer
+          // really got  a new pointer?
           if ( this != & p ) 
           {
             // decrease refcount for the old ptr, and delete if needed
@@ -136,16 +156,42 @@ namespace saga
         {
           return *ptr_;
         }
-        
+
+
         T * operator->() const
         {
           return ptr_;
         }
 
+
+        // note that the returned pointer is volatile, in the sense that it can
+        // be deleted by the shared_ptr d'tor at any time.
         T * get ()  const 
         {
           return ptr_;
         }
+
+        // dyamic_cast'ing version of get
+        // remarks to get() apply
+        template <class U> 
+        U * get (void)
+        {
+          U * ret;
+          
+          try
+          {
+            ret = dynamic_cast <U *> (ptr_);
+          }
+          catch ( const std::exception & e )
+          {
+            std::cerr << "bad dynamic_ptr_cast: " << e.what () << std::endl;
+            return NULL;
+          }
+
+          return ret;
+        }
+
+
 
         // allow to compare shared pointers, by comparing the contained pointer
         bool compare (const shared_ptr <T> & p) const
@@ -153,16 +199,29 @@ namespace saga
           return (ptr_ == p.ptr_);
         }
 
-        template <class U> U * dynamic_ptr_cast (void)
-        {
-          return dynamic_cast <U *> (ptr_);
-        }
 
-        template <class U> shared_ptr <U> dynamic_shared_ptr_cast (void)
+        // FIXME: this should be a shared_from_this like thing, but is not!
+        template <class U> 
+        shared_ptr <U> dynamic_pcast (void)
         {
-          U * tmp = dynamic_cast <U *> (ptr_);
+          U * tmp;
+
+          try 
+          {
+            tmp = dynamic_cast <U *> (ptr_);
+          }
+          catch ( const std::exception & e )
+          {
+            std::cerr << "bad dynamic_shared_ptr_cast: " << e.what () << std::endl;
+            tmp = NULL;
+          }
+
           return shared_ptr <U> (tmp);
         }
+
+
+        // allow simple boolean test, e.g. for if's
+        operator bool() const { return (!!ptr_); }
     };
 
 
