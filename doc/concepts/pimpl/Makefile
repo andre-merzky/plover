@@ -10,3 +10,6 @@ include $(SAGA_ROOT)/make/saga.application.mk
 
 # SAGA_CXXFLAGS += -DUSE_BOOST
 
+check:: all
+	valgrind --tool=memcheck --leak-check=full ./doc_pimple_shared_pointer
+
