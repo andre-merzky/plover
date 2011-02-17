@@ -6,26 +6,25 @@
 class test 
 {
   private:
-    int * i_;
+    int i_;
 
-    void inc_ (void)
-    {
-      *i_ += + 1;
-    }
 
   public:
     test (void) 
+      : i_ (0)
     { 
-      i_ = new int;
-    }
-    ~test (void) 
-    { 
-      delete i_;
+      std::cout << "ctor  " << this << std::endl;
     }
 
-    void print (void)
+    ~test (void) 
     { 
-      inc_ ();
+      std::cout << "dtor  " << this << std::endl;
+    }
+
+    void print (int i = 0)
+    { 
+      i_++;
+      std::cout << "print " << i << " : " << i_ << " : " << this << std::endl;
     }
 };
 
@@ -41,11 +40,15 @@ int main ()
         saga::util::shared_ptr <test> t_3 = t_2;
         t_0 = t_3;
 
-        t_3->print ();
+        t_3->print (1);
       }
-      t_2->print ();
+      t_2->print (2);
+
+      saga::util::shared_ptr <test> t_4 = t_2.get_shared_ptr ();
+      t_4->print (3);
+      t_4->print (4);
     }
-    t_1->print ();
+    t_1->print (5);
   }
   catch (const std::exception & e ) 
   {
