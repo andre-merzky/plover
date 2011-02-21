@@ -1,13 +1,13 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 //
-// SharedPIMPL for Polymorph Class Hierarchies 
+// SharedPIMPL for Polymorph Class Hierarchies
 // -------------------------------------------
 //
 // This is the same example as shown in doc_pimple_multiple_inheritance.cpp, but
-// instead of a PIMPL (Pointer to IMPLementation) we keep a shared pointer,
-// which elleviates many of the memory management and thread safety problems of
-// the pure PIMPL approach.
+// instead of a PIMPL (Pointer to IMPLementation) we keep a SharedPIMPL (Shared
+// Pointer to implementation).  which elleviates many of the memory management
+// and thread safety issues of the pure PIMPL approach.
 //
 
 #include "./dummy_shared_ptr.hpp" // for shared pointers
@@ -21,88 +21,86 @@
 //
 // impl classes
 //
-////////////////////////////////////////////////////////////////////////////////
-//
-// impl_pimpl is a virtually (pun!) empty class, which serves as polymorphism
-// anchor for all derived impl classes.  That way we can reflect the (here
-// also polymorph) inheritance hierarchy of the facade side, and ensure that
-// dynamic_cast's up and down that hierarchy function as expected.
-//
-// Note that in this exmaple code, polymorphism is used on both sides of 
-// the hierarchy.  In order to remove polymorphism on the facade side, simply
-// remove the polymorphe_() method from the pimpl class.
-//
-class impl_pimpl 
-
+namespace impl
 {
-  private:
-    // the impl_pimpl class needs to be polymorphic for the up/down casting of
-    // its, and its decendents pointers to work (via dynamic_cast).  So, we add
-    // one virtual function, but hide it.
-    virtual void polymorph_ (void) 
-    {
-    }
+  ////////////////////////////////////////////////////////////////////////////////
+  //
+  // impl::pimpl is a virtually (pun!) empty class, which serves as polymorphism
+  // anchor for all derived impl classes.  That way we can reflect the (here
+  // also polymorph) inheritance hierarchy of the facade side, and ensure that
+  // dynamic_cast's up and down that hierarchy function as expected.
+  //
+  // Note that in this exmaple code, polymorphism is used on both sides of 
+  // the hierarchy.  That is, depending on the application code, not really
+  // required for the pimpl scheme to work.
+  //
+  class pimpl 
+  {
+    private:
+      // the impl::pimpl class needs to be polymorphic for the up/down casting of
+      // its (and its decendent's) pointers to work (via dynamic_cast).  So, we add
+      // one virtual function, but hide it.
+      virtual void polymorph_ (void) 
+      {
+      }
 
-  public:
-    // just for debugging
-    impl_pimpl (void) { std::cout << " impl    pimpl   c'tor" << std::endl; }
+    public:
+      pimpl (void) { std::cout << " impl    pimpl   c'tor" << std::endl; }
 
-    // we need a virtual d'tor, too.  Note that all d'tors in derived classes
-    // will automatically be virtual now - no need to declare that again
-    virtual ~impl_pimpl (void) 
-    {
-      std::cout << " impl    pimpl   d'tor" << std::endl; 
-    }
+      // we need a virtual d'tor, too.  Note that all d'tors in derived classes
+      // will automatically be virtual now - no need to declare that again
+      virtual ~pimpl (void) 
+      {
+        std::cout << " impl    pimpl   d'tor" << std::endl; 
+      }
 
-    // other methods do not need to be virtual (but can be if needed).  In
-    // general, impl_pimpl should be kept empty, to make its job (to act as
-    // polymorphic impl base) more obvious.
-    void impl_test (void) 
-    {
-      std::cout << " impl    pimpl   test" << std::endl; 
-    }
-};
-
-
-////////////////////////////////////////////////////////////////////////////////
-// other impl classes *must*, directly or indirectly, inherit impl_pimpl as
-// 'virtual public base class', to profit from its polymorphism properties.
-class impl_object  : public virtual impl_pimpl 
-{
-  public:
-    // just for debugging
-     impl_object     (void) { std::cout << " impl    object  c'tor" << std::endl; }
-    ~impl_object     (void) { std::cout << " impl    object  d'tor" << std::endl; }
-    void object_test (void) { std::cout << " impl    object  test"  << std::endl; }
-};
-
-
-////////////////////////////////////////////////////////////////////////////////
-class impl_attribs : public virtual impl_pimpl 
-{
-  public:
-    // just for debugging
-     impl_attribs     (void) { std::cout << " impl    attribs c'tor" << std::endl; }
-    ~impl_attribs     (void) { std::cout << " impl    attribs d'tor" << std::endl; }
-    void attribs_test (void) { std::cout << " impl    attribs test"  << std::endl; }
-};
+      // other methods do not need to be virtual (but can be if needed).  In
+      // general, impl::pimpl should be kept empty, to make its job (to act as
+      // polymorphic impl base) more obvious.
+      void impl_test (void) 
+      {
+        std::cout << " impl    pimpl   test" << std::endl; 
+      }
+  };
 
 
-////////////////////////////////////////////////////////////////////////////////
-// in order to keep the pimpl hierarchy consistent, we continue to  
-// use 'virtual public' inheriatance.  That is not strictly neccessary 
-// (I think).
-class impl_context : public virtual impl_object
-                   , public virtual impl_attribs 
-{
-  public:
-    // just for debugging
-     impl_context     (void) { std::cout << " impl    context c'tor" << std::endl; }
-    ~impl_context     (void) { std::cout << " impl    context d'tor" << std::endl; } 
-    void context_test (void) { std::cout << " impl    context test"  << std::endl; }
-};
+  ////////////////////////////////////////////////////////////////////////////////
+  // other impl classes *must*, directly or indirectly, inherit impl::pimpl as
+  // 'virtual public base class', to profit from its polymorphism properties.
+  class object  : public virtual impl::pimpl 
+  {
+    public:
+      object           (void) { std::cout << " impl    object  c'tor" << std::endl; }
+      ~object          (void) { std::cout << " impl    object  d'tor" << std::endl; }
+      void object_test (void) { std::cout << " impl    object  test"  << std::endl; }
+  };
 
 
+  ////////////////////////////////////////////////////////////////////////////////
+  class attribs : public virtual impl::pimpl 
+  {
+    public:
+      attribs           (void) { std::cout << " impl    attribs c'tor" << std::endl; }
+      ~attribs          (void) { std::cout << " impl    attribs d'tor" << std::endl; }
+      void attribs_test (void) { std::cout << " impl    attribs test"  << std::endl; }
+  };
+
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // in order to keep the pimpl hierarchy consistent, we continue to  
+  // use 'virtual public' inheriatance.  That is not strictly neccessary 
+  // (I think).
+  class context : public virtual impl::object
+                  , public virtual impl::attribs 
+  {
+    public:
+      context           (void) { std::cout << " impl    context c'tor" << std::endl; }
+      ~context          (void) { std::cout << " impl    context d'tor" << std::endl; } 
+      void context_test (void) { std::cout << " impl    context test"  << std::endl; }
+  };
+
+
+} // namespace impl
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -139,7 +137,7 @@ class pimpl
 
   private:
     // here we keep the pointer to the impl instance, cast to it's base type
-    dummy::shared_ptr <impl_pimpl> impl_;
+    dummy::shared_ptr <impl::pimpl> impl_;
 
     // make our class hierarchy polymorph.  This method can be removed - the
     // pimpl paradigms works just as well on non-polymorph facades.
@@ -157,7 +155,6 @@ class pimpl
     // class hierarchy will pass down the impl pointer - all others will invoke 
     // this c'tor for their base class.
     pimpl (noimpl_enum) 
-      // : impl_ (NULL)
     {
       std::cout << " facade  pimpl   c'tor (no impl)" << std::endl; 
       
@@ -173,13 +170,13 @@ class pimpl
     // is then stored for later usage.  Note that the storage type is the base
     // pointer of the impl hierarchy, but the passed pointer type is one of the
     // derived classes of the impl hierarchy.
-    pimpl (impl_pimpl * impl) 
+    pimpl (impl::pimpl * impl) 
       : impl_ (impl) 
     {
-      std::cout << " facade  pimpl   c'tor (impl) - " << impl_.get () << " - " 
-                << typeid (impl_.get ()).name () << std::endl; 
+      std::cout << " facade  pimpl   c'tor (impl) - " << impl_.get_ptype () << std::endl; 
       impl_test ();  // impl should be valid
     }
+
 
   public:
     // ~pimpl should be the only place where the impl pointer gets deleted
@@ -191,8 +188,8 @@ class pimpl
   
       if ( impl_ ) 
       {
-        std::cout << " facade  pimpl   deletes impl_ - " << impl_.get () << " - " 
-                  << typeid (impl_.get ()).name () <<  " - " << impl_.count () << std::endl;
+        std::cout << " facade  pimpl   deletes impl_ - " << impl_.get_ptype () 
+                  << " - " << impl_.use_count () << std::endl;
       }
     }
 
@@ -211,13 +208,10 @@ class pimpl
     { 
       // ensure we actually have an impl pointer.  This avoids an exception on
       // the cast later on.
-      if ( NULL == impl_ )
+      if ( ! impl_ )
       {
-        throw std::string (" pimpl::get_impl() on NULL impl pointer!");
+        throw std::string (" pimpl::get_impl<T>() on NULL impl pointer!");
       }
-
-      // std::cout << " pimpl::get_impl " << impl_.get () << " - " 
-      //           << typeid (impl_.get ()).name () << std::endl;  
 
       // try to cast to the wanted pointer type
       dummy::shared_ptr <T> ret = impl_.get_shared_pointer <T> (); 
@@ -226,9 +220,9 @@ class pimpl
       if ( ! ret )
       {
         throw std::string (" pimpl::get_impl <")
-          + typeid (ret.get ()).name ()
+          + typeid (T).name ()
           + "> () cannot cast an " 
-          + typeid (impl_.get ()).name () 
+          + impl_.get_ptype ()
           + " impl pointer!";
       }
 
@@ -239,11 +233,44 @@ class pimpl
       return (ret);
     }
 
-    // just a test method, which also demonstrated the use of get_impl<type>().
-    // We could have used impl_ directly of course.
+
+    // is_a() is very similar to get_impl: it simply checks if get_impl, and in
+    // particular the casting, would succeed.
+    template <typename T>
+    bool is_a (void)              
+    { 
+      // return false on a NULL pointer (which has no type)
+      // the cast later on.
+      if ( NULL == impl_ )
+      {
+        return false;
+      }
+
+      // try to cast to the wanted pointer type
+      dummy::shared_ptr <T> ret = impl_.get_shared_pointer <T> (); 
+
+      // if that fails, complain
+      if ( ! ret )
+      {
+        // cast failed, so impl is not a T.
+        return false;
+      }
+
+      // otherwise, impl is a T
+      return true;
+    }
+
+
+    // just a test method, which also demonstrated the use of is_a<T>() and 
+    // get_impl<T>().
     void  impl_test (void) 
     {
-      get_impl <impl_pimpl> ()->impl_test (); 
+      std::cout << " pimpl test" << std::endl; 
+      if ( is_a <impl::pimpl>   () )   get_impl <impl::pimpl>   ()->impl_test    ();
+      if ( is_a <impl::object>  () )   get_impl <impl::object>  ()->object_test  ();
+      if ( is_a <impl::attribs> () )   get_impl <impl::attribs> ()->attribs_test ();
+      if ( is_a <impl::context> () )   get_impl <impl::context> ()->context_test ();
+      std::cout << " pimpl test" << std::endl; 
     }
 };
 
@@ -263,19 +290,17 @@ class object : public virtual pimpl
       : pimpl (noimpl)                
     { 
       std::cout << " facade  object  c'tor (no impl)" << std::endl; 
-      impl_test   ();
-      object_test ();
+      impl_test ();
     }
     
     
   public:
     // the second (public) c'tor allows for explicit object creation.
     object (void) 
-      : pimpl (new impl_object ())    
+      : pimpl (new impl::object ())    
     {
       std::cout << " facade  object  c'tor" << std::endl; 
       impl_test   ();
-      object_test ();
     }
     
     ~object (void)
@@ -285,7 +310,9 @@ class object : public virtual pimpl
     
     void object_test (void)  
     {
-      get_impl <impl_object> ()->object_test ();  
+      std::cout << " object test" << std::endl; 
+      impl_test ();
+      std::cout << " object test" << std::endl; 
     }
 };
 
@@ -318,7 +345,9 @@ class attribs : public virtual pimpl
     // the attribs methods
     void attribs_test (void)
     {
-      get_impl <impl_attribs> ()->attribs_test (); 
+      std::cout << " attribs test" << std::endl; 
+      impl_test ();
+      std::cout << " attribs test" << std::endl; 
     }
 };
 
@@ -333,15 +362,12 @@ class context : public object, public attribs
 {
   public:
     context (void) 
-      : pimpl   (new impl_context ()) // store new impl pointer in pimpl base
+      : pimpl   (new impl::context ()) // store new impl pointer in pimpl base
       , object  (pimpl::NO_IMPL)      // no impl pointer for the ...
       , attribs (pimpl::NO_IMPL)      // ... other base classes
     { 
       std::cout << " facade  context c'tor" << std::endl; 
       impl_test    ();
-      object_test  ();
-      attribs_test ();
-      context_test (); 
     } 
     
     ~context (void) 
@@ -351,7 +377,9 @@ class context : public object, public attribs
     
     void context_test (void) 
     {
-      get_impl <impl_context> ()->context_test (); 
+      std::cout << " context test" << std::endl; 
+      impl_test    ();
+      std::cout << " context test" << std::endl; 
     }
 };
 
@@ -371,10 +399,10 @@ int main (int argc, char** argv)
     {
       std::cout << " 2 --------------------------------" << std::endl;
 
-      impl_context* p1 = new impl_context ();
-      impl_object*  p2 = p1;
-      impl_attribs* p3 = p1;
-      impl_pimpl*   p4 = p1;
+      impl::context* p1 = new impl::context ();
+      impl::object*  p2 = p1;
+      impl::attribs* p3 = p1;
+      impl::pimpl*   p4 = p1;
 
       p1->context_test ();
 
@@ -428,16 +456,16 @@ int main (int argc, char** argv)
 
       p1->context_test ();
 
-      p1->object_test ();
-      p2->object_test ();
+      p1->object_test  ();
+      p2->object_test  ();
 
       p1->attribs_test ();
       p3->attribs_test ();
 
-      p1->impl_test ();
-      p2->impl_test ();
-      p3->impl_test ();
-      p4->impl_test ();
+      p1->impl_test    ();
+      p2->impl_test    ();
+      p3->impl_test    ();
+      p4->impl_test    ();
 
       delete (p1);
 

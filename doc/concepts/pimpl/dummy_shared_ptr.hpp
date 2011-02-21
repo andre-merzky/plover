@@ -3,23 +3,24 @@
 #define DUMMY_SHARED_PTR_HPP
 
 
-#ifdef USE_BOOST 
+#ifdef USE_TR1 
 
-# include <boost/shared_ptr.hpp>
+# include <tr1/memory>
+# include <string>
 
-#else // USE_BOOST
+#else // USE_TR1
 
 # include <saga/util/shared_ptr.hpp>
 
-#endif // USE_BOOST
+#endif // USE_TR1
 
 
 namespace dummy
 {
-#ifdef USE_BOOST
-  // declaration as boost shared_ptr derivate
+#ifdef USE_TR1
+  // declaration as std::shared_ptr derivate
   template <class T>
-  class shared_ptr : public boost::shared_ptr <T>
+  class shared_ptr : public std::tr1::shared_ptr <T>
   {
     // friend myself for allowing me to use the private c'tor in the
     // get_shared_ptr impl
@@ -28,31 +29,42 @@ namespace dummy
 
     private:
       // only used for get_shared_ptr()
-      shared_ptr (boost::shared_ptr <T> impl)
-        : boost::shared_ptr <T> (impl)
+      shared_ptr (std::tr1::shared_ptr <T> impl)
+        : std::tr1::shared_ptr <T> (impl)
       {
       }
 
     public:
       shared_ptr (void)
-        : boost::shared_ptr <T> ()
+        : std::tr1::shared_ptr <T> ()
       {
       }
 
       shared_ptr (T * impl)
-        : boost::shared_ptr <T> (impl)
+        : std::tr1::shared_ptr <T> (impl)
       {
       }
 
       template <class U>
       dummy::shared_ptr <U> get_shared_pointer (void)
       {
-        dummy::shared_ptr <U> ret (boost::dynamic_pointer_cast <U> (*this));
+        dummy::shared_ptr <U> ret (std::tr1::dynamic_pointer_cast <U> (*this));
         return ret;
       }
+
+      std::string get_ptype (void)
+      {
+        if ( NULL == this->get () )
+        {
+          return "NULL";
+        }
+
+        return (typeid (this->get ()).name ());
+      }
+
   };
 
-#else // ! USE_BOOST
+#else // ! USE_TR1
 
   // forward decl for the get_shared_ptr
   template <class T> class shared_ptr;
@@ -94,8 +106,13 @@ namespace dummy
         dummy::shared_ptr <U> ret = this->template get_shared_ptr <U> ();
         return ret;
       }
+
+      long use_count (void) const
+      {
+        return this->get_count ();
+      }
   };
-#endif // USE_BOOST
+#endif // USE_TR1
 }
 
 
