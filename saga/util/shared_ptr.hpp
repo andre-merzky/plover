@@ -21,10 +21,16 @@ namespace saga
     // zero, i.e. when the last copy of the shared pointer is
     // deleted.
     //
+    //
     // NOTES:
     //   - the  application must ensure that the pointer is 
     //     not in use outside that reference counting scheme, 
     //     at time of deletion.
+    //
+    //   - to support that, the get() and get<U>() methods 
+    //     are private - the user should only be able to get 
+    //     new shared pointers.
+    //
     //
     // LIMITATIONS:
     //   - refcounter is of long type, that obviously limits 
@@ -36,11 +42,6 @@ namespace saga
     //
     //   - needs a reset() and swap() method
     //
-    //   - needs something like 'get_shared_from_this <U> ()', which 
-    //     allows to create another shared pointer instance, in 
-    //     particular one having a different template type, to 
-    //     share the same pointer.
-    //
     template <class T> class shared_ptr
     {
       // allow for dynamic casts to other shared ptr types
@@ -51,15 +52,12 @@ namespace saga
         long              * cnt_; // ref counter
         saga::util::mutex * mtx_; // lock
 
+
         // Increment the reference count.  
         void inc_ (void)
         {
-          std::cout << " -> inc_ " << count () << " - " << cnt_ << " - " << this << " - " << ptr_ << std::endl;
-
           saga::util::scoped_lock lck (mtx_);
           (*cnt_) += 1;
-
-          std::cout << " <- inc_ " << count () << std::endl;
         }
 
 
@@ -67,30 +65,26 @@ namespace saga
         // the pointer.
         void dec_ (void)
         {
-          std::cout << " -> dec_ " << count () << " - " << cnt_ << " - " << this << " - " << ptr_ << std::endl;
-
-
           bool delete_mtx = false;
 
           {
             saga::util::scoped_lock lck (mtx_);
             (*cnt_) -= 1;
 
-            std::cout << " <- dec_ " << count () << std::endl;
-
-            if ( 0 == count () )
+            if ( 0 == get_count () )
             {
-              std::cout << " !! del  " << count () << std::endl;
-
+              std::cout << "typename: " << typeid (T).name () << std::endl;
               if ( NULL != ptr_ )
               {
                 // not managing a NULL pointer...
-                delete (ptr_);
+                // delete (ptr_);
                 ptr_ = NULL;
               }
 
               delete (cnt_);
               cnt_ = NULL;
+
+              delete_mtx = true;
             }
           }
 
@@ -102,6 +96,43 @@ namespace saga
             delete (mtx_);
             mtx_ = NULL;
           }
+        }
+
+
+        // note that the returned pointer is volatile, in the sense that it can
+        // be deleted by the shared_ptr d'tor at any time.
+        T * get ()  const 
+        {
+          // FIXME: catch NULL ptr_?
+          return ptr_;
+        }
+
+        // dyamic_cast'ing version of get
+        // remarks to get() apply
+        template <class U> 
+        U * get (void)
+        {
+          // FIXME: catch NULL ptr_?
+          U * ret;
+          
+          try
+          {
+            ret = dynamic_cast <U *> (ptr_);
+          }
+          catch ( const std::exception & e )
+          {
+            std::cerr << "bad dynamic_ptr_cast: " << e.what () << std::endl;
+            ret = NULL;
+          }
+
+          if ( NULL == ret )
+          {
+            // FIXME: log
+            // FIXME: how should we react?  return an empty shared ptr, as we do
+            // now, or throw and internal exception?
+          }
+
+          return ret;
         }
 
 
@@ -117,9 +148,8 @@ namespace saga
         explicit shared_ptr (T * p = NULL)
           : ptr_ (p)
           , cnt_ (new long)
-          , mtx_ (new saga::util::mutex)
         {
-          std::cout << " new counter " << cnt_ << std::endl;
+          mtx_ = new saga::util::mutex;
 
           // init counter
           (*cnt_) = 0;
@@ -197,44 +227,6 @@ namespace saga
         }
 
 
-        // note that the returned pointer is volatile, in the sense that it can
-        // be deleted by the shared_ptr d'tor at any time.
-        T * get ()  const 
-        {
-          // FIXME: catch NULL ptr_?
-          return ptr_;
-        }
-
-        // dyamic_cast'ing version of get
-        // remarks to get() apply
-        template <class U> 
-        U * get (void)
-        {
-          // FIXME: catch NULL ptr_?
-          U * ret;
-          
-          try
-          {
-            ret = dynamic_cast <U *> (ptr_);
-          }
-          catch ( const std::exception & e )
-          {
-            std::cerr << "bad dynamic_ptr_cast: " << e.what () << std::endl;
-            ret = NULL;
-          }
-
-          if ( NULL == ret )
-          {
-            // FIXME: log
-            // FIXME: how should we react?  return an empty shared ptr, as we do
-            // now, or throw and internal exception?
-          }
-
-          return ret;
-        }
-
-
-
         // FIXME: this should be a shared_from_this like thing, but is not!
         shared_ptr <T> get_shared_ptr (void)
         {
@@ -254,13 +246,6 @@ namespace saga
         }
 
 
-        // get the current refcounter value
-        long count ()  const 
-        {
-          return *cnt_;
-        }
-
-
         // allow to compare shared pointers, by comparing the contained pointer
         bool compare (const shared_ptr <T> & that) const
         {
@@ -270,6 +255,30 @@ namespace saga
 
         // allow simple boolean test, e.g. for if's
         operator bool() const { return (!!ptr_); }
+
+
+        //////////////////////////////////////////////////////////////Q
+        //
+        // some inspection methods
+        //
+
+        // get the current refcounter value
+        long get_count ()  const 
+        {
+          return *cnt_;
+        }
+
+
+        // get the typename of the stored pointer
+        std::string get_ptype (void)
+        {
+          if ( NULL == ptr_ )
+          {
+            return "NULL";
+          }
+
+          return (typeid (ptr_).name ());
+        }
     };
 
 

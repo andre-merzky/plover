@@ -1,12 +1,15 @@
 
 SAGA_ROOT     = $(shell pwd)/../../../
 
+SAGA_SUBDIRS += engine
 SAGA_SUBDIRS += adaptor_1
 SAGA_SUBDIRS += adaptor_2
 
 SAGA_BIN     += adaptor_test
 
 include $(SAGA_ROOT)/make/saga.mk
+
+SAGA_LDFLAGS += -L./engine/ -lsaga_engine
 
 check:: all
 	valgrind --tool=memcheck --leak-check=full ./adaptor_test

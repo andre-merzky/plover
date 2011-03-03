@@ -2,11 +2,12 @@
 #ifndef ADAPTOR_HPP
 #define ADAPTOR_HPP
 
-#include "cpi.hpp"
+#include "../engine/cpi.hpp"
+#include "../engine/adaptor_registry.hpp"
 
 namespace adaptor_2
 {
-  class object : public cpi::object
+  class object : public saga::cpi::object
   {
     public:
       object (void)
@@ -19,16 +20,17 @@ namespace adaptor_2
         std::cout << "adaptor_2::object::d'tor" << std::endl;
       }
 
-      void init (void)
+      void init (int i)
       {
-        std::cout << "adaptor_2::object::init" << std::endl;
+        std::cout << "adaptor_2::object::init: " << i << std::endl;
       }
   };
 }
 
 extern "C" 
 {
-  adaptor_2::object * get_object (void);
+  saga::cpi::object * create_cpi   (void);
+  void                register_cpi (saga::detail::adaptor_registry & reg);
 }
 
 #endif // ADAPTOR_HPP

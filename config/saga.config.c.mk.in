@@ -54,8 +54,11 @@ MAKE                      += --no-print-directory
 #
 # Compiler
 #
+# FIXME: ar detextion
+# 
 SAGA_CPP                   = @SAGA_CPP@
 SAGA_CC                    = @SAGA_CC@
+SAGA_AR                    = ar rcs
 SAGA_CXX                   = @SAGA_CXX@
 SAGA_LD                    = @SAGA_CXX@
 SAGA_LD_BIN                = @SAGA_CXX@
@@ -68,7 +71,8 @@ SAGA_LDFLAGS_EXT           = @SAGA_LDFLAGS_EXT@
 
 SAGA_CXXFLAGS             += -I$(BOOST_LOCATION)/include
 
-SAGE_LEXT                  = so
+SAGA_LEXT                  = so
+SAGA_AEXT                  = a
 
 SAGA_CCFLAGS              += $(SAGA_INC_FLAGS)
 SAGA_CXXFLAGS             += $(SAGA_INC_FLAGS)
