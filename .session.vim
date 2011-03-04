@@ -221,7 +221,7 @@ badd +2 doc/concepts/adaptor/engine/registrator.cpp
 badd +0 doc/concepts/adaptor/engine/adaptor_registry.hpp
 badd +0 doc/concepts/adaptor/engine/adaptor_registry.cpp
 badd +49 saga/util/demangle.hpp
-badd +6 saga/util/demangle.cpp
+badd +14 saga/util/demangle.cpp
 badd +8 saga/util/Makefile
 badd +117 make/saga.mk
 args doc/concepts/adaptor/Makefile
@@ -263,10 +263,7 @@ wincmd _ | wincmd |
 split
 wincmd _ | wincmd |
 split
-wincmd _ | wincmd |
-split
-19wincmd k
-wincmd w
+18wincmd k
 wincmd w
 wincmd w
 wincmd w
@@ -288,8 +285,8 @@ wincmd w
 set nosplitright
 wincmd t
 set winheight=1 winwidth=1
-exe '1resize ' . ((&lines * 0 + 25) / 51)
-exe '2resize ' . ((&lines * 30 + 25) / 51)
+exe '1resize ' . ((&lines * 31 + 25) / 51)
+exe '2resize ' . ((&lines * 0 + 25) / 51)
 exe '3resize ' . ((&lines * 0 + 25) / 51)
 exe '4resize ' . ((&lines * 0 + 25) / 51)
 exe '5resize ' . ((&lines * 0 + 25) / 51)
@@ -307,7 +304,6 @@ exe '16resize ' . ((&lines * 0 + 25) / 51)
 exe '17resize ' . ((&lines * 0 + 25) / 51)
 exe '18resize ' . ((&lines * 0 + 25) / 51)
 exe '19resize ' . ((&lines * 0 + 25) / 51)
-exe '20resize ' . ((&lines * 0 + 25) / 51)
 argglobal
 setlocal keymap=
 setlocal noarabic
@@ -403,7 +399,7 @@ setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 10 - ((9 * winheight(0) + 0) / 0)
+let s:l = 10 - ((9 * winheight(0) + 15) / 31)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
@@ -506,12 +502,12 @@ setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 77 - ((24 * winheight(0) + 15) / 30)
+let s:l = 80 - ((27 * winheight(0) + 0) / 0)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-77
-normal! 02l
+80
+normal! 0
 wincmd w
 argglobal
 edit doc/concepts/adaptor/adaptor_1/adaptor.cpp
@@ -712,7 +708,7 @@ setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 10 - ((8 * winheight(0) + 0) / 0)
+let s:l = 10 - ((9 * winheight(0) + 0) / 0)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
@@ -1124,7 +1120,7 @@ setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 45 - ((23 * winheight(0) + 0) / 0)
+let s:l = 45 - ((24 * winheight(0) + 0) / 0)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
@@ -1536,7 +1532,7 @@ setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 95 - ((15 * winheight(0) + 0) / 0)
+let s:l = 95 - ((16 * winheight(0) + 0) / 0)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
@@ -1639,7 +1635,7 @@ setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 24 - ((22 * winheight(0) + 0) / 0)
+let s:l = 24 - ((23 * winheight(0) + 0) / 0)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
@@ -1742,7 +1738,7 @@ setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 61 - ((21 * winheight(0) + 0) / 0)
+let s:l = 61 - ((22 * winheight(0) + 0) / 0)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
@@ -2162,109 +2158,6 @@ normal! zt
 normal! 016l
 wincmd w
 argglobal
-edit saga/util/demangle.cpp
-setlocal keymap=
-setlocal noarabic
-setlocal autoindent
-setlocal balloonexpr=
-setlocal nobinary
-setlocal bufhidden=
-setlocal buflisted
-setlocal buftype=
-setlocal cindent
-setlocal cinkeys=0{,0},0):,0#,!,o,O,e,<Tab>,*<Return>
-setlocal cinoptions=>s,e0,n0,f0,{0,}0,^0,:s,=s,l1,gs,hs,p0,t0,i2s,+0s,c3,C1,/0,(0,u0,U0,W4,w0,m0,)20,*20,30
-setlocal cinwords=if,else,while,do,for,switch
-setlocal comments=sO:*\ -,mO:*\ \ ,exO:*/,s1:/*,mb:*,ex:*/,://
-setlocal commentstring=/*%s*/
-setlocal complete=.,w,b,u,t,i
-setlocal completefunc=
-setlocal nocopyindent
-setlocal nocursorcolumn
-setlocal nocursorline
-setlocal define=
-setlocal dictionary=
-setlocal nodiff
-setlocal equalprg=
-setlocal errorformat=
-setlocal expandtab
-if &filetype != 'cpp'
-setlocal filetype=cpp
-endif
-setlocal foldcolumn=0
-setlocal foldenable
-setlocal foldexpr=0
-setlocal foldignore=#
-setlocal foldlevel=0
-setlocal foldmarker={{{,}}}
-setlocal foldmethod=manual
-setlocal foldminlines=1
-setlocal foldnestmax=20
-setlocal foldtext=foldtext()
-setlocal formatexpr=
-setlocal formatoptions=n1croql
-setlocal formatlistpat=^\\s*\\d\\+[\\]:.)}\\t\ ]\\s*
-setlocal grepprg=
-setlocal iminsert=0
-setlocal imsearch=2
-setlocal include=
-setlocal includeexpr=
-setlocal indentexpr=
-setlocal indentkeys==end,},!^F,o,O,<Return>
-setlocal noinfercase
-setlocal iskeyword=@,48-57,_,192-255
-setlocal keywordprg=
-setlocal nolinebreak
-setlocal nolisp
-setlocal nolist
-setlocal makeprg=
-setlocal matchpairs=(:),{:},[:]
-setlocal nomodeline
-setlocal modifiable
-setlocal nrformats=octal,hex
-setlocal nonumber
-setlocal numberwidth=4
-setlocal omnifunc=ccomplete#Complete
-setlocal path=
-setlocal nopreserveindent
-setlocal nopreviewwindow
-setlocal quoteescape=\\
-setlocal noreadonly
-setlocal norightleft
-setlocal rightleftcmd=search
-setlocal noscrollbind
-setlocal shiftwidth=2
-setlocal noshortname
-setlocal nosmartindent
-setlocal softtabstop=2
-setlocal nospell
-setlocal spellcapcheck=[.?!]\\_[\\])'\"\	\ ]\\+
-setlocal spellfile=
-setlocal spelllang=en
-setlocal statusline=
-setlocal suffixesadd=
-setlocal swapfile
-setlocal synmaxcol=3000
-if &syntax != 'cpp'
-setlocal syntax=cpp
-endif
-setlocal tabstop=2
-setlocal tags=
-setlocal textwidth=64
-setlocal thesaurus=
-setlocal nowinfixheight
-setlocal nowinfixwidth
-setlocal wrap
-setlocal wrapmargin=0
-silent! normal! zE
-let s:l = 14 - ((13 * winheight(0) + 0) / 0)
-if s:l < 1 | let s:l = 1 | endif
-exe s:l
-normal! zt
-14
-normal! 017l
-wincmd w
-argglobal
 edit saga/util/Makefile
 setlocal keymap=
 setlocal noarabic
@@ -2368,9 +2261,8 @@ normal! zt
 normal! 019l
 lcd ~/saga/simple/doc/concepts/adaptor
 wincmd w
-2wincmd w
-exe '1resize ' . ((&lines * 0 + 25) / 51)
-exe '2resize ' . ((&lines * 30 + 25) / 51)
+exe '1resize ' . ((&lines * 31 + 25) / 51)
+exe '2resize ' . ((&lines * 0 + 25) / 51)
 exe '3resize ' . ((&lines * 0 + 25) / 51)
 exe '4resize ' . ((&lines * 0 + 25) / 51)
 exe '5resize ' . ((&lines * 0 + 25) / 51)
@@ -2388,7 +2280,6 @@ exe '16resize ' . ((&lines * 0 + 25) / 51)
 exe '17resize ' . ((&lines * 0 + 25) / 51)
 exe '18resize ' . ((&lines * 0 + 25) / 51)
 exe '19resize ' . ((&lines * 0 + 25) / 51)
-exe '20resize ' . ((&lines * 0 + 25) / 51)
 tabnext 1
 if exists('s:wipebuf')
   silent exe 'bwipe ' . s:wipebuf
