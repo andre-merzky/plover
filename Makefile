@@ -28,7 +28,6 @@ edit:
     doc/concepts/adaptor/engine/Makefile \
     doc/concepts/adaptor/engine/cpi.hpp \
     doc/concepts/adaptor/engine/adaptor_registry.hpp \
-    doc/concepts/adaptor/engine/adaptor_registry.cpp \
     doc/concepts/adaptor/engine/adaptor.hpp \
     doc/concepts/adaptor/engine/adaptor.cpp \
     doc/concepts/adaptor/engine/engine.hpp \
