@@ -2,6 +2,7 @@
 #ifndef SAGA_UTIL_SHAREDPTR_HPP
 #define SAGA_UTIL_SHAREDPTR_HPP
 
+#include <saga/util/demangle.hpp>
 #include <saga/util/scoped_lock.hpp>
 
 #include <exception> // for std exception types
@@ -73,7 +74,8 @@ namespace saga
 
             if ( 0 == get_count () )
             {
-              std::cout << "typename: " << typeid (T).name () << std::endl;
+              std::cout << " deleting shared pointer of type " << saga::util::demangle (typeid (T).name ()) << std::endl;
+
               if ( NULL != ptr_ )
               {
                 // not managing a NULL pointer...
@@ -278,6 +280,12 @@ namespace saga
           }
 
           return (typeid (ptr_).name ());
+        }
+
+        // get the typename of the stored pointer, demangled
+        std::string get_ptype_demangled (void)
+        {
+          return (saga::util::demangle (get_ptype ()));
         }
     };
 

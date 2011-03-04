@@ -216,7 +216,7 @@ class pimpl
     pimpl (dummy::shared_ptr <impl::pimpl>  impl) 
       : impl_ (impl) 
     {
-      std::cout << " facade  pimpl   c'tor (impl) - " << impl_.get_ptype () << std::endl; 
+      std::cout << " facade  pimpl   c'tor (impl) - " << impl_.get_ptype_demangled () << std::endl; 
       impl_test ();  // impl should be valid
     }
 
@@ -231,7 +231,7 @@ class pimpl
   
       if ( impl_ ) 
       {
-        std::cout << " facade  pimpl   deletes impl_ - " << impl_.get_ptype () 
+        std::cout << " facade  pimpl d'tor - "   << impl_.get_ptype_demangled () 
                   << " - " << impl_.use_count () << std::endl;
       }
     }
@@ -265,7 +265,7 @@ class pimpl
         throw std::string (" pimpl::get_impl <")
           + typeid (T).name ()
           + "> () cannot cast an " 
-          + impl_.get_ptype ()
+          + impl_.get_ptype_demangled ()
           + " impl pointer!";
       }
 
