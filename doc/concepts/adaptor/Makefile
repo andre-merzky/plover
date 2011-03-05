@@ -10,6 +10,7 @@ SAGA_BIN     += adaptor_test
 include $(SAGA_ROOT)/make/saga.mk
 
 SAGA_LDFLAGS += -L./engine/ -lsaga_engine
+SAGA_LDFLAGS += -L../../../saga/util/ -lsaga_util
 
 check:: all
 	valgrind --tool=memcheck --leak-check=full ./adaptor_test

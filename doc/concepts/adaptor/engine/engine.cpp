@@ -6,6 +6,8 @@
 #include "adaptor.hpp"
 #include "adaptor_registry.hpp"
 
+#include <saga/util/demangle.hpp>
+
 namespace saga
 {
   namespace detail
@@ -53,16 +55,40 @@ namespace saga
       // all adaptor libs registered all adaptors for
       // specific cpis.  Now, get a list of all
       // saga::cpi::object adaptors, and test those cpi's
-      std::vector <create_hook_t> create_hooks 
-           = registry_.get_create_hooks <saga::cpi::object> ();
-
-      for ( unsigned int i = 0; i < create_hooks.size (); i++ )
       {
-        cpi::object * o = create_hooks[i]();
+        std::vector <create_hook_t> create_hooks 
+          = registry_.get_create_hooks <saga::cpi::object> ();
 
-        o->init (1);
+        for ( unsigned int i = 0; i < create_hooks.size (); i++ )
+        {
+          cpi::object * o = create_hooks[i]();
 
-        delete (o);
+          std::cout << " got instance of " << saga::util::demangle (typeid (*o).name ()) << std::endl;
+
+          o->init (1);
+
+
+          delete (o);
+        }
+      }
+
+
+      // now test all context cpi implementations
+      {
+        std::vector <create_hook_t> create_hooks 
+          = registry_.get_create_hooks <saga::cpi::context> ();
+
+        for ( unsigned int i = 0; i < create_hooks.size (); i++ )
+        {
+          cpi::object * o = create_hooks[i]();
+
+          std::cout << " got instance of " << saga::util::demangle (typeid (*o).name ()) << std::endl;
+
+          o->init (1);
+
+
+          delete (o);
+        }
       }
     }
 

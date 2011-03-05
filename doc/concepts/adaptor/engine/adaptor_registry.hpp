@@ -29,7 +29,7 @@ namespace saga
 
       public:
         template <typename T>
-        void register_cpi (T* (&hook)())
+        void register_cpi (create_hook_t hook)
         {
           std::cout << " add_cpi: " 
                     << saga::util::demangle (typeid (T).name ())
