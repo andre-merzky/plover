@@ -45,6 +45,7 @@ int main ()
       t_2->print (2);
 
       saga::util::shared_ptr <test> t_4 = t_2.get_shared_ptr ();
+
       t_4->print (3);
       t_4->print (4);
     }

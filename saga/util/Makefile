@@ -9,3 +9,5 @@ SAGA_BIN         = test_shared_ptr
 
 include $(SAGA_ROOT)/make/saga.application.mk
 
+# SAGA_CXXFLAGS   += -DSAGA_USE_TR1
+
