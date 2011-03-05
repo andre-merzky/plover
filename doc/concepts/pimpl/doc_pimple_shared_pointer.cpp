@@ -10,7 +10,7 @@
 // and thread safety issues of the pure PIMPL approach.
 //
 
-#include "./dummy_shared_ptr.hpp" // for shared pointers
+#include <saga/util/shared_ptr.hpp>
 
 #include <iostream>  // for debug messages
 #include <typeinfo>  // for better debug messages
@@ -137,7 +137,7 @@ class pimpl
 
   private:
     // here we keep the pointer to the impl instance, cast to it's base type
-    dummy::shared_ptr <impl::pimpl> impl_;
+    saga::util::shared_ptr <impl::pimpl> impl_;
 
     // make our class hierarchy polymorph.  This method can be removed - the
     // pimpl paradigms works just as well on non-polymorph facades.
@@ -173,7 +173,7 @@ class pimpl
     pimpl (impl::pimpl * impl) 
       : impl_ (impl) 
     {
-      std::cout << " facade  pimpl   c'tor (impl) - " << impl_.get_ptype () << std::endl; 
+      std::cout << " facade  pimpl   c'tor (impl) - " << impl_.get_ptype_demangled () << std::endl; 
       impl_test ();  // impl should be valid
     }
 
@@ -188,8 +188,8 @@ class pimpl
   
       if ( impl_ ) 
       {
-        std::cout << " facade  pimpl   deletes impl_ - " << impl_.get_ptype () 
-                  << " - " << impl_.use_count () << std::endl;
+        std::cout << " facade  pimpl d'tor - " << impl_.get_ptype_demangled () 
+                  << " - " << impl_.get_count () << std::endl;
       }
     }
 
@@ -204,7 +204,7 @@ class pimpl
     // either here, or in your derived class.  The complexity will increase
     // however as one then needs to check for dangling pointers...
     template <typename T>
-    dummy::shared_ptr <T> get_impl (void)              
+    saga::util::shared_ptr <T> get_impl (void)              
     { 
       // ensure we actually have an impl pointer.  This avoids an exception on
       // the cast later on.
@@ -214,7 +214,7 @@ class pimpl
       }
 
       // try to cast to the wanted pointer type
-      dummy::shared_ptr <T> ret = impl_.get_shared_pointer <T> (); 
+      saga::util::shared_ptr <T> ret = impl_.get_shared_ptr <T> (); 
 
       // if that fails, complain
       if ( ! ret )
@@ -222,7 +222,7 @@ class pimpl
         throw std::string (" pimpl::get_impl <")
           + typeid (T).name ()
           + "> () cannot cast an " 
-          + impl_.get_ptype ()
+          + impl_.get_ptype_demangled ()
           + " impl pointer!";
       }
 
@@ -247,7 +247,7 @@ class pimpl
       }
 
       // try to cast to the wanted pointer type
-      dummy::shared_ptr <T> ret = impl_.get_shared_pointer <T> (); 
+      saga::util::shared_ptr <T> ret = impl_.get_shared_ptr <T> (); 
 
       // if that fails, complain
       if ( ! ret )

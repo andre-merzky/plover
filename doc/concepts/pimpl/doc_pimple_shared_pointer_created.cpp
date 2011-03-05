@@ -19,7 +19,7 @@
 // scheme.
 //
 
-#include "./dummy_shared_ptr.hpp" // for shared pointers
+#include <saga/util/shared_ptr.hpp>
 
 #include <iostream>  // for debug messages
 #include <typeinfo>  // for better debug messages
@@ -77,9 +77,9 @@ namespace impl
         std::cout << " impl    pimpl   test" << std::endl; 
       }
 
-      static dummy::shared_ptr <impl::pimpl> create (void)
+      static saga::util::shared_ptr <impl::pimpl> create (void)
       {
-        return dummy::shared_ptr <impl::pimpl> (new impl::pimpl ());
+        return saga::util::shared_ptr <impl::pimpl> (new impl::pimpl ());
       }
   };
 
@@ -97,9 +97,9 @@ namespace impl
       ~object          (void) { std::cout << " impl    object  d'tor" << std::endl; }
       void object_test (void) { std::cout << " impl    object  test"  << std::endl; }
 
-      static dummy::shared_ptr <impl::object> create (void)
+      static saga::util::shared_ptr <impl::object> create (void)
       {
-        return dummy::shared_ptr <impl::object> (new impl::object ());
+        return saga::util::shared_ptr <impl::object> (new impl::object ());
       }
   };
 
@@ -115,9 +115,9 @@ namespace impl
       ~attribs          (void) { std::cout << " impl    attribs d'tor" << std::endl; }
       void attribs_test (void) { std::cout << " impl    attribs test"  << std::endl; }
 
-      static dummy::shared_ptr <impl::attribs> create (void)
+      static saga::util::shared_ptr <impl::attribs> create (void)
       {
-        return dummy::shared_ptr <impl::attribs> (new impl::attribs ());
+        return saga::util::shared_ptr <impl::attribs> (new impl::attribs ());
       }
   };
 
@@ -136,9 +136,9 @@ namespace impl
       ~context          (void) { std::cout << " impl    context d'tor" << std::endl; } 
       void context_test (void) { std::cout << " impl    context test"  << std::endl; }
 
-      static dummy::shared_ptr <impl::context> create (void)
+      static saga::util::shared_ptr <impl::context> create (void)
       {
-        return dummy::shared_ptr <impl::context> (new impl::context ());
+        return saga::util::shared_ptr <impl::context> (new impl::context ());
       }
   };
 
@@ -180,7 +180,7 @@ class pimpl
 
   private:
     // here we keep the pointer to the impl instance, cast to it's base type
-    dummy::shared_ptr <impl::pimpl> impl_;
+    saga::util::shared_ptr <impl::pimpl> impl_;
 
     // make our class hierarchy polymorph.  This method can be removed - the
     // pimpl paradigms works just as well on non-polymorph facades.
@@ -213,7 +213,7 @@ class pimpl
     // is then stored for later usage.  Note that the storage type is the base
     // pointer of the impl hierarchy, but the passed pointer type is one of the
     // derived classes of the impl hierarchy.
-    pimpl (dummy::shared_ptr <impl::pimpl>  impl) 
+    pimpl (saga::util::shared_ptr <impl::pimpl>  impl) 
       : impl_ (impl) 
     {
       std::cout << " facade  pimpl   c'tor (impl) - " << impl_.get_ptype_demangled () << std::endl; 
@@ -232,7 +232,7 @@ class pimpl
       if ( impl_ ) 
       {
         std::cout << " facade  pimpl d'tor - "   << impl_.get_ptype_demangled () 
-                  << " - " << impl_.use_count () << std::endl;
+                  << " - " << impl_.get_count () << std::endl;
       }
     }
 
@@ -247,7 +247,7 @@ class pimpl
     // either here, or in your derived class.  The complexity will increase
     // however as one then needs to check for dangling pointers...
     template <typename T>
-    dummy::shared_ptr <T> get_impl (void)              
+    saga::util::shared_ptr <T> get_impl (void)              
     { 
       // ensure we actually have an impl pointer.  This avoids an exception on
       // the cast later on.
@@ -257,7 +257,7 @@ class pimpl
       }
 
       // try to cast to the wanted pointer type
-      dummy::shared_ptr <T> ret = impl_.get_shared_pointer <T> (); 
+      saga::util::shared_ptr <T> ret = impl_.get_shared_ptr <T> (); 
 
       // if that fails, complain
       if ( ! ret )
@@ -290,7 +290,7 @@ class pimpl
       }
 
       // try to cast to the wanted pointer type
-      dummy::shared_ptr <T> ret = impl_.get_shared_pointer <T> (); 
+      saga::util::shared_ptr <T> ret = impl_.get_shared_ptr <T> (); 
 
       // if that fails, complain
       if ( ! ret )
@@ -340,7 +340,7 @@ class object : public virtual pimpl
   public:
     // the second (public) c'tor allows for explicit object creation.
     object (void) 
-      : pimpl (impl::object::create ().get_shared_pointer <impl::pimpl> ())    
+      : pimpl (impl::object::create ().get_shared_ptr <impl::pimpl> ())    
     {
       std::cout << " facade  object  c'tor" << std::endl; 
       impl_test   ();
@@ -405,7 +405,7 @@ class context : public object, public attribs
 {
   public:
     context (void) 
-      : pimpl   (impl::context::create ().get_shared_pointer <impl::pimpl> ())
+      : pimpl   (impl::context::create ().get_shared_ptr <impl::pimpl> ())
                                            // store new impl pointer in pimpl base
       , object  (pimpl::NO_IMPL)           // no impl pointer for the ...
       , attribs (pimpl::NO_IMPL)           // ... other base classes

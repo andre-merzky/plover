@@ -44,6 +44,7 @@
 #include <typeinfo>  // for better debug messages
 #include <string>    // we use strings as exceptions *blush*
 
+#include <saga/util/demangle.hpp>
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -202,7 +203,7 @@ class pimpl
     pimpl (impl::pimpl * impl) 
       : impl_ (impl) 
     {
-      std::cout << " facade  pimpl   c'tor (impl) - " << typeid (*impl_).name () << std::endl; 
+      std::cout << " facade  pimpl   c'tor (impl) - " << saga::util::demangle (typeid (*impl_).name ()) << std::endl; 
       impl_test ();  // impl should be valid
     }
 
@@ -217,7 +218,7 @@ class pimpl
   
       if ( NULL != impl_ ) 
       {
-        std::cout << " facade  pimpl   deletes impl_ - " << typeid (*impl_).name () <<  std::endl;
+        std::cout << " facade  pimpl d'tor impl_ - " << saga::util::demangle (typeid (*impl_).name ()) <<  std::endl;
         delete (impl_);
         impl_ = NULL;
       }
@@ -250,9 +251,9 @@ class pimpl
       if ( NULL == ret )
       {
         throw std::string (" pimpl::get_impl <")
-          + typeid (T).name ()
+          + saga::util::demangle (typeid (T).name ())
           + "> () cannot cast an " 
-          + typeid (*impl_).name () 
+          + saga::util::demangle (typeid (*impl_).name ())
           + " impl pointer!";
       }
 
