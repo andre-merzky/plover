@@ -231,7 +231,8 @@ class pimpl
   
       if ( impl_ ) 
       {
-        std::cout << " facade  pimpl d'tor - "   << impl_.get_ptype_demangled () 
+        std::cout << " facade  pimpl d'tor - "   
+                  << impl_.get_ptype_demangled () 
                   << " - " << impl_.get_count () << std::endl;
       }
     }
@@ -263,7 +264,7 @@ class pimpl
       if ( ! ret )
       {
         throw std::string (" pimpl::get_impl <")
-          + typeid (T).name ()
+          + saga::util::demangle (typeid (T).name ())
           + "> () cannot cast an " 
           + impl_.get_ptype_demangled ()
           + " impl pointer!";
@@ -277,42 +278,21 @@ class pimpl
     }
 
 
-    // is_a() is very similar to get_impl: it simply checks if get_impl, and in
-    // particular the casting, would succeed.
+    // is_a<T> is now provided by the shared_ptr impl
     template <typename T>
     bool is_a (void)              
     { 
-      // return false on a NULL pointer (which has no type)
-      // the cast later on.
-      if ( NULL == impl_ )
-      {
-        return false;
-      }
-
-      // try to cast to the wanted pointer type
-      saga::util::shared_ptr <T> ret = impl_.get_shared_ptr <T> (); 
-
-      // if that fails, complain
-      if ( ! ret )
-      {
-        // cast failed, so impl is not a T.
-        return false;
-      }
-
-      // otherwise, impl is a T
-      return true;
+      return (impl_.is_a <T> ());
     }
 
-
-    // just a test method, which also demonstrated the use of is_a<T>() and 
-    // get_impl<T>().
+    // just a test method, which also demonstrated the use of get_impl<T>().
     void  impl_test (void) 
     {
       std::cout << " pimpl test" << std::endl; 
-      if ( is_a <impl::pimpl>   () )   get_impl <impl::pimpl>   ()->impl_test    ();
-      if ( is_a <impl::object>  () )   get_impl <impl::object>  ()->object_test  ();
-      if ( is_a <impl::attribs> () )   get_impl <impl::attribs> ()->attribs_test ();
-      if ( is_a <impl::context> () )   get_impl <impl::context> ()->context_test ();
+      if ( impl_.is_a <impl::pimpl>   () )   get_impl <impl::pimpl>   ()->impl_test    ();
+      if ( impl_.is_a <impl::object>  () )   get_impl <impl::object>  ()->object_test  ();
+      if ( impl_.is_a <impl::attribs> () )   get_impl <impl::attribs> ()->attribs_test ();
+      if ( impl_.is_a <impl::context> () )   get_impl <impl::context> ()->context_test ();
       std::cout << " pimpl test" << std::endl; 
     }
 };

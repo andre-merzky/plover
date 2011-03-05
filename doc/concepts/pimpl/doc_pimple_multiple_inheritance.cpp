@@ -218,7 +218,8 @@ class pimpl
   
       if ( NULL != impl_ ) 
       {
-        std::cout << " facade  pimpl d'tor impl_ - " << saga::util::demangle (typeid (*impl_).name ()) <<  std::endl;
+        std::cout << " facade  pimpl d'tor - " 
+                  << saga::util::demangle (typeid (*impl_).name ()) <<  std::endl;
         delete (impl_);
         impl_ = NULL;
       }
