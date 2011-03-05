@@ -12,6 +12,8 @@ edit:
     Makefile \
     saga/util/Makefile \
     saga/util/shared_ptr.hpp \
+    saga/util/shared_ptr_tr1.hpp \
+    saga/util/shared_ptr_saga.hpp \
     saga/util/demangle.hpp \
     doc/concepts/pimpl/Makefile \
     doc/concepts/pimpl/README \

@@ -78,12 +78,9 @@ namespace saga
 
             if ( 0 == get_count () )
             {
-              std::cout << " deleting shared pointer of type " << saga::util::demangle (typeid (T).name ()) << std::endl;
-
               if ( NULL != ptr_ )
               {
-                // not managing a NULL pointer...
-                // delete (ptr_);
+                delete (ptr_);
                 ptr_ = NULL;
               }
 
