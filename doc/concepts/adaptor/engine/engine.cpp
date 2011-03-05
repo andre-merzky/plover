@@ -50,6 +50,9 @@ namespace saga
 
 
 
+    // FIXME: every call to the adaptor cpi implementation instances should get
+    // a (weak?) pointer to the pimpl impl, which maintains the object state.
+    // FIXME: don't use pointers, use shared pointers!
     void engine::run (void)
     {
       // all adaptor libs registered all adaptors for
