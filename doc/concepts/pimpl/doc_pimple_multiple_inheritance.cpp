@@ -295,7 +295,7 @@ class pimpl
 
     // just a test method, which also demonstrated the use of is_a<T>() and 
     // get_impl<T>().
-    void  impl_test (void) 
+    void impl_test (void) 
     {
       std::cout << " pimpl test" << std::endl; 
       if ( is_a <impl::pimpl>   () )   get_impl <impl::pimpl>   ()->impl_test    ();
@@ -322,7 +322,7 @@ class object : public virtual pimpl
       : pimpl (noimpl)                
     { 
       std::cout << " facade  object  c'tor (no impl)" << std::endl; 
-      impl_test   ();
+      impl_test ();
     }
     
     
@@ -332,7 +332,7 @@ class object : public virtual pimpl
       : pimpl (new impl::object ())    
     {
       std::cout << " facade  object  c'tor" << std::endl; 
-      impl_test   ();
+      impl_test ();
     }
     
     ~object (void)
@@ -363,8 +363,7 @@ class attribs : public virtual pimpl
       : pimpl (noimpl)                
     { 
       std::cout << " facade  attribs c'tor (no impl)" << std::endl; 
-      impl_test    ();
-      attribs_test ();
+      impl_test ();
     }
     
     ~attribs (void)
@@ -399,7 +398,7 @@ class context : public object, public attribs
       , attribs (pimpl::NO_IMPL)      // ... other base classes
     { 
       std::cout << " facade  context c'tor" << std::endl; 
-      impl_test    ();
+      impl_test ();
     } 
     
     ~context (void) 
@@ -410,7 +409,7 @@ class context : public object, public attribs
     void context_test (void) 
     {
       std::cout << " context test" << std::endl; 
-      impl_test    ();
+      impl_test ();
       std::cout << " context test" << std::endl; 
     }
 };
