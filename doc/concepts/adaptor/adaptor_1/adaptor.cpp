@@ -7,25 +7,21 @@ extern "C"
 {
   // factory method to create instances of this adaptor's implementation of the
   // object cpi
-  saga::cpi::object * create_object_cpi (void)
+  saga::util::shared_ptr <saga::cpi::object> create_object_cpi (void)
   {
     std::cout << "adaptor_1::create_object_cpi" << std::endl;
 
-    adaptor_1::object * ret = new adaptor_1::object ();
-
-    return ret;
+    return saga::util::shared_ptr <adaptor_1::object> (new adaptor_1::object ());
   }
 
 
   // factory method to create instances of this adaptor's implementation of the
   // context cpi
-  saga::cpi::object * create_context_cpi (void)
+  saga::util::shared_ptr <saga::cpi::object> create_context_cpi (void)
   {
     std::cout << "adaptor_1::create_context_cpi" << std::endl;
 
-    adaptor_1::context * ret = new adaptor_1::context ();
-
-    return ret;
+    return saga::util::shared_ptr <adaptor_1::context> (new adaptor_1::context ());
   }
 
 
@@ -34,8 +30,8 @@ extern "C"
   // factory methods to the registry map in the saga engine,   
   void register_cpi (saga::detail::adaptor_registry & reg)
   {
-    reg.register_cpi <saga::cpi::object>  (create_object_cpi);
-    reg.register_cpi <saga::cpi::context> (create_context_cpi);
+    reg.register_cpi_object <saga::cpi::object>  (create_object_cpi);
+    reg.register_cpi_object <saga::cpi::context> (create_context_cpi);
   }
 }
 

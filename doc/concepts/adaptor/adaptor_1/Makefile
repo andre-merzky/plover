@@ -10,4 +10,3 @@ SAGA_CXXFLAGS    += -I../
 SAGA_LDFLAGS     += -L../../../../saga/util/ -lsaga_util
 
 run:
-

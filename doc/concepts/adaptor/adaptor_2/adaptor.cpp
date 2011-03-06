@@ -5,19 +5,16 @@
 
 extern "C" 
 {
-  saga::cpi::object * create_cpi (void)
+  saga::util::shared_ptr <saga::cpi::object> create_object_cpi (void)
   {
     std::cout << "adaptor_2::create_cpi" << std::endl;
 
-    adaptor_2::object * ret = new adaptor_2::object ();
-
-    return ret;
+    return saga::util::shared_ptr <adaptor_2::object> (new adaptor_2::object ());
   }
 
   void register_cpi (saga::detail::adaptor_registry & reg)
   {
-    saga::detail::create_hook_t hook = create_cpi;
-    reg.register_cpi <saga::cpi::object> (hook);
+    reg.register_cpi_object <saga::cpi::object> (create_object_cpi);
   }
 }
 

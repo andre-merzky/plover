@@ -52,7 +52,6 @@ namespace saga
 
     // FIXME: every call to the adaptor cpi implementation instances should get
     // a (weak?) pointer to the pimpl impl, which maintains the object state.
-    // FIXME: don't use pointers, use shared pointers!
     void engine::run (void)
     {
       // all adaptor libs registered all adaptors for
@@ -64,14 +63,11 @@ namespace saga
 
         for ( unsigned int i = 0; i < create_hooks.size (); i++ )
         {
-          cpi::object * o = create_hooks[i]();
+          saga::util::shared_ptr <cpi::object> o = create_hooks[i]();
 
-          std::cout << " got instance of " << saga::util::demangle (typeid (*o).name ()) << std::endl;
+          std::cout << "got instance of " << o.get_ptype_demangled () <<  std::endl;
 
           o->init (1);
-
-
-          delete (o);
         }
       }
 
@@ -83,14 +79,11 @@ namespace saga
 
         for ( unsigned int i = 0; i < create_hooks.size (); i++ )
         {
-          cpi::object * o = create_hooks[i]();
+          saga::util::shared_ptr <cpi::object> o = create_hooks[i]();
 
-          std::cout << " got instance of " << saga::util::demangle (typeid (*o).name ()) << std::endl;
+          std::cout << "got instance of " << o.get_ptype_demangled () <<  std::endl;
 
           o->init (1);
-
-
-          delete (o);
         }
       }
     }

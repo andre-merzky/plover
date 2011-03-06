@@ -7,9 +7,11 @@
 #include <iostream>
 #include <typeinfo>
 
+#include <saga/util/demangle.hpp>
+#include <saga/util/shared_ptr.hpp>
+
 #include "cpi.hpp"
 
-#include <saga/util/demangle.hpp>
 
 namespace saga
 {
@@ -18,7 +20,7 @@ namespace saga
     class adaptor_registry;
 
     // FIXME: create_cpi should return a shared_ptr
-    typedef cpi::object * (*create_hook_t)(void);
+    typedef saga::util::shared_ptr <cpi::object> (*create_hook_t)(void);
     typedef void          (*registration_hook_t)(saga::detail::adaptor_registry &);
 
 
@@ -29,9 +31,9 @@ namespace saga
 
       public:
         template <typename T>
-        void register_cpi (create_hook_t hook)
+        void register_cpi_object (create_hook_t hook)
         {
-          std::cout << " add_cpi: " 
+          std::cout << "register_cpi_object: " 
                     << saga::util::demangle (typeid (T).name ())
                     << std::endl;
           create_hook_map_ [saga::util::demangle (typeid (T).name ())].push_back (hook);

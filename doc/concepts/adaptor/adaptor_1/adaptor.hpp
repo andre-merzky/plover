@@ -2,6 +2,8 @@
 #ifndef ADAPTOR_HPP
 #define ADAPTOR_HPP
 
+#include <saga/util/shared_ptr.hpp>
+
 #include "../engine/cpi.hpp"                // cpi's to implement
 #include "../engine/adaptor_registry.hpp"   // register with engine
 
@@ -13,9 +15,10 @@
 
 extern "C" 
 {
-  saga::cpi::object * create_context_cpi (void);
-  saga::cpi::object * create_object_cpi  (void);
-  void                register_cpi       (saga::detail::adaptor_registry & reg);
+  saga::util::shared_ptr <saga::cpi::object> create_context_cpi (void);
+  saga::util::shared_ptr <saga::cpi::object> create_object_cpi  (void);
+
+  void  register_cpi (saga::detail::adaptor_registry & reg);
 }
 
 

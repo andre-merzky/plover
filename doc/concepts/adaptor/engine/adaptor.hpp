@@ -4,6 +4,8 @@
 
 #include <string>
 
+#include <saga/util/shared_ptr.hpp>
+
 #include "adaptor_registry.hpp"
 
 namespace saga
@@ -16,9 +18,9 @@ namespace saga
 
   namespace detail
   {
-    // FIXME: create_cpi should return a shared_ptr
-    typedef cpi::object * (*create_hook_t)(void);
-    typedef void          (*registration_hook_t)(saga::detail::adaptor_registry &);
+    typedef saga::util::shared_ptr <cpi::object> (*create_hook_t)(void);
+
+    typedef void (*registration_hook_t)(saga::detail::adaptor_registry &);
 
 
     class adaptor
