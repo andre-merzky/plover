@@ -1,15 +1,10 @@
 
 SAGA_ROOT     = $(shell pwd)/../../../
 
-SAGA_SUBDIRS += engine
-SAGA_SUBDIRS += adaptor_1
-SAGA_SUBDIRS += adaptor_2
-
-SAGA_BIN      = adaptor_test
+SAGA_BIN     += cpi_test
 
 include $(SAGA_ROOT)/make/saga.mk
 
-SAGA_LDFLAGS += -L./engine/ -lsaga_engine
 SAGA_LDFLAGS += -L../../../saga/util/ -lsaga_util
 
 check:: all
