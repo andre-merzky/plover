@@ -3,22 +3,32 @@
 BEGIN {
   use strict;
 
+  use IO::File;
   use Data::Dumper;
+
+  sub create_enum_file  ($$$);
+  sub create_iface_file ($$$);
+  sub format_comment    ($$ );
 }
 
+
+########################################################################
 if ( scalar (@ARGV) < 1 )
 {
-  print <<EOT;
-  
-  usage: $0 <file.idl> [...]
-
-EOT
+  print "\n\n\tusage: $0 <file.idl> [...]\n\n";
   exit -1;
 }
 
-my %idl = ();
 
 
+########################################################################
+# global vars
+my $TW   = 72;  # textwidth
+my $BASE = './saga_simple/';
+my %idl  = ();
+
+
+########################################################################
 foreach my $arg ( @ARGV )
 {
   if ( $arg =~ /^(.+)\.idl$/ )
@@ -27,12 +37,20 @@ foreach my $arg ( @ARGV )
 
     print " file \t\t: $arg\n";
 
-    open  ( IN, "<$arg");
+    open  ( IN, "<$arg") || die "Cannot open $arg: $!\n";
     while (<IN> ) { $txt .= $_; }
     close ( IN);
 
     # ignore text before 'package' keyword
     $txt =~ s/^(?:.*\s)?package/package/iosg;
+
+    # before we can translate to cpp, we have fix a number of keywords
+    #
+    #   namespace    -> name_space
+    #   logical_file -> replica
+    
+    $txt =~ s/\bnamespace\b/name_space/og;
+    $txt =~ s/\blogical_file\b/replica/og;
 
     my $pname = "";
 
@@ -66,7 +84,8 @@ PACKAGE:
 
       while ( $ptxt =~ /^
                         \s*
-                        (\/\/.*?\s\s\s\s)?     # opt comment
+                        (\/\/.*?)?             # opt comment
+                        \s*
                         (class|interface|enum) # element type      
                         \s+
                         (\S+)                  # element name
@@ -85,13 +104,12 @@ PACKAGE:
         my $etxt    = $5;
            $ptxt    = $6 || "";
 
-        print "   element \t: $ename ($etype)\n";
-
         my %elem = ();
 
         $elem{'name'} = $ename;
         $elem{'type'} = $etype;
         $elem{'idx'}  = $eidx;
+        $elem{'comm'} = $ecomm;
         $eidx++;
   
 
@@ -110,39 +128,30 @@ PACKAGE:
           }
         }
 
-        # validate comment
-        my @ecommlines = split (/\n/, $ecomm);
-        foreach my $ecommline ( @ecommlines ) {
-          if ( $ecommline =~ /^\s*\/\/\s*(.*)$/io ) {
-            $ecomm .= $1;
-          }
-          elsif ( $ecommline =~ /^\s*$/io ) {
-            # ignore
-          }
-          else {
-            die "Cannot parse package text in line '$ecommline'\n";
-          }
-        }
-        $elem{'comm'} = $ecomm;
 
 
         if ( $etype eq "class"     ||
              $etype eq "interface" )
         {
-          # grab comments
-          while ( $etxt =~ /^\s*\/\/\s*(.+?)\n(.*)$/ios )
-          {
-            my $comm = $1 || "";
-               $etxt = $2 || "";
-
-            $elem{'comm'} .= $comm;
-          }
-
           my $midx = 0;
+
+          # tagging interfaces my have *only* comments, if at all
+          if ( $etxt =~ /^
+                         ([\s\n]*?)
+                         ((?:\s*?\/\/[^\n]*\n)+)
+                         ([\s\n]*?)
+                         $
+                         /ioxs )
+          {
+            print " ### 1 $1 ### 2 $2 ### 3 $3 ###\n";
+            $ecomm = $2 || "";
+            $etxt  = "";
+            $elem{'comm'} .= "\n$ecomm";
+          }
 
           # search for method definitions
           while ( $etxt =~ /^\s*
-                            (?:\/\/\s*(.+?)\s+)?  # opt. comment
+                            (?:(\/\/\s*.+?)\s+)?  # opt. comment
                             (\S+)                 # method name
                             \s*
                             (\<[^>]+?\>)?         # opt. template qualifier
@@ -303,24 +312,17 @@ PACKAGE:
         {
           my %enum = ();
 
-
-          if ( $etxt =~ /^\s*\/\/\s*(\S.*?)$(.*)/iom )
+          while ( $etxt !~ /^\s*$/o ) 
           {
-            # some num vals are only added as comments, if inherited from
-            # elsewhere
-            $enum{'comm'} .= $1;
-            $etxt          = $2 || "";
-          }
-          else
-          {
-            while ( $etxt =~ /^\s*
-                               (\S+)      # enum key
-                               \s*=\s*    # = 
-                               (\S+)      # enum val
-                               \s*,?      # ,
-                               (?:\/\/\s*(.+?)\n)? # optional comment
-                               (.*)       # remainder
-                               $/iosx )
+            if ( $etxt =~ /^
+                           \s*
+                           (\S+?)     # enum key
+                           \s*=\s*    # = 
+                           (\d+)      # enum val
+                           \s*,?      # ,
+                           (?:\n|\s*\/\/\s*(.*?)\n)? # optional comment
+                           (.*)       # remainder
+                           $/iosx )
             {
               my $enumkey  = $1;
               my $enumval  = $2;
@@ -334,12 +336,40 @@ PACKAGE:
 
               $enum{$enumval}{'name'} = $enumkey; 
               $enum{$enumval}{'comm'} = $enumcomm;
+              $enum{$enumval}{'used'} = 1;
             }
-          }
+            elsif ( $etxt =~ /^
+                              \s*
+                              \/\/             # comment marker
+                              \s*              # 
+                              (\d+)            # enum val
+                              \s*,?            # ,
+                              \s*reserved\sfor #
+                              \s+(\S+?)        # 
+                              \s*\n 
+                              (.*)             # remainder
+                              $/iosx )
+            {
+              my $enumval  = $1;
+              my $enumkey  = $2;
+              my $enumcomm = "reserved";
+                 $etxt     = $3 || "";
 
-          if ( $etxt !~ /^\s*$/o ) {
-            die "Could not fully parse enum $ename: '$etxt'\n";
-          }
+              if ( exists ($enum{$enumval}) )
+              {
+                die "enum value $enumval defined twice in $pname:$ename\n";
+              }
+
+              $enum{$enumval}{'name'} = $enumkey; 
+              $enum{$enumval}{'comm'} = $enumcomm;
+              $enum{$enumval}{'used'} = 0;
+            }
+            else
+            {
+              die "Could not fully parse enum $ename: '$etxt'\n";
+            }
+
+          } # while
 
           $elem{'def'} = \%enum;
         }
@@ -406,7 +436,7 @@ PACKAGE:
           $etype = lc($1);
           $ename = lc($2);
 
-          print "scan details for $pname $etype $ename\n";
+          # print "scan details for $pname $etype $ename\n";
 
           $expect = "detail";
           next LINE;
@@ -431,7 +461,7 @@ PACKAGE:
         }
 
         # we sometimes see additonal comment lines
-        warn "expected detail or header, not '$line'\n";
+        # warn "expected detail or header, not '$line'\n";
         $extra_comm .= "$line\n";
         next LINE;
       }
@@ -446,7 +476,7 @@ PACKAGE:
           {
             # if we found any detail earlier on, this is where we need to store it
             # away, along with any extra_comm we saw.
-            print "dump detail for $mname ($etype $ename) in $pname\n";
+            # print "dump detail for $mname ($etype $ename) in $pname\n";
 
             if ( ! exists ($idl{$pname})                        || 
                  ! exists ($idl{$pname}{$ename})                ||
@@ -466,7 +496,7 @@ PACKAGE:
             }
             else
             {
-              print "storing detail in $pname :: $ename :: $mname\n";
+              # print "storing detail in $pname :: $ename :: $mname\n";
               $idl{$pname}{$ename}{'def'}{$mname}{'detail'} = $mtxt;
               $idl{$pname}{$ename}{'def'}{$mname}{'precom'} = $extra_comm;
             }
@@ -499,4 +529,355 @@ open  (OUT, ">idl.dump") || die "Cannot open idl.dump: $!\n";
 print  OUT Dumper \%idl;
 close (OUT);
 
+
+
+########################################################################
+
+system "rm -rf $BASE/";
+
+mkdir  "$BASE/";
+mkdir  "$BASE/saga/";
+
+mkdir  "$BASE/saga/util/";
+mkdir  "$BASE/saga/api/";
+mkdir  "$BASE/saga/cpi/";
+mkdir  "$BASE/saga/impl/";
+mkdir  "$BASE/saga/misc/";
+
+
+# list of all package names
+my @p_hdrs = ();
+
+########################################################################
+foreach my $pname ( sort keys (%idl) )
+{
+  my $pkg    = $pname;
+
+  $pkg =~ s/^saga\.//;
+
+  print "$pkg\n";
+
+  mkdir "$BASE/saga/api/$pkg/";
+  mkdir "$BASE/saga/cpi/$pkg/";
+  mkdir "$BASE/saga/impl/$pkg/";
+  mkdir "$BASE/saga/misc/$pkg/";
+
+  my $p_api_header = "$BASE/saga/api/$pkg.hpp";
+  my $p_cpi_header = "$BASE/saga/cpi/$pkg.hpp";
+
+  my %pkg_elems    = ();
+  my @p_elem_hdrs  = ();
+
+  foreach my $ename ( keys %{ $idl{$pname} } )
+  {
+    my $type = $idl{$pname}{$ename}{'type'};
+
+    push (@{$pkg_elems{$type}}, $ename);
+  }
+
+  # print Dumper (\%pkg_elems);
+
+  foreach my $ename ( @{$pkg_elems{'enum'}} )
+  {
+    print "  enum   \t $ename\n";
+    my $p_elem_hdr = create_enum_file ($pkg, $ename, $idl{$pname}{$ename});
+    push (@p_elem_hdrs, $p_elem_hdr);
+  }
+
+  foreach my $iname ( @{$pkg_elems{'interface'}} )
+  {
+    print "  iface  \t $iname\n";
+    my $p_elem_hdr = create_iface_file ($pkg, $iname, $idl{$pname}{$iname});
+    push (@p_elem_hdrs, $p_elem_hdr);
+  }
+
+  foreach my $cname ( @{$pkg_elems{'class'}} )
+  {
+    print "  class  \t $cname\n";
+  }
+
+
+  # create package header, which pulls all package member headers
+  my $PKG   = uc ($pkg);
+  my $guard = "SAGA_API_$PKG\_HPP_";
+  my $p_hdr = "saga/api/$pkg.hpp";
+  my $out   = new IO::File ("> $BASE/$p_hdr") || die "Cannot create enum entry
+  at $BASE/$p_hdr: $!\n";
+
+#------------------------------------------------------------
+  print $out <<EOT;
+
+#ifndef $guard
+#define $guard
+
+#include <saga/saga/hpp>
+
+EOT
+#------------------------------------------------------------
+  
+  foreach my $p_elem_hdr ( @p_elem_hdrs )
+  {
+#------------------------------------------------------------
+    print $out <<EOT;
+#include <$p_elem_hdr>
+EOT
+  }
+
+#------------------------------------------------------------
+  print $out <<EOT;
+
+#endif $guard
+
+EOT
+#------------------------------------------------------------
+  $out->close ();
+
+  # save the package header for the api header
+  push (@p_hdrs, $p_hdr);
+}
+
+
+########################################################################
+{
+  # create saga header, which pulls are package headers
+  my $guard = "SAGA_API_HPP_";
+  my $a_hdr = "saga/saga_api.hpp";
+  my $out   = new IO::File ("> $BASE/$a_hdr") || die "Cannot create enum entry at $BASE/$a_hdr: $!\n";
+
+#------------------------------------------------------------
+  print $out <<EOT;
+
+#ifndef $guard
+#define $guard
+
+#include <saga/saga.hpp>
+
+EOT
+#------------------------------------------------------------
+  
+  foreach my $pname ( @p_hdrs )
+  {
+#------------------------------------------------------------
+    print $out <<EOT;
+#include <$pname>
+EOT
+  }
+
+#------------------------------------------------------------
+  print $out <<EOT;
+
+#endif $guard
+
+EOT
+#------------------------------------------------------------
+  $out->close ();
+}
+
+########################################################################
+sub create_enum_file ($$$)
+{
+  my $pname = shift;
+  my $ename = shift;
+  my $enum  = shift;
+
+  my $PNAME = uc ($pname);
+  my $ENAME = uc ($ename);
+
+  my $guard = "SAGA_API_$PNAME\_$ENAME\_HPP_";
+  my $e_hdr = "saga/api/$pname/$ename.hpp";
+  my $out   = new IO::File ("> $BASE/$e_hdr") || die "Cannot create enum entry at $BASE/$e_hdr: $!\n";
+
+  my $comm  = $enum->{'comm'};
+
+  if ( $comm )
+  {
+    $comm = "\n" . format_comment (4, $comm);
+  }
+
+#------------------------------------------------------------
+  print $out <<EOT;
+
+#ifndef $guard
+#define $guard
+
+#include <saga/saga.hpp>
+
+namespace saga
+{
+  namespace $pname
+  { $comm
+    enum $ename 
+    {
+EOT
+#------------------------------------------------------------
+
+
+  my @ekeys = sort { $a <=> $b } keys ( %{$enum->{'def'}} );
+
+  foreach my $i (  0..$#ekeys )
+  {
+    my $e = $ekeys[$i];
+
+    my $n = $enum->{'def'}{$e}{'name'} || "";
+    my $c = $enum->{'def'}{$e}{'comm'} || "";
+    my $u = $enum->{'def'}{$e}{'used'} ||  0;
+
+    # append comma for all but last enum
+    my $comma = ',';
+    if ( $i eq $#ekeys  ) { $comma = ' '; }
+
+    # format comment as such
+    if ( $c ) { $c = "    // $c"; }
+  
+    # is the enum used, or just a comment?
+    if ( $u )
+    {
+      printf $out ("      %-15s = %6d$comma%s\n", $n, $e, $c);
+    }
+    else
+    {
+      printf $out ("   // %-15s = %6d$comma%s\n", $n, $e, $c);
+    }
+  }
+
+#------------------------------------------------------------
+  print $out <<EOT;
+    };
+
+  } // namespace $pname
+
+} // namespace saga
+
+#endif $guard
+
+EOT
+#------------------------------------------------------------
+    
+  $out->close;
+
+  return $e_hdr;
+}
+
+
+########################################################################
+sub create_iface_file ($$$)
+{
+  my $pname = shift;
+  my $iname = shift;
+  my $iface = shift;
+
+  my $PNAME = uc ($pname);
+  my $INAME = uc ($iname);
+
+  my $guard = "SAGA_API_$PNAME\_$INAME\_HPP_";
+  my $i_hdr = "saga/api/$pname/$iname.hpp";
+  my $out   = new IO::File ("> $BASE/$i_hdr") || die "Cannot create enum entry at $BASE/$i_hdr: $!\n";
+
+  my $comm  = $iface->{'comm'};
+
+  if ( $comm )
+  {
+    $comm = "\n" . format_comment (4, $comm);
+  }
+
+  # print Dumper \$iface;
+
+#------------------------------------------------------------
+  print $out <<EOT;
+
+#ifndef $guard
+#define $guard
+
+#include <saga/saga.hpp>
+
+namespace saga
+{
+  namespace $pname
+  { $comm
+    class $iname
+    {
+EOT
+#------------------------------------------------------------
+
+
+#  my @ekeys = sort { $a <=> $b } keys ( %{$enum->{'def'}} );
+#
+#  foreach my $i (  0..$#ekeys )
+#  {
+#    my $e = $ekeys[$i];
+#
+#    my $n = $enum->{'def'}{$e}{'name'} || "";
+#    my $c = $enum->{'def'}{$e}{'comm'} || "";
+#    my $u = $enum->{'def'}{$e}{'used'} ||  0;
+#
+#    # append comma for all but last enum
+#    my $comma = ',';
+#    if ( $i eq $#ekeys  ) { $comma = ' '; }
+#
+#    # format comment as such
+#    if ( $c ) { $c = "    // $c"; }
+#  
+#    # is the enum used, or just a comment?
+#    if ( $u )
+#    {
+#      printf $out ("      %-15s = %6d$comma%s\n", $n, $e, $c);
+#    }
+#    else
+#    {
+#      printf $out ("   // %-15s = %6d$comma%s\n", $n, $e, $c);
+#    }
+#  }
+
+#------------------------------------------------------------
+  print $out <<EOT;
+    };
+
+  } // namespace $pname
+
+} // namespace saga
+
+#endif $guard
+
+EOT
+#------------------------------------------------------------
+    
+  $out->close;
+
+  return $i_hdr;
+}
+
+
+########################################################################
+sub format_comment ($$)
+{
+  my $ind   = shift;
+  my $comm  = shift;
+  my $out   = "";
+  my $IND   = ' ' x $ind;
+  my @lines = split (/\n/, $comm);
+
+  foreach my $line ( @lines ) 
+  {
+    if ( $line =~ /^\s*\/\/(.*)$/o )
+    {
+      my $txt = $1 || " ";
+
+      $out .= "$IND//$txt\n";
+    }
+    elsif ( $line =~ /^\s*$/o )
+    {
+      # ignore empty lines
+    }
+    else
+    {
+      die "can't parse comment line '$line'\n";
+    }
+  }
+
+  chomp ($out);
+
+  return $out;
+}
+
+########################################################################
 

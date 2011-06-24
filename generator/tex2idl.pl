@@ -21,9 +21,9 @@ foreach my $arg ( @ARGV )
     my $base =  $1;
     my $out  = "$base.idl";
 
-    print "parsing idl from $arg\n";
+    # print "parsing idl from $arg\n";
   
-    open  (IN, "<$arg");
+    open  (IN, "<$arg") || die "Cannot open input at $arg: $!\n";
     my @lines = <IN>;
     close (IN);
 
