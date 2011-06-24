@@ -20,7 +20,7 @@ test::
 	@./tex2idl.pl   saga_core_testing.tex
 	@./parse_idl.pl saga_core_testing.idl
 	@du -a saga_simple/ | grep -i testing
-	@cat saga_simple/saga/api/*testing*pp
-	@cat saga_simple/saga/api/testing/*pp
+	# @cat saga_simple/saga/api/*testing*pp
+	# @cat saga_simple/saga/api/testing/*pp
 
 

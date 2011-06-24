@@ -6,9 +6,11 @@ BEGIN {
   use IO::File;
   use Data::Dumper;
 
-  sub create_enum_file  ($$$);
-  sub create_iface_file ($$$);
-  sub format_comment    ($$ );
+  sub format_comment        ($$  );
+  sub create_enum_api_hpp   ($$$ );
+  sub create_iface_api_hpp  ($$$ );
+  sub format_method_sync_api_hpp  ($$;$);
+  sub format_method_async_api_hpp ($$;$);
 }
 
 
@@ -143,9 +145,13 @@ PACKAGE:
                          $
                          /ioxs )
           {
-            print " ### 1 $1 ### 2 $2 ### 3 $3 ###\n";
             $ecomm = $2 || "";
             $etxt  = "";
+
+            if ( $elem{'comm'} )
+            {
+              $elem{'comm'} .= "\n// \n";
+            }
             $elem{'comm'} .= "\n$ecomm";
           }
 
@@ -154,7 +160,7 @@ PACKAGE:
                             (?:(\/\/\s*.+?)\s+)?  # opt. comment
                             (\S+)                 # method name
                             \s*
-                            (\<[^>]+?\>)?         # opt. template qualifier
+                            (?:\<([^>]+?)\>)?     # opt. template qualifier
                             \s*
                             \(([^\)]+)\)          # signature
                             ;                     # end of method
@@ -207,7 +213,7 @@ PACKAGE:
 
 
             
-            $elem{'def'}{$mname} = \%method;
+            push (@{$elem{'def'}{'methods'}}, \%method);
 
             if ( $mtxt !~ /^\s*$/o ) {
               die "Could not fully parse method $mname: '$mtxt'\n";
@@ -474,16 +480,36 @@ PACKAGE:
         {
           if ( $mtxt !~ /^\s*$/io )
           {
-            # if we found any detail earlier on, this is where we need to store it
-            # away, along with any extra_comm we saw.
+            # if we found any detail earlier on, now we need to store it
+            # away, along with any extra_comm we saw.  So we search the def
+            # hash for the matching method name
+
             # print "dump detail for $mname ($etype $ename) in $pname\n";
 
-            if ( ! exists ($idl{$pname})                        || 
-                 ! exists ($idl{$pname}{$ename})                ||
-                 ! exists ($idl{$pname}{$ename}{'def'})         ||
-                 ! exists ($idl{$pname}{$ename}{'def'}{$mname}) )
+            my $match_found = 0;
+
+            if ( exists ($idl{$pname})                           && 
+                 exists ($idl{$pname}{$ename})                   &&
+                 exists ($idl{$pname}{$ename}{'def'})            &&
+                 exists ($idl{$pname}{$ename}{'def'}{'methods'}) )
             {
-              # we ignore missing  method names which contain a '*' - those need to
+              foreach my $method ( @{$idl{$pname}{$ename}{'def'}{'methods'}} )
+              {
+                if ( $method->{'name'} eq $mname )
+                {
+                  $match_found = 1;
+              
+                  # print "storing detail in $pname :: $ename :: $mname\n";
+                  $method->{'detail'} = $mtxt;
+                  $method->{'precom'} = $extra_comm;
+
+                }
+              }
+            }
+
+            if ( ! $match_found )
+            {
+              # we only warn on method names which contain a '*' - those need to
               # be handled though! FIXME
               if ( $mname !~ /\*/io )
               {
@@ -493,12 +519,6 @@ PACKAGE:
               {
                 warn "no such method '$mname' for $pname :: $ename\n" unless ( defined ( $tmpmethod ) );
               }
-            }
-            else
-            {
-              # print "storing detail in $pname :: $ename :: $mname\n";
-              $idl{$pname}{$ename}{'def'}{$mname}{'detail'} = $mtxt;
-              $idl{$pname}{$ename}{'def'}{$mname}{'precom'} = $extra_comm;
             }
           }
 
@@ -580,14 +600,14 @@ foreach my $pname ( sort keys (%idl) )
   foreach my $ename ( @{$pkg_elems{'enum'}} )
   {
     print "  enum   \t $ename\n";
-    my $p_elem_hdr = create_enum_file ($pkg, $ename, $idl{$pname}{$ename});
+    my $p_elem_hdr = create_enum_api_hpp ($pkg, $ename, $idl{$pname}{$ename});
     push (@p_elem_hdrs, $p_elem_hdr);
   }
 
   foreach my $iname ( @{$pkg_elems{'interface'}} )
   {
     print "  iface  \t $iname\n";
-    my $p_elem_hdr = create_iface_file ($pkg, $iname, $idl{$pname}{$iname});
+    my $p_elem_hdr = create_iface_api_hpp ($pkg, $iname, $idl{$pname}{$iname});
     push (@p_elem_hdrs, $p_elem_hdr);
   }
 
@@ -674,7 +694,7 @@ EOT
 }
 
 ########################################################################
-sub create_enum_file ($$$)
+sub create_enum_api_hpp ($$$)
 {
   my $pname = shift;
   my $ename = shift;
@@ -760,7 +780,7 @@ EOT
 
 
 ########################################################################
-sub create_iface_file ($$$)
+sub create_iface_api_hpp ($$$)
 {
   my $pname = shift;
   my $iname = shift;
@@ -780,7 +800,33 @@ sub create_iface_file ($$$)
     $comm = "\n" . format_comment (4, $comm);
   }
 
-  # print Dumper \$iface;
+  # print Dumper \$iface if ( $iname eq "unit_test" );
+
+  my $impltxt = "";
+  my $impls   = $iface->{'impl'} || "";
+
+  my $impl_async = 0;
+  my $impl_first = 1;
+  my $impl_ind   = ' ' x (11 + length ($iname));
+  foreach my $impl ( @{$impls} )
+  {
+    if ( $impl eq 'saga::async' )
+    {
+      $impl_async = 1;
+    }
+
+    if ( $impl_first )
+    {
+      $impltxt .= " : public $impl";
+    }
+    else
+    {
+      $impltxt .= "\n$impl_ind, public $impl";
+    }
+
+    $impl_first = 0;
+  }
+
 
 #------------------------------------------------------------
   print $out <<EOT;
@@ -794,39 +840,60 @@ namespace saga
 {
   namespace $pname
   { $comm
-    class $iname
+    class $iname$impltxt
     {
 EOT
 #------------------------------------------------------------
 
 
-#  my @ekeys = sort { $a <=> $b } keys ( %{$enum->{'def'}} );
-#
-#  foreach my $i (  0..$#ekeys )
-#  {
-#    my $e = $ekeys[$i];
-#
-#    my $n = $enum->{'def'}{$e}{'name'} || "";
-#    my $c = $enum->{'def'}{$e}{'comm'} || "";
-#    my $u = $enum->{'def'}{$e}{'used'} ||  0;
-#
-#    # append comma for all but last enum
-#    my $comma = ',';
-#    if ( $i eq $#ekeys  ) { $comma = ' '; }
-#
-#    # format comment as such
-#    if ( $c ) { $c = "    // $c"; }
-#  
-#    # is the enum used, or just a comment?
-#    if ( $u )
-#    {
-#      printf $out ("      %-15s = %6d$comma%s\n", $n, $e, $c);
-#    }
-#    else
-#    {
-#      printf $out ("   // %-15s = %6d$comma%s\n", $n, $e, $c);
-#    }
-#  }
+  # sync methods
+  {
+    if ( $impl_async )
+    {
+      print $out "      //-------------------------\n";
+      print $out "      // sync method definitions \n";
+      print $out "      //-------------------------\n\n";
+    }
+
+    my $m_first = 1;
+    foreach my $method ( @{$iface->{'def'}{'methods'}} )
+    {
+      my $mtxt = format_method_sync_api_hpp (6, $method);
+
+      # no empty line before first method
+      if ( $m_first )
+      {
+        $mtxt =~ s/^\s*\n//io;
+      }
+
+      $m_first = 0;
+      print $out "$mtxt\n";
+    }
+  }
+
+  # async methods
+  if ( $impl_async )
+  {
+    print $out "\n\n";
+    print $out "      //--------------------------\n";
+    print $out "      // async method definitions \n";
+    print $out "      //--------------------------\n\n";
+
+    my $m_first = 1;
+    foreach my $method ( @{$iface->{'def'}{'methods'}} )
+    {
+      my $mtxt = format_method_async_api_hpp (6, $method);
+
+      # no empty line before first method
+      if ( $m_first )
+      {
+        $mtxt =~ s/^\s*\n//io;
+      }
+
+      $m_first = 0;
+      print $out "$mtxt\n";
+    }
+  }
 
 #------------------------------------------------------------
   print $out <<EOT;
@@ -872,6 +939,215 @@ sub format_comment ($$)
     {
       die "can't parse comment line '$line'\n";
     }
+  }
+
+  chomp ($out);
+
+  return $out;
+}
+
+########################################################################
+sub format_method_sync_api_hpp ($$)
+{
+  my $ind   = shift;
+  my $m     = shift;
+  my $out   = "";
+  my $IND   = ' ' x $ind;
+
+  my $mname  = $m->{'name'};
+  my $comm   = format_comment ($ind, $m->{'comm'}); 
+
+  if ( $comm )
+  {
+    $out .= "\n$comm\n";
+  }
+
+  # print "----------------------------------\n" if ( $mname eq "get_test_obj");
+  # print Dumper \$m                             if ( $mname eq "get_test_obj");
+  # print "----------------------------------\n" if ( $mname eq "get_test_obj");
+
+  # search for 'out' params - the first will determine the return value type.
+  # If none is found, we have a void method.  Rember that param's index, as we
+  # don't need it for the signature
+  my $mtype  = "void";
+  my $oparam = "";
+
+  FORMAT_METHOD_SYNC_PARAM:
+  foreach my $param ( @{$m->{'params'}} )
+  {
+    if ( $param->{'mode'} eq 'out' )
+    {
+      $oparam = $param->{'name'};
+      $mtype  = $param->{'type'};
+      last FORMAT_METHOD_SYNC_PARAM;
+    }
+  }
+
+  my $tname = $m->{'temp'} || "";
+  my $slen  = 0;
+
+  if ( $tname )
+  {
+    $out .= "\n$IND" . "template <typename $tname>\n";
+  }
+  
+  my $tmp = sprintf ("$IND%-15s  %-20s (", $mtype, $mname);
+  $out .= $tmp;
+  $IND = ' ' x length  ($tmp);
+
+  # add parameter signatures
+  my $noind = 1; # noi indent for first param
+
+  foreach my $param ( @{$m->{'params'}} )
+  {
+    my $pname = $param->{'name'};
+    my $pmode = $param->{'mode'};
+    my $pdef  = $param->{'default'};
+    my $ptype = $param->{'type'};
+
+    # skip output param - already handled as return type
+    unless ( $pname eq $oparam )
+    {
+      # out and inout params are to be passed by reference pointers
+      my $pref = " ";
+      unless ( $pmode eq 'in' )
+      {
+        $pref = "*";
+      }
+
+      my $ptxt = sprintf ("%-15s $pref %s\n", $ptype, $pname);
+
+      unless ( $noind )
+      {
+        $out .= $IND;
+      }
+
+      $out .= $ptxt;
+    
+      $noind = 0;
+    }
+  }
+
+  # remove last \n
+  chomp ($out);
+
+  # close method signature
+  if ( $noind )
+  {
+    # no param got inserted - method has void signature)
+    $out .= "void);\n";
+  }
+  else
+  {
+    $out .= ");\n";
+  }
+
+  chomp ($out);
+
+  return $out;
+}
+
+########################################################################
+sub format_method_async_api_hpp ($$)
+{
+  my $ind   = shift;
+  my $m     = shift;
+  my $out   = "";
+  my $IND   = ' ' x $ind;
+
+  my $mname  = $m->{'name'};
+  my $comm   = format_comment ($ind, $m->{'comm'}); 
+
+  if ( $comm )
+  {
+    $out .= "\n$comm\n";
+  }
+
+  # print "----------------------------------\n" if ( $mname eq "get_test_obj");
+  # print Dumper \$m                             if ( $mname eq "get_test_obj");
+  # print "----------------------------------\n" if ( $mname eq "get_test_obj");
+
+  # task types are specified as template parameter.  If the method itself is
+  # templetized, we need to support multiple template parameters
+  my $tname   = $m->{'temp'} || "";
+  my $slen    = 0;
+
+  if ( $tname )
+  {
+    # add the async flag to the template
+    my $tmp = sprintf ("$IND" . "template <typename ASYNC,\n$IND          typename %-5s> ", $tname);
+    $out .= $tmp;
+  }
+  else
+  {
+    # just the async template flag needed
+    $out    .= "$IND" . "template <typename ASYNC> ";
+  }
+  
+
+  # return type for async calls is always saga::task.  We still need to filter
+  # out the original out par, as that will not be part of the func signature,
+  # but will be returned by the task on get_result<mtype>();
+  my $oparam = "";
+
+  FORMAT_METHOD_SYNC_PARAM:
+  foreach my $param ( @{$m->{'params'}} )
+  {
+    if ( $param->{'mode'} eq 'out' )
+    {
+      $oparam = $param->{'name'};
+      last FORMAT_METHOD_SYNC_PARAM;
+    }
+  }
+  $out .= "saga::task  ";
+
+  my $tmp = sprintf ("%-20s (", $mname);
+  $out .= $tmp;
+  $IND = ' ' x ($ind + 38 + length ($tmp));
+
+  # add parameter signatures
+  my $noind = 1; # noi indent for first param
+
+  foreach my $param ( @{$m->{'params'}} )
+  {
+    my $pname = $param->{'name'};
+    my $pmode = $param->{'mode'};
+    my $pdef  = $param->{'default'};
+    my $ptype = $param->{'type'};
+
+    unless ( $pname eq $oparam )
+    {
+      # out and inout params are to be passed by reference pointers
+      my $pref = " ";
+      unless ( $pmode eq 'in' )
+      {
+        $pref = "*";
+      }
+
+      my $ptxt = sprintf ("%-15s $pref %s\n", $ptype, $pname);
+
+      unless ( $noind )
+      {
+        $out .= $IND;
+      }
+
+      $out .= $ptxt;
+      $noind = 0;
+    }
+  }
+
+  # remove last \n
+  chomp ($out);
+
+  # close method signature
+  if ( $noind )
+  {
+    # no param got inserted - method has void signature)
+    $out .= "void);\n";
+  }
+  else
+  {
+    $out .= ");\n";
   }
 
   chomp ($out);

@@ -44,10 +44,17 @@
     // a single element to be tested
     //    - allows to add objects
     //    - allows to remove objects
-    interface unit_test
+    interface unit_test : implements saga::async
+                          implements saga::object
     {
       // setter
       set_test_obj            (in  saga::object o);
+      set_test_thing <T>      (in  T            t);
+
+      // checker
+      check_test_obj          (in    saga::object o = NULL, 
+                               inout string       result,
+                               out   bool         ok);
 
       // getter
       get_test_obj            (out saga::object o);
@@ -75,6 +82,7 @@
    //            4, reserved for AlwaysWorks
     }
 
+    // async interface.  doh!
     interface async
     {
       // this interface is empty on purpose, and is used only
@@ -272,42 +280,49 @@
       Perms:    Write
       Throws:   NotImplemented
                 BadParameter
-                DoesNotExist
-                IncorrectState
-                PermissionDenied
-                AuthorizationFailed
-                AuthenticationFailed
-                Timeout
                 NoSuccess
       Notes:    - an empty string means to set an empty value
                   (the attribute is not removed).
                 - the attribute is created, if it does not exist
                 - a 'PermissionDenied' exception is thrown if the
-                  attribute to be changed is ReadOnly.
-                - only some SAGA objects allow to create new
-                  attributes - others allow only access to
-                  predefined attributes.  If a non-existing
-                  attribute is queried on such objects, a
-                  'DoesNotExist' exception is raised
-                - changes of attributes may reflect changes of
-                  endpoint entity properties.  As such,
-                  authorization and/or authentication may fail
-                  for settings such attributes, for some
-                  backends.  In that case, the respective
-                  'AuthenticationFailed', 'AuthorizationFailed',
-                  and 'PermissionDenied' exceptions are thrown.
-                  For example, an implementation may forbid to
-                  change the saga::stream 'BufSize' attribute.
-                - if an attribute is not well formatted, or
-                  outside of some allowed range, a 'BadParameter'
-                  exception with a descriptive error message is
-                  thrown.
-                - if the operation is attempted on a vector
-                  attribute, an 'IncorrectState' exception is
-                  thrown.
+                  'NoSuccess' exception, respectively.
+ 
+ 
+    - set_test_thing
+      Purpose:  set an test thing
+      Format:   set_test_obj <type>  (in type         t)
+      Inputs:   t:                    thing to be tested
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: -
+      Perms:    Write
+      Throws:   NotImplemented
+                BadParameter
+      Notes:    - an empty string means to set an empty value
+                  (the attribute is not removed).
                 - setting of attributes may time out, or may fail
                   for other reasons - which causes a 'Timeout' or
                   'NoSuccess' exception, respectively.
+ 
+ 
+    - check_test_obj
+      Purpose:  check an test object
+      Format:   check_test_obj         (in    saga::object o = NULL,
+                                        inout string    result,
+                                        out   bool      ok);
+      Inputs:   o:                    object to be tested
+      InOuts:   result:               check message
+      Outputs:  ok                    success?
+      PreCond:  -
+      PostCond: -
+      Perms:    Write
+      Throws:   NotImplemented
+                BadParameter
+                DoesNotExist
+      Notes:    - an empty string means to set an empty value
+                  (the attribute is not removed).
+                - the attribute is created, if it does not exist
  
  
     - get_test_obj
@@ -321,31 +336,11 @@
       Perms:    Query
       Throws:   NotImplemented
                 DoesNotExist
-                IncorrectState
-                PermissionDenied
-                AuthorizationFailed
-                AuthenticationFailed
-                Timeout
-                NoSuccess
       Notes:    - queries of attributes may imply queries of
                   endpoint entity properties.  As such,
-                  authorization and/or authentication may fail
-                  for querying such attributes, for some
-                  backends.  In that case, the respective
-                  'AuthenticationFailed', 'AuthorizationFailed',
-                  and 'PermissionDenied' exceptions are thrown.
-                  For example, an implementation may forbid to
-                  read the saga::stream 'BufSize' attribute.
                 - reading an attribute value for an attribute
                   which is not in the current set of attributes
                   causes a 'DoesNotExist' exception.
-                - if the operation is attempted on a vector
-                  attribute, an 'IncorrectState' exception is
-                  thrown.
-                - getting attribute values may time out, or may 
-                  fail for other reasons - which causes a 
-                  'Timeout' or 'NoSuccess' exception, 
-                  respectively.
  \end{myspec}
  
  
