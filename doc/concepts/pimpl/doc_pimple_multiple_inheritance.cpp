@@ -99,18 +99,28 @@ namespace impl
   class object  : public virtual impl::pimpl 
   {
     public:
-      object     (void) { std::cout << " impl    object  c'tor" << std::endl; }
-      ~object     (void) { std::cout << " impl    object  d'tor" << std::endl; }
+      object           (void) { std::cout << " impl    object  c'tor" << std::endl; }
+      ~object          (void) { std::cout << " impl    object  d'tor" << std::endl; }
       void object_test (void) { std::cout << " impl    object  test"  << std::endl; }
   };
 
 
   ////////////////////////////////////////////////////////////////////////////////
-  class attribs : public virtual impl::pimpl 
+  class attribs_base : public virtual impl::pimpl 
   {
     public:
-      attribs     (void) { std::cout << " impl    attribs c'tor" << std::endl; }
-      ~attribs     (void) { std::cout << " impl    attribs d'tor" << std::endl; }
+      attribs_base      (void) { std::cout << " impl    attribs_base c'tor" << std::endl; }
+      ~attribs_base     (void) { std::cout << " impl    attribs_base d'tor" << std::endl; }
+      void attribs_test (void) { std::cout << " impl    attribs_base test"  << std::endl; }
+  };
+
+
+  ////////////////////////////////////////////////////////////////////////////////
+  class attribs : public virtual impl::attribs_base
+  {
+    public:
+      attribs           (void) { std::cout << " impl    attribs c'tor" << std::endl; }
+      ~attribs          (void) { std::cout << " impl    attribs d'tor" << std::endl; }
       void attribs_test (void) { std::cout << " impl    attribs test"  << std::endl; }
   };
 
@@ -120,11 +130,11 @@ namespace impl
   // use 'virtual public' inheriatance.  That is not strictly neccessary 
   // (I think).
   class context : public virtual impl::object
-                  , public virtual impl::attribs 
+                , public virtual impl::attribs 
   {
     public:
-      context     (void) { std::cout << " impl    context c'tor" << std::endl; }
-      ~context     (void) { std::cout << " impl    context d'tor" << std::endl; } 
+      context           (void) { std::cout << " impl    context c'tor" << std::endl; }
+      ~context          (void) { std::cout << " impl    context d'tor" << std::endl; } 
       void context_test (void) { std::cout << " impl    context test"  << std::endl; }
   };
 
@@ -158,9 +168,9 @@ class pimpl
   protected:
     // enum to tag c'tors without impl pointer.  
     // Only visible to derived classes.
-    enum noimpl_enum
+    enum _noimpl_enum
     {
-      NO_IMPL = 0
+      NO_IMPL = 1
     };
 
 
@@ -183,7 +193,7 @@ class pimpl
     // of multiple inheritance, only one of the classes on any level of the 
     // class hierarchy will pass down the impl pointer - all others will invoke 
     // this c'tor for their base class.
-    pimpl (noimpl_enum) 
+    pimpl (_noimpl_enum) 
       : impl_ (NULL)
     {
       std::cout << " facade  pimpl   c'tor (no impl)" << std::endl; 
@@ -203,7 +213,9 @@ class pimpl
     pimpl (impl::pimpl * impl) 
       : impl_ (impl) 
     {
-      std::cout << " facade  pimpl   c'tor (impl) - " << saga::util::demangle (typeid (*impl_).name ()) << std::endl; 
+      std::cout << " facade  pimpl   c'tor (impl) - " 
+                << saga::util::demangle (typeid (*impl_).name ()) << std::endl; 
+
       impl_test ();  // impl should be valid
     }
 
@@ -318,8 +330,8 @@ class object : public virtual pimpl
 {
   protected:
     // the first c'tor does simply forward the noimpl flag.
-    object (noimpl_enum noimpl) 
-      : pimpl (noimpl)                
+    object (_noimpl_enum) 
+      : pimpl (pimpl::NO_IMPL)                
     { 
       std::cout << " facade  object  c'tor (no impl)" << std::endl; 
       impl_test ();
@@ -354,13 +366,49 @@ class object : public virtual pimpl
 // construction.  In fact, it's c'tor is protected - only derived classes can 
 // be created.
 //
-class attribs : public virtual pimpl 
+class attribs_base : public virtual pimpl 
 {
   // interface class, thus protected c'tor/d'tor
   protected:
     // the c'tor does simply forward the noimpl flag.
-    attribs (noimpl_enum noimpl) 
-      : pimpl (noimpl)                
+    attribs_base (_noimpl_enum) 
+      : pimpl (pimpl::NO_IMPL)                
+    { 
+      std::cout << " facade  attribs_base c'tor (no impl)" << std::endl; 
+      impl_test ();
+    }
+    
+    ~attribs_base (void)
+    {
+      std::cout << " facade  attribs_base d'tor" << std::endl; 
+    }
+
+
+  public:
+    // the attribs_base methods
+    void attribs_base_test (void)
+    {
+      std::cout << " attribs_base test" << std::endl; 
+      impl_test ();
+      std::cout << " attribs_base test" << std::endl; 
+    }
+};
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// attribs is an interface class, and thus does not create an impl pointer on
+// construction.  In fact, it's c'tor is protected - only derived classes can 
+// be created.
+//
+class attribs : public attribs_base
+{
+  // interface class, thus protected c'tor/d'tor
+  protected:
+    // the c'tor does simply forward the noimpl flag.
+    attribs (_noimpl_enum ni) 
+      : attribs_base (ni)                
+      , pimpl        (ni)                
     { 
       std::cout << " facade  attribs c'tor (no impl)" << std::endl; 
       impl_test ();

@@ -1,15 +1,22 @@
 
 SAGA_ROOT     = $(shell pwd)/../../../
 
-SAGA_BIN     += cpi_test
+SAGA_BIN     += cpi_1
+SAGA_BIN     += cpi_2
 
 include $(SAGA_ROOT)/make/saga.mk
 
 SAGA_LDFLAGS += -L../../../saga/util/ -lsaga_util
 
 check:: all
-	valgrind --tool=memcheck --leak-check=full ./$(SAGA_BIN)
+	@echo ""
+	valgrind --tool=memcheck --leak-check=full ./cpi_1
+	@echo ""
 
 run: all
-	/usr/bin/env LD_LIBRARY_PATH=`pwd`/adaptor/ ./$(SAGA_BIN)
+	@echo ""
+	./cpi_1
+	@echo ""
+	./cpi_2
+	@echo ""
 

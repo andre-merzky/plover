@@ -4,9 +4,6 @@
 
 #include <string>
 
-// FIXME: add configure test
-#define HAVE_CXA_DEMANGLE 
-
 namespace saga
 {
   namespace util

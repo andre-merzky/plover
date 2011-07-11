@@ -1,6 +1,6 @@
 
-#ifndef SAGA_CPI_TEST_HPP
-#define SAGA_CPI_TEST_HPP
+#ifndef SAGA_CPI_1_HPP
+#define SAGA_CPI_1_HPP
 
 #include <vector>
 #include <iostream>
@@ -104,5 +104,5 @@ namespace saga
   //
 }
 
-#endif //  SAGA_CPI_TEST_HPP
+#endif //  SAGA_CPI_1_HPP
 

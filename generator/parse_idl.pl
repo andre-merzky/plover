@@ -613,6 +613,13 @@ foreach my $pname ( sort keys (%idl) )
 
   foreach my $cname ( @{$pkg_elems{'class'}} )
   {
+    print "  iface  \t $cname\n";
+    my $p_elem_hdr = create_iface_api_hpp ($pkg, $cname, $idl{$pname}{$cname});
+    push (@p_elem_hdrs, $p_elem_hdr);
+  }
+
+  foreach my $cname ( @{$pkg_elems{'class'}} )
+  {
     print "  class  \t $cname\n";
   }
 

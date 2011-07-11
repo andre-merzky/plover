@@ -1,5 +1,5 @@
 
-SAGA_SUBDIRS = util saga impl
+SAGA_SUBDIRS = util # saga impl
 
 SAGA_ROOT    = $(shell pwd)/..
 
