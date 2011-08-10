@@ -90,3 +90,11 @@
     classes.  We use int's anyway, no need to keep enums around in 
     the parent namespace then.
 
+
+ - encapsulate adaptor selection
+   probably too complex, and not worth it
+
+
+  - saga::util is public visible / usable, and should be part of
+    the language bindings
+

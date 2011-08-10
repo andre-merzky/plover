@@ -26,7 +26,7 @@ namespace saga
           mtx_->lock ();
         }
 
-        scoped_lock (void)
+        scoped_lock (void) // FIXME: is this version ever useful?
           : mtx_ (new saga::util::mutex ())
           , own_ (true)
         {

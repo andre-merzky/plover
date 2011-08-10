@@ -69,7 +69,7 @@ SAGA_CCFLAGS               = @SAGA_CCFLAGS@
 SAGA_CXXFLAGS              = @SAGA_CXXFLAGS@
 SAGA_LDFLAGS_EXT           = @SAGA_LDFLAGS_EXT@
 
-SAGA_CXXFLAGS             += -I$(BOOST_LOCATION)/include
+# SAGA_CXXFLAGS             += -I$(BOOST_LOCATION)/include
 
 SAGA_LEXT                  = so
 SAGA_AEXT                  = a
@@ -131,7 +131,7 @@ ifeq "$(SAGA_OSTYPE)" "LINUX"
   SAGA_CXXFLAGS           += -D__LINUX__ 
 
   ifeq "$(SAGA_CC)" "gcc"
-    SAGA_CCFLAGS          += -pipe -pthread -fPIC -fvisibility=default
+    SAGA_CCFLAGS          += -pipe -pthread -fPIC -fvisibility=default -std=c++0x
   endif
   ifeq "$(SAGA_CC)" "icc"
     SAGA_CCFLAGS          += -cxxlib-icc -openmp 
@@ -140,7 +140,7 @@ ifeq "$(SAGA_OSTYPE)" "LINUX"
   SAGA_CCFLAGS            += -Wall -Wno-unknown-pragmas
 
   ifeq "$(SAGA_CXX)" "g++"
-    SAGA_CXXFLAGS         += $(SAGA_CCFLAGS)
+    SAGA_CXXFLAGS         += $(SAGA_CCFLAGS) -std=c++0x
   endif
   ifeq "$(SAGA_CXX)" "icc"
     SAGA_CXXFLAGS         += $(SAGA_CCFLAGS)

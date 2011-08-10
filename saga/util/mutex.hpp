@@ -52,6 +52,16 @@ namespace saga
           pthread_mutex_unlock (&mtx_);
           // std::cerr << "mutex unlocked\n";
         }
+
+        bool try_lock (void)
+        {
+          if ( 0 == pthread_mutex_trylock (&mtx_) )
+          {
+            return true;
+          }
+
+          return false;
+        }
     };
 
   } // namespace util
