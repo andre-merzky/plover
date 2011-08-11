@@ -1,11 +1,11 @@
 
-#include "cpi_3.hpp"
+#include "cpi_4.hpp"
 
 int main ()
 {
   try
   {
-    saga::file f ("/etc/passwd");
+    saga::filesystem::file f ("/etc/passwd");
     std::cout << "size: " << f.get_size () << std::endl;
     f.copy ("/tmp/passwd.bak");
   }

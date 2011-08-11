@@ -2,7 +2,7 @@
 #ifndef SAGA_IMPL_FILE_HPP
 #define SAGA_IMPL_FILE_HPP
 
-#include <saga/impl/object.hpp>
+#include <saga/impl/core/object.hpp>
 
 // FIXME: this needs to be in impl
 namespace saga

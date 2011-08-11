@@ -3,7 +3,7 @@
 #define SAGA_UTIL_SHAREDPTRSAGA_HPP
 
 #ifdef SAGA_USE_TR1
-# warning "this include should only be used with TR1 defined"
+# warning "this include should only be used with TR1 undefined"
 #endif
 
 #include <saga/util/demangle.hpp>
@@ -110,7 +110,7 @@ namespace saga
           return ptr_;
         }
 
-        // dyamic_cast'ing version of get
+        // dyamic_cast'ing version of get.
         // remarks to get() apply
         template <class U> 
         U * get (void)
@@ -132,7 +132,7 @@ namespace saga
           {
             // FIXME: log
             // FIXME: how should we react?  return an empty shared ptr, as we do
-            // now, or throw and internal exception?
+            // now, or throw an internal exception, or incorrect_type exception?
           }
 
           return ret;
@@ -241,7 +241,7 @@ namespace saga
         template <class U> 
         shared_ptr <U> get_shared_ptr (void)
         {
-          // use casting copy c'tor to get new shared ptr
+          // FIXME: use casting copy c'tor to get new shared ptr
           shared_ptr <U> ret = shared_ptr <U> (*this);
 
           return ret;

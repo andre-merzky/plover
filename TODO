@@ -98,3 +98,8 @@
   - saga::util is public visible / usable, and should be part of
     the language bindings
 
+  - classes should inherit from a 'shareable', which keeps a weak 
+    pointer of the class if the class is ever used for a shared ptr.
+    No other shared_ptr can then ever claim that class, and the class
+    gets a shared_from_this().
+

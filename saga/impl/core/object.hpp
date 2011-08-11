@@ -13,7 +13,7 @@ namespace saga
 {
   namespace impl
   {
-    class object
+    class object : public saga::util::shareable
     {
       friend class saga::object;
 
