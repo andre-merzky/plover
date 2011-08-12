@@ -49,10 +49,9 @@ namespace saga
 
   namespace filesystem
   {
-    class file // holds pointer to impl
-    {
-      ...
-    };
+    enum  flags;
+    class file;      // holds pointer to impl
+    class directory; // holds pointer to impl
   }
 
   //////////////////////////////////////////////////////////////////////
