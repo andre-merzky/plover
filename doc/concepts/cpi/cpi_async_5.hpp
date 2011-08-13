@@ -72,6 +72,8 @@ namespace saga
       class file_cpi : public saga::util::shareable
       {
         public:
+          virtual ~file_cpi (void) { };
+
           virtual void constructor (saga::util::shared_ptr <saga::impl::filesystem::file> impl, std::string url) 
           { throw "constructor: NotImplemented"; } 
           virtual int  get_size    (saga::util::shared_ptr <saga::impl::filesystem::file> impl)                  
@@ -118,7 +120,6 @@ namespace saga
 
         public:
           file (void);
-          ~file (void);
 
           // as the constructor is also a cpi method, and we thus want to call the
           // cpi, we want to be finished with the actual object construction,

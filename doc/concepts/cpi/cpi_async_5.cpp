@@ -19,11 +19,6 @@ namespace saga
       }
 
       //////////////////////////////////////////////////////////////////
-      file::~file (void)
-      {
-      }
-
-      //////////////////////////////////////////////////////////////////
       void file::constructor (std::string url)
       {
         saga::util::scoped_lock sl (idata_->get_mutex ());
@@ -74,25 +69,21 @@ namespace saga
 
 int main ()
 {
-  for ( unsigned i = 0; i < 1; i++ )
+  try
   {
-    try
-    {
-      std::string t ("/etc/passwd");
-      saga::filesystem::file f (t);
-      std::cout << "size: " << f.get_size () << std::endl;
-      f.copy ("/tmp/passwd.bak");
-    }
-    catch ( const std::exception & e )
-    {
-      std::cerr << "exception: " << e.what () << std::endl;
-      return 1;
-    }
-    catch ( const char * err )
-    {
-      std::cerr << "error: " << err << std::endl;
-      return 1;
-    }
+    saga::filesystem::file f ("/etc/passwd");
+    std::cout << "size: " << f.get_size () << std::endl;
+    f.copy ("/tmp/passwd.bak");
+  }
+  catch ( const std::exception & e )
+  {
+    std::cerr << "exception: " << e.what () << std::endl;
+    return 1;
+  }
+  catch ( const char * err )
+  {
+    std::cerr << "error: " << err << std::endl;
+    return 1;
   }
 
   return 0;

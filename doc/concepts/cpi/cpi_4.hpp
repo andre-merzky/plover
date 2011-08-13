@@ -72,6 +72,8 @@ namespace saga
       class file_cpi : public saga::util::shareable
       {
         public:
+          virtual ~file_cpi (void) { };
+
           virtual void constructor (saga::util::shared_ptr <saga::impl::filesystem::file> impl, std::string url) 
           { throw "constructor: NotImplemented"; } 
           virtual int  get_size    (saga::util::shared_ptr <saga::impl::filesystem::file> impl)                  
@@ -93,9 +95,9 @@ namespace saga
           size_t      pos;
           bool        valid;
 
-          saga::util::mutex * get_mutex (void)
+          saga::util::mutex & get_mutex (void)
           {
-            return &mtx_;
+            return mtx_;
           }
       };
 
