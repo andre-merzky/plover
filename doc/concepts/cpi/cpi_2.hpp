@@ -22,7 +22,7 @@ namespace saga
   //
   namespace cpi
   {
-    class file
+    class file : public saga::util::shareable
     {
       public:
         virtual int get_size (void)
@@ -80,7 +80,7 @@ namespace saga
   //
   // or slightly more clever ;-)
   //
-  class engine
+  class engine : public saga::util::shareable
   {
     private:
       std::vector <saga::util::shared_ptr <saga::cpi::file> > file_cpis_;
@@ -110,7 +110,7 @@ namespace saga
   // the SAGA API class implementation, which forwards all calls to 
   // one of the known CPI instances.
   //
-  class file
+  class file : public saga::util::shareable
   {
     private:
       saga::util::shared_ptr <engine> engine_;

@@ -25,7 +25,7 @@ namespace saga
     //
     // our file adaptor base class
     //
-    class file
+    class file : public saga::util::shareable
     {
       public:
         virtual int get_size (void)
@@ -53,7 +53,7 @@ namespace saga
       //////////////////////////////////////////////////////////////////
       // non-void ret type, 0 args
       template <typename CPI, typename RET> 
-      class functor_0 
+      class functor_0 : public saga::util::shareable 
       {
         private:           
           RET (CPI::*call_)(void); 
@@ -73,7 +73,7 @@ namespace saga
       //////////////////////////////////////////////////////////////////
       // void ret type, 0 args
       template <typename CPI> 
-      class functor_0 <CPI, void_t> 
+      class functor_0 <CPI, void_t> : public saga::util::shareable 
       {
         private:           
           void (CPI::*call_)(void); 
@@ -96,7 +96,7 @@ namespace saga
       template <typename CPI, 
                 typename RET, 
                 typename ARG_1> 
-      class functor_1 
+      class functor_1 : public saga::util::shareable 
       {
         private:           
           RET (CPI::*call_)(ARG_1); 
@@ -119,7 +119,7 @@ namespace saga
       // void ret type, 1 args
       template <typename CPI, 
                 typename ARG_1> 
-      class functor_1 <CPI, void_t, ARG_1>
+      class functor_1 <CPI, void_t, ARG_1> : public saga::util::shareable
       {
         private:           
           void (CPI::*call_)(ARG_1); 
@@ -199,7 +199,7 @@ namespace saga
     //
     // or slightly more clever ;-)
     //
-    class engine
+    class engine : public saga::util::shareable
     {
       private:
         std::vector <saga::util::shared_ptr <saga::cpi::file> > file_cpis_;
@@ -262,7 +262,7 @@ namespace saga
     // the SAGA API class implementation, which forwards all calls to 
     // one of the known CPI instances.
     //
-    class file
+    class file : public saga::util::shareable
     {
       private:
         saga::util::shared_ptr <engine> engine_;
