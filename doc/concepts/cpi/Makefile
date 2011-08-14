@@ -5,7 +5,7 @@ SAGA_BIN     += cpi_1
 SAGA_BIN     += cpi_2
 SAGA_BIN     += cpi_3
 SAGA_BIN     += cpi_4
-SAGA_BIN     += cpi_5
+SAGA_BIN     += cpi_async_5
 
 include $(SAGA_ROOT)/make/saga.mk
 
@@ -14,7 +14,7 @@ SAGA_CXXFLAGS += -std=c++0x
 
 check:: all
 	@echo ""
-	valgrind --tool=memcheck --leak-check=full ./cpi_5
+	valgrind --tool=memcheck --leak-check=full ./cpi_async_5
 	@echo ""
 
 run: all
@@ -27,6 +27,6 @@ run: all
 	@echo ""
 	./cpi_4
 	@echo ""
-	./cpi_5
+	./cpi_async_5
 	@echo ""
 

@@ -4,7 +4,6 @@
 
 #include <vector>
 #include <iostream>
-#include <functional>
 
 #include <saga/util/shared_ptr.hpp>
 
