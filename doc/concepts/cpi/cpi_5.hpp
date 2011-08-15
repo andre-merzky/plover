@@ -13,13 +13,66 @@
 #include <saga/util/mutex.hpp>
 #include <saga/util/shared_ptr.hpp>
 
-// In the cpi_3 example, the engine took over the adaptor loading and
-// management.  The saga::impl classes should, however, have some amount of
-// interaction with the adaptor list.  For one, it should maintain object state
-// information between subsequent calls, but also it should be able to re-order
-// adaptors, and for example prefer successful ones on re-try.
+// In the cpi_4 example, we introduces a functor class, which allows the
+// engine to more indirectly mediate between API and adaptor, and also 
+// added the ability to pass API instance data from the API to the adaptor.
+// Those instance data represent the API object state, as maintained over 
+// successive adaptor invocations. 
 //
-// This example shows how those features can be achieved.
+// The presented scheme now forms an almost complete SAGA stack, but a 
+// couple of features are missing:
+//
+//   - different cpi-call modes
+//   - asynchronous operations
+//   - adaptor state management
+//   - adaptor suite state management
+//   - callbacks and metrics
+//   - bulk operations (i.e.., clever abuse of task containers)
+//   - filter-adaptors (which call other adaptors)
+//  
+// This iteration will implement 
+//
+//   filter-adaptors
+//     adaptors may do something to the call's state and instance
+//     data, and then call into the engine again.  An example might
+//     be task_container, or basic parameter and state checks
+//
+//   asynchronous operations
+//     make api function calls stateful things (aka tasks)
+//
+//   cpi-call modes
+//     some calls may require to collect results over multiple
+//     adaptors (js.list_jobs()), others may use adaptors for 
+//     just filtering, calling one adaptor after the other 
+//     (task_container).  
+//
+//  For those features, it seems prodent to extent the concept of Functors, and
+//  to attach additional information and state to it, such as
+//
+//   - adaptors to use
+//   - adaptors not to use
+//   - cpi-call mode
+//   - async mode
+//   - exception stack
+//   - task state
+//   - timing info
+//   - inspection info (name, calling object id, args?)
+//
+//  In cpi_4, the interactions between functor and adaptor are coordinated
+//  byt the engine (engine selects adaptor to use by functor).  That
+//  functionality moves into the functor itself, making the engine even 
+//  simpler: the engine 
+//
+//    - loads adaptors
+//    - passes list of suitable adaptors to functor
+//    - passes itself to functor, so that functor can do call scheduling
+//      on its content, according to call mode, and 
+//
+//  To simplify and unify functors and cpi function pointers, we use bool 
+//  functions everywhere below the top level API.  The return value is stored 
+//  as reference in the functor itself (think task.get_result ()).
+//
+//
 //
 namespace saga
 {
@@ -63,6 +116,10 @@ namespace saga
 
   namespace impl
   {
+    class void_t { };
+    template <typename IMPL, typename CPI, typename RET>                 class functor_0;
+    template <typename IMPL, typename CPI, typename RET, typename ARG_1> class functor_1;
+
     //////////////////////////////////////////////////////////////////
     //
     // the filesystem implementation
@@ -74,12 +131,34 @@ namespace saga
         public:
           virtual ~file_cpi (void) { };
 
-          virtual void constructor (saga::util::shared_ptr <saga::impl::filesystem::file> impl, std::string url) 
-          { throw "constructor: NotImplemented"; } 
-          virtual int  get_size    (saga::util::shared_ptr <saga::impl::filesystem::file> impl)                  
-          { throw "get_size   : NotImplemented"; } 
-          virtual void copy        (saga::util::shared_ptr <saga::impl::filesystem::file> impl, std::string tgt) 
-          { throw "copy       : NotImplemented"; }
+          virtual saga::impl::void_t constructor (
+              saga::util::shared_ptr <functor <saga::impl::filesystem::file, 
+                                               saga::impl::filesystem::file_cpi, 
+                                               saga::impl::void_t> >   func, 
+              saga::util::shared_ptr <saga::impl::filesystem::file>    impl, 
+              std::string                                              url) 
+          { 
+            throw "constructor: NotImplemented"; 
+          } 
+
+          virtual int get_size (
+              saga::util::shared_ptr <functor <saga::impl::filesystem::file, 
+                                               saga::impl::filesystem::file_cpi, 
+                                               int> >                  func,
+              saga::util::shared_ptr <saga::impl::filesystem::file>    impl)
+          { 
+            throw "get_size : NotImplemented"; 
+          } 
+
+          virtual saga::impl::void_t copy (
+              saga::util::shared_ptr <functor <saga::impl::filesystem::file, 
+                                               saga::impl::filesystem::file_cpi, 
+                                               saga::impl::void_t> >   func, 
+              saga::util::shared_ptr <saga::impl::filesystem::file>    impl, 
+              std::string                                              tgt)
+          {
+            throw "copy : NotImplemented"; 
+          }
       };
 
       // saga api class
@@ -125,14 +204,14 @@ namespace saga
           // cpi, we want to be finished with the actual object construction,
           // and the shared_ptr setup.  Thus impl construction is rendered as
           // a two-step process
-          void constructor (std::string url);
+          saga::impl::void_t constructor (std::string url);
 
           // instead of get_size calling each cpi individually, the call invocation
           // is passed off to the engine
           int get_size (void);
 
           // same for copy
-          void copy (std::string tgt);
+          saga::impl::void_t copy (std::string tgt);
 
           // allow adaptor to obtain instance data (unlocked)
           saga::util::shared_ptr <file_instance_data> get_instance_data (void)
@@ -144,6 +223,39 @@ namespace saga
       }; // class file
 
     } // namespace filesystem
+
+
+
+    //////////////////////////////////////////////////////////////////
+    //
+    // father of all functors
+    //
+    template <typename IMPL, typename CPI, typename RET>
+    class functor : public saga::util::shareable
+    {
+      private:
+  ///       std::vector <saga::util::shared_ptr <CPI> > adaptors_used_;   // adaptors which have been used (audit trail)
+  ///       std::vector <saga::util::shared_ptr <CPI> > adaptors_;        // adaptors to use
+  ///       std::vector <saga::util::shared_ptr <CPI> > adaptors_skip_;   // adaptors not to use
+  ///       saga::util::shared_ptr <IMPL>               impl_;            // calling object (has session)
+  ///       saga::impl::cpi_call_mode                   cpi_call_mode_;   // also as class templates?
+  ///       saga::impl::async_call_mode                 async_call_mode_; // also as class templates?
+  ///   //  saga::exception                             exception_;       // exception stack collected from adaptors_used_/failed
+  ///   //  saga::task::state                           state_;           // current state
+  ///   //  saga::util::timestamp                       start_;           // start time stamp
+  ///   //  saga::util::timestamp                       stop_;            // stop time stamp
+  ///   //  saga::util::timestamp                       duration_;        // time needed for completion
+  ///       std::string                                 method_name_;     // name of method which created functor
+  ///       std::string                                 method_args_;     // for logging, args given to functor
+  ///   //  std::vector <saga::util::log::entry>        log_;             // some audit log
+  ///       RET                                         result_;          // return value
+  ///       saga::util::mutex                           mtx_;             // mult.  adaptors etc run concurrently
+
+      public:
+        // virtual ~functor (void) = 0;
+        virtual RET call_cpi (saga::util::shared_ptr <CPI>  cpi, 
+                              saga::util::shared_ptr <IMPL> impl) = 0;
+    };
 
   } // namespace impl
 
@@ -164,23 +276,38 @@ namespace saga
         public:
           adaptor_0    (void) { std::cout << "adaptor 0 : ctor" << std::endl; } 
 
-          void constructor (saga::util::shared_ptr <saga::impl::filesystem::file> impl, std::string url) 
+          saga::impl::void_t constructor (
+              saga::util::shared_ptr <saga::impl::functor <saga::impl::filesystem::file, 
+                                               saga::impl::filesystem::file_cpi, 
+                                               saga::impl::void_t> >   func, 
+              saga::util::shared_ptr <saga::impl::filesystem::file>    impl, 
+              std::string                                              url) 
           { 
             std::cout << "adaptor 0 : constructor (" << url << ")" << std::endl;
             url_ = url;
+            return saga::impl::void_t ();
           } 
 
-          int get_size (saga::util::shared_ptr <saga::impl::filesystem::file> impl)
+          int get_size (
+              saga::util::shared_ptr <saga::impl::functor <saga::impl::filesystem::file, 
+                                               saga::impl::filesystem::file_cpi, 
+                                               int> >                  func,
+              saga::util::shared_ptr <saga::impl::filesystem::file>    impl)
           {
             std::cout << "adaptor 0 : get_size" << std::endl;
             throw "oops";
           }
 
-          void copy (saga::util::shared_ptr <saga::impl::filesystem::file> impl, std::string tgt)
+          saga::impl::void_t copy (
+              saga::util::shared_ptr <saga::impl::functor <saga::impl::filesystem::file, 
+                                               saga::impl::filesystem::file_cpi, 
+                                               saga::impl::void_t> >   func, 
+              saga::util::shared_ptr <saga::impl::filesystem::file>    impl, 
+              std::string                                              tgt)
           {
             std::cout << "adaptor 0 : copy " << tgt << std::endl;
             throw "oops";
-            return;
+            return saga::impl::void_t ();
           }
       };
 
@@ -193,13 +320,23 @@ namespace saga
         public:
           adaptor_1    (void) { std::cout << "adaptor 1 : ctor" << std::endl; } 
 
-          void constructor (saga::util::shared_ptr <saga::impl::filesystem::file> impl, std::string url) 
+          saga::impl::void_t constructor (
+              saga::util::shared_ptr <saga::impl::functor <saga::impl::filesystem::file, 
+                                               saga::impl::filesystem::file_cpi, 
+                                               saga::impl::void_t> >   func, 
+              saga::util::shared_ptr <saga::impl::filesystem::file>    impl, 
+              std::string                                              url) 
           { 
             std::cout << "adaptor 1 : constructor (" << url << ")" << std::endl;
             url_ = url;
+            return saga::impl::void_t ();
           } 
 
-          int get_size (saga::util::shared_ptr <saga::impl::filesystem::file> impl)
+          int get_size (
+              saga::util::shared_ptr <saga::impl::functor <saga::impl::filesystem::file, 
+                                               saga::impl::filesystem::file_cpi, 
+                                                 int> >                func,
+              saga::util::shared_ptr <saga::impl::filesystem::file>    impl)
           {
             std::cout << "adaptor 1 : get_size" << std::endl;
             saga::util::shared_ptr <saga::impl::filesystem::file_instance_data> idata = impl->get_instance_data ();
@@ -210,8 +347,12 @@ namespace saga
             return buf.st_size;
           }
 
-          void copy (saga::util::shared_ptr <saga::impl::filesystem::file> impl,
-                     std::string                    tgt)
+          saga::impl::void_t copy (
+              saga::util::shared_ptr <saga::impl::functor <saga::impl::filesystem::file, 
+                                               saga::impl::filesystem::file_cpi, 
+                                               saga::impl::void_t> >   func, 
+              saga::util::shared_ptr <saga::impl::filesystem::file>    impl, 
+              std::string                                              tgt)
           {
             std::cout << "adaptor 1 : copy " << tgt << std::endl;
 
@@ -223,6 +364,8 @@ namespace saga
             {
               throw "system command error";
             }
+
+            return saga::impl::void_t ();
           }
       };
     } // namepsace test
@@ -231,41 +374,51 @@ namespace saga
 
   namespace impl
   {
+
+    enum cpi_call_mode {
+      Any        = 0, 
+      Bounde     = 1, 
+      Simple     = 2, 
+      Collective = 3, 
+      Filter     = 4,
+      All        = 5
+    };
+
+    enum async_call_mode {
+      Sync       = 0,
+      ASync      = 1,
+      Task       = 2
+    };
+
     /////////////////////////////////////////////////////////////////
     //
     // functor: stores a cpi function pointer and call arguments, and 
     // calls it on a given cpi
     //
     //////////////////////////////////////////////////////////////////
-    //
-    // father of all functors
-    //
-    template <typename IMPL, typename CPI, typename RET>
-    class functor 
-    {
-      public:
-        // virtual ~functor (void) = 0;
-        virtual RET call_cpi (saga::util::shared_ptr <CPI>  cpi, 
-                              saga::util::shared_ptr <IMPL> impl) = 0;
-    };
-
     // functor with 0 args
-    template <typename IMPL, typename CPI, typename RET> 
+    template <typename IMPL, 
+              typename CPI, 
+              typename RET>
     class functor_0 : public functor <IMPL, CPI, RET>
     {
       private:           
-        RET (CPI::*call_)(saga::util::shared_ptr <IMPL>); 
+        RET (CPI::*call_)(
+            saga::util::shared_ptr <functor <IMPL, CPI, RET> >,
+            saga::util::shared_ptr <IMPL>); 
 
       public: 
-        functor_0 (RET (CPI::*call )(saga::util::shared_ptr <IMPL>)) 
+        functor_0 (RET (CPI::*call )(
+                saga::util::shared_ptr <functor <IMPL, CPI, RET> >,
+                saga::util::shared_ptr <IMPL>)) 
         { 
-          call_ = call; 
-        } 
+          call_  = call; 
+        }
 
         RET call_cpi (saga::util::shared_ptr <CPI>  cpi, 
                       saga::util::shared_ptr <IMPL> impl) 
         { 
-          return ((*cpi).*(call_)) (impl); 
+          return ((*cpi).*(call_)) (saga::util::shareable::shared_this <functor <IMPL, CPI, RET> > (), impl); 
         }
     };
 
@@ -278,11 +431,19 @@ namespace saga
     class functor_1 : public functor <IMPL, CPI, RET>
     {
       private:           
-        RET (CPI::*call_)(saga::util::shared_ptr <IMPL>, ARG_1); 
+        RET (CPI::*call_)(
+            saga::util::shared_ptr <functor <IMPL, CPI, RET> >,
+            saga::util::shared_ptr <IMPL>, 
+            ARG_1); 
+
         ARG_1 arg_1_;
 
       public: 
-        functor_1 (RET (CPI::*call )(saga::util::shared_ptr <IMPL>, ARG_1), ARG_1 arg_1) 
+        functor_1 (RET (CPI::*call )(
+                saga::util::shared_ptr <functor <IMPL, CPI, RET> >,
+                saga::util::shared_ptr <IMPL>, 
+                ARG_1), 
+            ARG_1 arg_1) 
         { 
           call_  = call; 
           arg_1_ = arg_1; 
@@ -291,7 +452,7 @@ namespace saga
         RET call_cpi (saga::util::shared_ptr <CPI>  cpi, 
                       saga::util::shared_ptr <IMPL> impl) 
         { 
-          return ((*cpi).*(call_)) (impl, arg_1_); 
+          return ((*cpi).*(call_)) (saga::util::shareable::shared_this <functor <IMPL, CPI, RET> > (), impl, arg_1_); 
         }
     };
 
@@ -344,10 +505,10 @@ namespace saga
 
         //////////////////////////////////////////////////////////////////
         //
-        // non-void ret type
+        // 
         //
-        template <typename CPI, typename IMPL, typename RET>
-        RET call (saga::impl::functor <IMPL, CPI, RET> & func, 
+        template <typename IMPL, typename CPI, typename RET>
+        RET call (saga::util::shared_ptr <saga::impl::functor <IMPL, CPI, RET> > func, 
                   saga::util::shared_ptr <IMPL> impl)
         {
           // get the matching list of CPIs
@@ -360,7 +521,7 @@ namespace saga
             {
               std::cout << "adaptor " << i << std::endl;
 
-              return func.call_cpi (cpis_[i], impl);
+              return func->call_cpi (cpis_[i], impl);
             }
             catch ( ... )
             {
@@ -389,7 +550,7 @@ namespace saga
         file (std::string url)
           : impl_ (new saga::impl::filesystem::file)
         {
-          impl_->constructor (url);
+          (void) impl_->constructor (url);
         }
 
         int get_size (void)
@@ -399,7 +560,7 @@ namespace saga
 
         void copy (std::string tgt)
         {
-          impl_->copy (tgt);
+          (void) impl_->copy (tgt);
         }
     };
   } // namespace filesystem

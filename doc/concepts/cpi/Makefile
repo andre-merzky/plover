@@ -10,7 +10,7 @@ SAGA_BIN     += cpi_5
 include $(SAGA_ROOT)/make/saga.mk
 
 SAGA_LDFLAGS  += -L../../../saga/util/ -lsaga_util
-SAGA_CXXFLAGS += -std=c++0x 
+SAGA_CXXFLAGS += -std=c++0x -DDEBUG
 
 check:: all
 	@echo ""

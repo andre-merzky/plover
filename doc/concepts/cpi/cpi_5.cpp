@@ -1,5 +1,5 @@
 
-#include "cpi_async_5.hpp"
+#include "cpi_5.hpp"
 
 
 namespace saga
@@ -19,45 +19,51 @@ namespace saga
       }
 
       //////////////////////////////////////////////////////////////////
-      void file::constructor (std::string url)
+      saga::impl::void_t file::constructor (std::string url)
       {
         saga::util::scoped_lock sl (idata_->get_mutex ());
         idata_->url   = url;
         idata_->pos   = 0;
         idata_->valid = true;
 
-        saga::impl::functor_1 <saga::impl::filesystem::file, 
-                               saga::impl::filesystem::file_cpi, void, std::string>  
-                        func (&saga::impl::filesystem::file_cpi::constructor, url);
+        typedef saga::impl::filesystem::file              api_t;
+        typedef saga::impl::filesystem::file_cpi          cpi_t;
+        typedef saga::impl::functor_1 <api_t, cpi_t, 
+                      saga::impl::void_t, std::string>    func_t;
 
-        engine_->call <saga::impl::filesystem::file_cpi, 
-                       saga::impl::filesystem::file, void> (func, x_get_shared_ptr <saga::impl::filesystem::file> ());
+        saga::util::shared_ptr <func_t> 
+              func (new func_t (&cpi_t::constructor, url));
+
+        return engine_->call <api_t, cpi_t, saga::impl::void_t> (func, shared_this <api_t> ());
       }
 
       //////////////////////////////////////////////////////////////////
       int file::get_size (void)
       {
+        typedef saga::impl::filesystem::file              api_t;
+        typedef saga::impl::filesystem::file_cpi          cpi_t;
+        typedef saga::impl::functor_0 <api_t, cpi_t, int> func_t;
+
         // create a functor which hold the cpi class' get_size() function
         // pointer.  The second templ parameter is the functions return type
-        saga::impl::functor_0 <saga::impl::filesystem::file, 
-                               saga::impl::filesystem::file_cpi, int> 
-                        func (&saga::impl::filesystem::file_cpi::get_size);
+        saga::util::shared_ptr <func_t> func (new func_t (&cpi_t::get_size));
 
         // the functor is given to the engine, so it can be used to call that
         // function on some cpi
-        return engine_->call  <saga::impl::filesystem::file_cpi,
-                               saga::impl::filesystem::file, int> (func, x_get_shared_ptr <saga::impl::filesystem::file> ());
+        return engine_->call  <api_t, cpi_t, int> (func, shared_this <api_t> ());
       }
 
       //////////////////////////////////////////////////////////////////
-      void file::copy (std::string tgt)
+      saga::impl::void_t file::copy (std::string tgt)
       {
-        saga::impl::functor_1 <saga::impl::filesystem::file, 
-                               saga::impl::filesystem::file_cpi, void, std::string> 
-                        func (&saga::impl::filesystem::file_cpi::copy, tgt);
+        typedef saga::impl::filesystem::file              api_t;
+        typedef saga::impl::filesystem::file_cpi          cpi_t;
+        typedef saga::impl::functor_1 <api_t, cpi_t, 
+                      saga::impl::void_t, std::string>    func_t;
 
-        return engine_->call <saga::impl::filesystem::file_cpi, 
-                              saga::impl::filesystem::file, void> (func, x_get_shared_ptr <saga::impl::filesystem::file> ());
+        saga::util::shared_ptr <func_t> func (new func_t (&cpi_t::copy, tgt));
+
+        return engine_->call <api_t, cpi_t, saga::impl::void_t> (func, shared_this <api_t> ());
       }
     } // namespace filesystem
 
