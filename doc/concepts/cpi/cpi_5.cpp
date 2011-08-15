@@ -19,7 +19,7 @@ namespace saga
       }
 
       //////////////////////////////////////////////////////////////////
-      saga::impl::void_t file::constructor (std::string url)
+      void_t file::constructor (std::string url)
       {
         saga::util::scoped_lock sl (idata_->get_mutex ());
         idata_->url   = url;
@@ -29,12 +29,12 @@ namespace saga
         typedef saga::impl::filesystem::file              api_t;
         typedef saga::impl::filesystem::file_cpi          cpi_t;
         typedef saga::impl::functor_1 <api_t, cpi_t, 
-                      saga::impl::void_t, std::string>    func_t;
+                      void_t, std::string>    func_t;
 
         saga::util::shared_ptr <func_t> 
               func (new func_t (&cpi_t::constructor, url));
 
-        return engine_->call <api_t, cpi_t, saga::impl::void_t> (func, shared_this <api_t> ());
+        return engine_->call <api_t, cpi_t, void_t> (func, shared_this <api_t> ());
       }
 
       //////////////////////////////////////////////////////////////////
@@ -54,16 +54,15 @@ namespace saga
       }
 
       //////////////////////////////////////////////////////////////////
-      saga::impl::void_t file::copy (std::string tgt)
+      void_t file::copy (std::string tgt)
       {
         typedef saga::impl::filesystem::file              api_t;
         typedef saga::impl::filesystem::file_cpi          cpi_t;
-        typedef saga::impl::functor_1 <api_t, cpi_t, 
-                      saga::impl::void_t, std::string>    func_t;
+        typedef saga::impl::functor_1 <api_t, cpi_t, void_t, std::string>    func_t;
 
         saga::util::shared_ptr <func_t> func (new func_t (&cpi_t::copy, tgt));
 
-        return engine_->call <api_t, cpi_t, saga::impl::void_t> (func, shared_this <api_t> ());
+        return engine_->call <api_t, cpi_t, void_t> (func, shared_this <api_t> ());
       }
     } // namespace filesystem
 

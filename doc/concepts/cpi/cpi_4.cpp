@@ -31,7 +31,7 @@ namespace saga
                         func (&saga::impl::filesystem::file_cpi::constructor, url);
 
         engine_->call <saga::impl::filesystem::file_cpi, 
-                       saga::impl::filesystem::file, void> (func, x_get_shared_ptr <saga::impl::filesystem::file> ());
+                       saga::impl::filesystem::file, void> (func, shared_this <saga::impl::filesystem::file> ());
       }
 
       //////////////////////////////////////////////////////////////////
@@ -46,7 +46,7 @@ namespace saga
         // the functor is given to the engine, so it can be used to call that
         // function on some cpi
         return engine_->call  <saga::impl::filesystem::file_cpi,
-                               saga::impl::filesystem::file, int> (func, x_get_shared_ptr <saga::impl::filesystem::file> ());
+                               saga::impl::filesystem::file, int> (func, shared_this <saga::impl::filesystem::file> ());
       }
 
       //////////////////////////////////////////////////////////////////
@@ -57,7 +57,7 @@ namespace saga
                         func (&saga::impl::filesystem::file_cpi::copy, tgt);
 
         return engine_->call <saga::impl::filesystem::file_cpi, 
-                              saga::impl::filesystem::file, void> (func, x_get_shared_ptr <saga::impl::filesystem::file> ());
+                              saga::impl::filesystem::file, void> (func, shared_this <saga::impl::filesystem::file> ());
       }
     } // namespace filesystem
 
