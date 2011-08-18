@@ -56,10 +56,11 @@ MAKE                      += --no-print-directory
 #
 # FIXME: ar detextion
 # 
+SAGA_CXXFILT               = gccfilter -c -r -w
 SAGA_CPP                   = @SAGA_CPP@
 SAGA_CC                    = @SAGA_CC@
 SAGA_AR                    = ar rcs
-SAGA_CXX                   = @SAGA_CXX@
+SAGA_CXX                   = $(SAGA_CXXFILT) @SAGA_CXX@
 SAGA_LD                    = @SAGA_CXX@
 SAGA_LD_BIN                = @SAGA_CXX@
 SAGA_LD_LIB                = @SAGA_CXX@

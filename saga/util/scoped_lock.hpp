@@ -8,6 +8,10 @@ namespace saga
 {
   namespace util
   {
+
+    template <typename T> class shared_ptr;
+    class shareable;
+
     // This class provides a simple scoped lock, based on the
     // saga::util::mutex class.
     class scoped_lock 
@@ -19,29 +23,11 @@ namespace saga
         // FIXME: forbid copy and assignment etc.
 
       public:
-        scoped_lock (saga::util::mutex * mtx)
-          : mtx_ (mtx)
-          , own_ (false)
-        {
-          mtx_->lock ();
-        }
-
-        scoped_lock (void) // FIXME: is this version ever useful?
-          : mtx_ (new saga::util::mutex ())
-          , own_ (true)
-        {
-          mtx_->lock ();
-        }
-
-        ~scoped_lock () 
-        {
-          mtx_->unlock ();
-
-          if ( own_ )
-          {
-            delete (mtx_);
-          }
-        }
+        scoped_lock (saga::util::mutex * mtx);
+        scoped_lock (saga::util::shared_ptr <saga::util::shareable> l);
+        scoped_lock (saga::util::mutex & mtx); // FIXME: rethink if this one makes sense...
+        scoped_lock (void);                    // FIXME: is this version ever useful?
+        ~scoped_lock (void); 
     };
 
   } // namespace util

@@ -62,6 +62,11 @@ namespace saga
 
           return false;
         }
+
+        mutex * get_mutex ()
+        {
+          return this;
+        }
     };
 
   } // namespace util
@@ -69,4 +74,3 @@ namespace saga
 } // namespace saga
 
 #endif // SAGA_UTIL_MUTEX_HPP
-

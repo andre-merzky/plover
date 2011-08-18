@@ -5,7 +5,7 @@
 #include <vector>
 #include <iostream>
 
-#include <saga/util/shared_ptr.hpp>
+#include <saga/util/shareable.hpp>
 
 // In the cpi_2 example, each class had to repeatedly implement it's own cpi
 // invocation, which leads to lots or repeated code, and to relatively complex

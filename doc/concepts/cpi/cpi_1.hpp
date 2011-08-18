@@ -5,7 +5,7 @@
 #include <vector>
 #include <iostream>
 
-#include <saga/util/shared_ptr.hpp>
+#include <saga/util/shareable.hpp>
 
 // the cpi classes represent the adaptor base classes.  CPI stands for
 // 'capability provider interface', and it basically reflects the api

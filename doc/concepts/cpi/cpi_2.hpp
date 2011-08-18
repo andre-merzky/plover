@@ -5,7 +5,7 @@
 #include <vector>
 #include <iostream>
 
-#include <saga/util/shared_ptr.hpp>
+#include <saga/util/shareable.hpp>
 
 // In the cpi_1 example, each class instance maintains its own set of shared
 // pointers to the cpi classes, and in fact populates those shared pointers

@@ -22,7 +22,7 @@ namespace saga
       //////////////////////////////////////////////////////////////////
       void_t file::constructor (std::string url)
       {
-        saga::util::scoped_lock sl (idata_->get_mutex ());
+        saga::util::scoped_lock sl (idata_);
         idata_->url   = url;
         idata_->pos   = 0;
         idata_->valid = true;
@@ -82,7 +82,7 @@ namespace saga
       //////////////////////////////////////////////////////////////////
       void_t dir::constructor (std::string url)
       {
-        saga::util::scoped_lock sl (idata_->get_mutex ());
+        saga::util::scoped_lock sl (idata_);
         idata_->url   = url;
         idata_->pos   = 0;
         idata_->valid = true;
@@ -126,12 +126,15 @@ int main ()
 {
   try
   {
+    for ( unsigned int i = 0; i < 1; i++ )
+    {
     saga::filesystem::file f ("/etc/passwd");
     std::cout << "file size: " << f.get_size () << std::endl;
     f.copy ("/tmp/passwd.bak");
 
     saga::filesystem::dir d ("/etc/");
     std::cout << "dir url: " << d.get_url () << std::endl;
+    }
   }
   catch ( const std::exception & e )
   {

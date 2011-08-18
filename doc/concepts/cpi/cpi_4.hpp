@@ -11,7 +11,7 @@
 
 
 #include <saga/util/mutex.hpp>
-#include <saga/util/shared_ptr.hpp>
+#include <saga/util/shareable.hpp>
 
 // In the cpi_3 example, the engine took over the adaptor loading and
 // management.  The saga::impl classes should, however, have some amount of

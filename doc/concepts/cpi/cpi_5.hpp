@@ -11,7 +11,8 @@
 
 
 #include <saga/util/mutex.hpp>
-#include <saga/util/shared_ptr.hpp>
+#include <saga/util/scoped_lock.hpp>
+#include <saga/util/shareable.hpp>
 
 // In the cpi_4 example, we introduces a functor class, which allows the
 // engine to more indirectly mediate between API and adaptor, and also 
@@ -57,20 +58,14 @@
 //
 //  We find, however, that functors become rather complex that way, so we 
 //  split it in the functor proper (holding the cpi function pointer to call)
-//  and a calling context (cc) which holds the remaining info, and is passed
-//  from impl via the engine to the adaptors and back.  To a large extent, a
-//  CC internally represents a saga::task.
+//  and a calling context (cc) which holds the functor and the remaining 
+//  info, and is passed from impl via the engine to the adaptors and back.  
+//  To a large extent, a CC internally represents a saga::task.
 //
-//  In cpi_4, the interactions between functor and adaptor are coordinated
-//  by the engine (engine selects adaptor to use by functor).  That
-//  functionality moves into the functor itself, making the engine even 
-//  simpler: the engine 
-//
-//    - loads adaptors
-//    - passes list of suitable adaptors to functor
-//    - passes itself to functor, so that functor can do call scheduling
-//      on its content, according to call mode, and call other adaptors
-//      via the engine again.
+//  To reduce the templetism of the code, only the functor itself is
+//  templetized, and is stored as a shared pointer to an untempletized base
+//  class.  The user of the functor have to cast it back, but can use inspection
+//  before doing so.  That way, we keep the use of templates confined.
 //
 namespace saga
 {
@@ -97,7 +92,6 @@ namespace saga
       class dir_instance_data;
     }
 
-    template <typename IMPL, typename CPI, typename RET> class functor;
   }
   namespace adaptor
   {
@@ -112,9 +106,14 @@ namespace saga
   }
   namespace impl
   {
+    class engine;
+    class functor_base;
+    class call_context;
+
+    template <typename IMPL, typename CPI, typename RET> class functor;
     template <typename IMPL, typename CPI, typename RET>                 class functor_0;
     template <typename IMPL, typename CPI, typename RET, typename ARG_1> class functor_1;
-    class engine;
+    
   }
   namespace filesystem
   {
@@ -228,7 +227,6 @@ namespace saga
       class file_instance_data : public saga::util::shareable
       {
         private:
-          saga::util::mutex mtx_;
           std::map <std::string, void*> adata_;
           // saga::session s_;
 
@@ -236,11 +234,6 @@ namespace saga
           std::string url;
           size_t      pos;
           bool        valid;
-
-          saga::util::mutex & get_mutex (void)
-          {
-            return mtx_;
-          }
       };
 
 
@@ -323,11 +316,6 @@ namespace saga
           std::string url;
           size_t      pos;
           bool        valid;
-
-          saga::util::mutex & get_mutex (void)
-          {
-            return mtx_;
-          }
       };
 
 

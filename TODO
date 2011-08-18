@@ -103,3 +103,32 @@
     No other shared_ptr can then ever claim that class, and the class
     gets a shared_from_this().
 
+  - a task adaptor should be able to manage a thread pool, and call 
+    into the sync adaptors (again via the engine?)
+
+  - a task container adaptor should be able to group asks in a 
+    container, and again to call back to bulk adaptors (via the engine?).
+    task_container adaptors need to be called one after the other.  
+    task::instance_data need to keep track of what adaptor runs what 
+    task, etc
+
+  - three call modes for adaptors:
+    - simple:      call one and only one adaptor (bound functor)
+    - trial/error: call one, on error call next, on success return (file.copy)
+    - collect:     call all, collect results (service discovery)
+    - all:         call one after the other, operating on the same functor
+                   (think task_container)
+    - make these modes exchangable, and allow each call to specify what is
+      needed
+    - collect: split collect-mode functor into [n] async bound functors, 
+      and call templetized collector class to combine results
+
+      result_combiner <service_description> (vector <vector <service_description> > sds)
+
+  - everything should be async:
+    - impl provides only async funcs - the api can make sync versions out of
+      those.
+    - if the adaptor provides async funcs, fine.  If it provides sync ones, the
+      impl or functor or ... wraps them into threads (some task adaptor does
+      that, right?).
+  
