@@ -23,6 +23,7 @@ namespace saga
       void_t file::constructor (std::string url)
       {
         saga::util::scoped_lock sl (idata_);
+
         idata_->url   = url;
         idata_->pos   = 0;
         idata_->valid = true;
@@ -32,10 +33,11 @@ namespace saga
         typedef saga::impl::functor_1 <api_t, cpi_t, 
                       void_t, std::string>    func_t;
 
-        saga::util::shared_ptr <func_t> 
-              func (new func_t (&cpi_t::constructor, url));
+        saga::util::shared_ptr <func_t> func (new func_t (&cpi_t::constructor, url));
 
-        return engine_->call <api_t, cpi_t, void_t> (func, shared_this <api_t> ());
+        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
+
+        return engine_->call <api_t, cpi_t, void_t> (cc);
       }
 
       //////////////////////////////////////////////////////////////////
@@ -49,9 +51,12 @@ namespace saga
         // pointer.  The second templ parameter is the functions return type
         saga::util::shared_ptr <func_t> func (new func_t (&cpi_t::get_size));
 
-        // the functor is given to the engine, so it can be used to call that
+        // create a call context wich holds functor and implementation
+        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
+
+        // the cc is given to the engine, so it can use the functor to call that
         // function on some cpi
-        return engine_->call  <api_t, cpi_t, int> (func, shared_this <api_t> ());
+        return engine_->call <api_t, cpi_t, int> (cc);
       }
 
       //////////////////////////////////////////////////////////////////
@@ -63,7 +68,9 @@ namespace saga
 
         saga::util::shared_ptr <func_t> func (new func_t (&cpi_t::copy, tgt));
 
-        return engine_->call <api_t, cpi_t, void_t> (func, shared_this <api_t> ());
+        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
+
+        return engine_->call <api_t, cpi_t, void_t> (cc);
       }
 
 
@@ -92,10 +99,11 @@ namespace saga
         typedef saga::impl::functor_1 <api_t, cpi_t, 
                                        void_t, std::string> func_t;
 
-        saga::util::shared_ptr <func_t> 
-              func (new func_t (&cpi_t::constructor, url));
+        saga::util::shared_ptr <func_t> func (new func_t (&cpi_t::constructor, url));
 
-        return engine_->call <api_t, cpi_t, void_t> (func, shared_this <api_t> ());
+        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
+
+        return engine_->call <api_t, cpi_t, void_t> (cc);
       }
 
       //////////////////////////////////////////////////////////////////
@@ -105,13 +113,11 @@ namespace saga
         typedef saga::impl::filesystem::dir_cpi                   cpi_t;
         typedef saga::impl::functor_0 <api_t, cpi_t, std::string> func_t;
 
-        // create a functor which hold the cpi class' get_size() function
-        // pointer.  The second templ parameter is the functions return type
         saga::util::shared_ptr <func_t> func (new func_t (&cpi_t::get_url));
 
-        // the functor is given to the engine, so it can be used to call that
-        // function on some cpi
-        return engine_->call  <api_t, cpi_t, std::string> (func, shared_this <api_t> ());
+        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
+
+        return engine_->call <api_t, cpi_t, std::string> (cc);
       }
 
     } // namespace filesystem
