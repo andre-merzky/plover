@@ -2,6 +2,8 @@
 #ifndef SAGA_UTIL_SHAREABLE_HPP
 #define SAGA_UTIL_SHAREABLE_HPP
 
+#include <stdlib.h> // FIXME, only for abort
+
 #include <saga/util/mutex.hpp>
 #include <saga/util/shared_ptr.hpp>
 
@@ -78,6 +80,7 @@ namespace saga
             // So we do not allow this, but only allows shared_this if
             // *this* was shared before (is valid_).
 
+            abort ();
             throw ("cannot get shared_ptr for unshared object");
 
             // // if not, create new shared ptr, which creates a new mutex and counter

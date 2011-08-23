@@ -131,4 +131,15 @@
     - if the adaptor provides async funcs, fine.  If it provides sync ones, the
       impl or functor or ... wraps them into threads (some task adaptor does
       that, right?).
+
+  - for all nontempletized classes: only setters/getters/inspectors are inlined
+    into header files - everything else (spanning more than one simple assign
+    snd return statement) goes into the cpp files.
+
+
+  - below API level, we express call modes as flags, in order to avoid
+    templatization throughout the impl and cpi layers.  An exception might
+    be the get_result templatization of saga::impl::task
+
+
   

@@ -10,7 +10,7 @@ SAGA_LIB_OBJ    += demangle.o
 SAGA_LIB_OBJ    += scoped_lock.o  
 SAGA_LIB_OBJ    += shareable.o
 
-
 include $(SAGA_ROOT)/make/saga.application.mk
 
+SAGA_LDFLAGS    += -lpthread
 

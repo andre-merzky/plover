@@ -18,15 +18,12 @@ namespace saga
     {
       private:
         saga::util::mutex * mtx_;
-        bool                own_; // do we own the mutex?
 
         // FIXME: forbid copy and assignment etc.
+       
 
       public:
-        scoped_lock (saga::util::mutex * mtx);
-        scoped_lock (saga::util::shared_ptr <saga::util::shareable> l);
-        scoped_lock (saga::util::mutex & mtx); // FIXME: rethink if this one makes sense...
-        scoped_lock (void);                    // FIXME: is this version ever useful?
+        scoped_lock  (saga::util::mutex * mtx_);
         ~scoped_lock (void); 
     };
 

@@ -21,7 +21,9 @@ namespace saga
       //////////////////////////////////////////////////////////////////
       void file::constructor (std::string url)
       {
-        saga::util::scoped_lock sl (idata_->get_mutex ());
+        // doesn't work anymore with current scoped lock impl
+        // saga::util::scoped_lock sl (idata_->get_mutex ()); 
+
         idata_->url   = url;
         idata_->pos   = 0;
         idata_->valid = true;

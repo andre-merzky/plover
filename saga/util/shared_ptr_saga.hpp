@@ -56,10 +56,9 @@ namespace saga
       template <class U> friend class shared_ptr;
 
       private:
-        T                 * ptr_; // holds the pointer
-        long              * cnt_; // ref counter
-        saga::util::mutex * mtx_; // lock
-
+        T                 * ptr_;     // holds the pointer
+        long              * cnt_;     // ref counter
+        saga::util::mutex * mtx_;     // lock
 
         // Increment the reference count.  
         void inc_ (void)
@@ -85,18 +84,17 @@ namespace saga
             if ( 0 == get_count () )
             {
 
-              if ( is_a <saga::util::shareable> () )
-              {
-                get <saga::util::shareable> ()->unshare ();
-              }
-
               if ( NULL != ptr_ )
               {
-                // std::cout << " === delete  : " << get_ptype_demangled() << " - " << ptr_ << " - " << (*cnt_) << std::endl;
+                unshare (ptr_);
+
+                // std::cout << " === delete  : " << get_ptype_demangled() << " - " << ptr_ << " - " << (*cnt_) << std::endl << std::flush;
                 delete (ptr_);
                 ptr_ = NULL;
+                // std::cout << " === deleted : " << get_ptype_demangled() << " - " << ptr_ << " - " << (*cnt_) << std::endl << std::flush;
               }
 
+              // FIXME: who else could delete this counter?
               delete (cnt_);
               cnt_ = NULL;
 
@@ -107,8 +105,9 @@ namespace saga
           if ( delete_mtx )
           {
             // scoped lock got unlocked, we can safely remove the mutex
-            // FIXME: check for race conditions with other instances waiting on
-            // this mutex
+            // FIXME: check for race conditions with other instances waiting
+            // or owning this mutex
+
             delete (mtx_);
             mtx_ = NULL;
           }
@@ -119,7 +118,11 @@ namespace saga
         // be deleted by the shared_ptr d'tor at any time.
         T * get ()  const 
         {
-          // FIXME: catch NULL ptr_?
+          if ( NULL == ptr_ )
+          {
+            throw "trying to access NULL ptr";
+          }
+
           return ptr_;
         }
 
@@ -128,7 +131,11 @@ namespace saga
         template <class U> 
         U * get (void)
         {
-          // FIXME: catch NULL ptr_?
+          if ( NULL == ptr_ )
+          {
+            throw "trying to get/cast NULL ptr";
+          }
+          
           U * ret;
           
           try
@@ -151,6 +158,43 @@ namespace saga
           return ret;
         }
 
+        // FIXME: 
+        //  the below functions are supposed to allow using our shared_ptr class
+        //  with types which are not anchored in shareables.  The current
+        //  formulation does not yet work, as the overloaded function is only
+        //  triggered for //  shareable pointers, not for pointers of derived 
+        //  classes.
+
+        // template <class U> void share (U * p) { }
+        // void share (saga::util::shareable * p)
+        void share (T * p)
+        {
+          if ( NULL != p )
+          {
+            if ( ! get <saga::util::shareable> ()->is_shared () )
+            {
+              // std::cout << " === share   : " << get_ptype_demangled() << " - " << ptr_ << " - " << (*cnt_) << std::endl;
+              get <saga::util::shareable> ()->share (mtx_, cnt_);
+            }
+          }
+        }
+
+        // template <class U> void unshare (U * p) { }
+        // void unshare (saga::util::shareable * p)
+        void unshare (T * p)
+        {
+          if ( NULL != p )
+          {
+            if ( get <saga::util::shareable> ()->is_shared () )
+            {
+              // std::cout << " === unshare : " << get_ptype_demangled() << " - " << ptr_ << " - " << (*cnt_) << std::endl;
+              get <saga::util::shareable> ()->unshare ();
+            }
+          }
+        }
+
+
+
 
       public:
         // default ctor
@@ -162,40 +206,26 @@ namespace saga
         //   needed_later = old_shared_ptr;
         //
         explicit shared_ptr (T * p = NULL)
-          : ptr_ (p)
-          , cnt_ (new long)
+          : ptr_     (p)
+          , cnt_     (new long)
+          , mtx_     (new saga::util::mutex)
         {
-          if ( NULL != ptr_ ) ptr_->is_shareable ();
-
-          mtx_ = new saga::util::mutex;
-
           // init counter
           (*cnt_) = 0;
 
           // increment the counter
           inc_ ();
 
-          if ( is_a <saga::util::shareable> () && ! ptr_->is_shared () )
-          {
-            // std::cout << " === share 1 : " << ptr_ << " - " << cnt_ << " - " << mtx_ << std::endl;
-            get <saga::util::shareable> ()->share (mtx_, cnt_);
-          }
+          share (ptr_);
         }
-
 
         // copy ctor, increments ref count
         shared_ptr (const shared_ptr <T> & that)
-          : ptr_           (that.ptr_)
-          , cnt_           (that.cnt_)
-          , mtx_           (that.mtx_)
+          : ptr_     (that.ptr_)
+          , cnt_     (that.cnt_)
+          , mtx_     (that.mtx_)
         {
-          if ( NULL != ptr_ ) ptr_->is_shareable ();
-
-          if ( is_a <saga::util::shareable> () && ! ptr_->is_shared () )
-          {
-            // std::cout << " === share 2" << ptr_ << " - " << std::endl;
-            get <saga::util::shareable> ()->share (mtx_, cnt_);
-          }
+          share (ptr_);
 
           inc_ ();
         }
@@ -203,17 +233,11 @@ namespace saga
 
         // explicit ctor, uses existing ptr, cnt and mtx, increments ref count
         shared_ptr (saga::util::mutex * mtx, long * cnt, T * ptr)
-          : ptr_           (ptr)
-          , cnt_           (cnt)
-          , mtx_           (mtx)
+          : ptr_     (ptr)
+          , cnt_     (cnt)
+          , mtx_     (mtx)
         {
-          if ( NULL != ptr_ ) ptr_->is_shareable ();
-
-          if ( is_a <saga::util::shareable> () && ! ptr_->is_shared () )
-          {
-            // std::cout << " === share 3" << ptr_ << " - " << std::endl;
-            get <saga::util::shareable> ()->share (mtx_, cnt_);
-          }
+          share (ptr_);
 
           inc_ ();
         }
@@ -223,17 +247,11 @@ namespace saga
         // FIXME: dynamic_cast can throw!
         template <class U> 
         shared_ptr (const shared_ptr <U> & that)
-          : ptr_           (dynamic_cast <T*> (that.ptr_))
-          , cnt_           (that.cnt_)
-          , mtx_           (that.mtx_)
+          : ptr_     (dynamic_cast <T*> (that.ptr_))
+          , cnt_     (that.cnt_)
+          , mtx_     (that.mtx_)
         {
-          if ( NULL != ptr_ ) ptr_->is_shareable ();
-
-          if ( is_a <saga::util::shareable> () && ! ptr_->is_shared () )
-          {
-            // std::cout << " === share 4" << ptr_ << " - " << std::endl;
-            get <saga::util::shareable> ()->share (mtx_, cnt_);
-          }
+          share (ptr_);
 
           inc_ ();
         }
@@ -258,17 +276,11 @@ namespace saga
             dec_ ();
 
             // init 'this' just as in the copy c'tor
-            this->ptr_  = that.ptr_;
-            this->cnt_  = that.cnt_;
-            this->mtx_  = that.mtx_;
+            this->ptr_     = that.ptr_;
+            this->cnt_     = that.cnt_;
+            this->mtx_     = that.mtx_;
 
-            if ( NULL != ptr_ ) ptr_->is_shareable ();
-
-            if ( is_a <saga::util::shareable> () && ! ptr_->is_shared () )
-            {
-              // std::cout << " === share 5" << ptr_ << " - " << std::endl;
-              get <saga::util::shareable> ()->share (mtx_, cnt_);
-            }
+            share (ptr_);
 
             // increment ref count for new pointer
             inc_ ();
@@ -281,21 +293,28 @@ namespace saga
         // accessors
         T & operator * ()  const 
         {
-          // FIXME: catch NULL ptr_?
+          if ( NULL == ptr_ )
+          {
+            throw "trying to reference NULL ptr";
+          }
+
           return *ptr_;
         }
 
 
         T * operator->() const
         {
-          // FIXME: catch NULL ptr_!
+          if ( NULL == ptr_ )
+          {
+            throw "trying to dereference NULL ptr";
+          }
+          
           return ptr_;
         }
 
 
         shared_ptr <T> get_shared_ptr (void)
         {
-          // FIXME: catch NULL ptr_
           // use copy c'tor to get new shared ptr
           return (shared_ptr <T> (*this));
         }
@@ -362,13 +381,28 @@ namespace saga
         // get the typename of the stored pointer
         std::string get_ptype (void)
         {
+          if ( NULL == ptr_ )
+          {
+            return "NULL";
+          }
+
           return ptr_->get_ptype ();
         }
 
         // get the typename of the stored pointer, demangled
         std::string get_ptype_demangled (void)
         {
+          if ( NULL == ptr_ )
+          {
+            return "NULL";
+          }
+
           return ptr_->get_ptype_demangled ();
+        }
+
+        void dump (std::string msg)
+        {
+          // std::cout << " === dump    : " << get_ptype_demangled() << " - " << ptr_ << " - " << (*cnt_) << " : " << msg << std::endl;
         }
     };
 
