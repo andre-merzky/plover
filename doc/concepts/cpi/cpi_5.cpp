@@ -148,22 +148,22 @@ namespace saga
       }
 
       //////////////////////////////////////////////////////////////////
-      saga::util::shared_ptr <saga::impl::task> file::get_size_async (saga::impl::call_mode::CallMode m)
+      saga::util::shared_ptr <saga::impl::task> file::get_size (saga::impl::call_mode m)
       {
         typedef saga::impl::filesystem::file                                                                            api_t;
         typedef saga::impl::filesystem::file_cpi                                                                        cpi_t;
-        typedef saga::impl::functor_1 <api_t, cpi_t, saga::util::shared_ptr <saga::impl::task>, saga::impl::call_mode::CallMode > func_t;
+        typedef saga::impl::functor_1 <api_t, cpi_t, saga::util::shared_ptr <saga::impl::task>, saga::impl::call_mode> func_t;
 
         // create a functor which hold the cpi class' get_size() function
         // pointer.  The second templ parameter is the functions return type
-        saga::util::shared_ptr <func_t> func (new func_t (&cpi_t::get_size_async, m));
+        saga::util::shared_ptr <func_t> func (new func_t (&cpi_t::get_size, m));
 
-        func.dump ("file::get_size_async functor");
+        func.dump ("file::get_size <async> functor");
 
         // create a call context wich holds functor and implementation
         saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
 
-        cc->set_func_name ("file::get_size_async");
+        cc->set_func_name ("file::get_size <async>");
 
         // the cc is given to the engine, so it can use the functor to call that
         // function on some cpi
@@ -171,7 +171,7 @@ namespace saga
 
         if ( cc->get_state () == Failed )
         {
-          throw " file constructor failed";
+          throw " get_size <async> failed";
         }
 
         return ret;
@@ -324,7 +324,9 @@ int main ()
       
       saga::filesystem::file f ("/etc/passwd");
       
-      saga::task t = f.get_size <saga::impl::call_mode::Async> ();
+      std::cout << "file size: " << f.get_size () << std::endl;
+
+      saga::task t = f.get_size <saga::impl::Async> ();
       
       std::cout << "state: " << t.get_state () << std::endl;
       std::cout << "state: " << saga::util::saga_enums.to_key <saga::impl::call_state> (t.get_state ()) << std::endl;

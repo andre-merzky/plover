@@ -141,5 +141,17 @@
     templatization throughout the impl and cpi layers.  An exception might
     be the get_result templatization of saga::impl::task
 
+  - ? allow for generic adaptors with the CPI
+
+      void catchall (call_context cc);
+
+    which get chain_called for each function call, for logging, timing, call
+    transformation, ...  That adaptor should be able to say 'apply first' or
+    'apply last' etc.
+
+    That would make a threading async adaptor trivial - it just spawns a thread,
+    and switches the cc's call_mode to sync before handin it off to the
+    thread...
+
 
   

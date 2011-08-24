@@ -179,12 +179,11 @@ namespace saga
     REGISTER_ENUM (cpi_mode, All       , 5);
 
 
-    namespace call_mode  // FIXME: eventually becomes saga::task::mode
+    enum call_mode  // FIXME: eventually becomes saga::task::mode
     { 
-      struct CallMode  { };
-      struct Sync  : public CallMode { };
-      struct Async : public CallMode { };
-      struct Task  : public CallMode { };
+      Sync  = 0,
+      Async = 1,
+      Task  = 2
     };
 
     // REGISTER_ENUM (call_mode, Sync , 0);
@@ -252,7 +251,7 @@ namespace saga
         std::vector <std::string>             adaptors_skip_;   // adaptors not to use
         saga::util::shared_ptr <shareable>    impl_;            // calling object (has session)
         saga::impl::cpi_mode                  cpi_mode_;        // collect, simple, ...
-        saga::impl::call_mode::CallMode       mode_;            // sync, async, task
+        saga::impl::call_mode                 mode_;            // sync, async, task
         saga::impl::call_state                state_;           // new, running, done, failed ...
     //  saga::exception                       exception_;       // exception stack collected from adaptors_used_/failed
     //  saga::util::timestamp                 created_;         // created time stamp
@@ -404,10 +403,17 @@ namespace saga
             throw "get_size : NotImplemented"; 
           } 
 
-          virtual saga::util::shared_ptr <saga::impl::task> get_size_async (saga::util::shared_ptr <call_context> cc, 
-                                                                            saga::impl::call_mode::CallMode       m)
+          //  we have a second get_size method for the async versions.  The
+          //  call_mode parameter is somewhat redundant, as the cm is also
+          //  stored in the cc, but it allows to use overloading in the adaptor
+          //  for the various sync/async calls.  The adaptor needs to switch
+          //  over the enum to see what async flavor is wanted / needed, 
+          //  but the returned task's state can easily be adjusted by the
+          //  calling functor or by the engine.
+          virtual saga::util::shared_ptr <saga::impl::task> get_size (saga::util::shared_ptr <call_context> cc, 
+                                                                      saga::impl::call_mode                 m)
           { 
-            throw "get_size_async : NotImplemented"; 
+            throw "get_size <...> : NotImplemented"; 
           } 
 
           virtual void_t copy (saga::util::shared_ptr <call_context> cc, 
@@ -460,7 +466,7 @@ namespace saga
           int get_size (void);
 
           // async version of same call
-          saga::util::shared_ptr <saga::impl::task> get_size_async (saga::impl::call_mode::CallMode);
+          saga::util::shared_ptr <saga::impl::task> get_size (saga::impl::call_mode);
 
           // other calls for copy
           void_t copy (std::string tgt);
@@ -590,10 +596,10 @@ namespace saga
             throw "oops";
           }
 
-          saga::util::shared_ptr <saga::impl::task> get_size_async (saga::util::shared_ptr <saga::impl::call_context> cc, 
-                                                                    saga::impl::call_mode::CallMode                   m)
+          saga::util::shared_ptr <saga::impl::task> get_size (saga::util::shared_ptr <saga::impl::call_context> cc, 
+                                                              saga::impl::call_mode                             m)
           { 
-            std::cout << "file adaptor 0 : get_size_async" << std::endl;
+            std::cout << "file adaptor 0 : get_size <async>" << std::endl;
             throw "oops";
           } 
 
@@ -647,12 +653,12 @@ namespace saga
             return buf.st_size;
           }
 
-          saga::util::shared_ptr <saga::impl::task> get_size_async (saga::util::shared_ptr <saga::impl::call_context> cc, 
-                                                                    saga::impl::call_mode::CallMode                   m)
+          saga::util::shared_ptr <saga::impl::task> get_size (saga::util::shared_ptr <saga::impl::call_context> cc, 
+                                                              saga::impl::call_mode                             m)
           { 
             saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
 
-            std::cout << "file adaptor 1 : get_size_async" << std::endl;
+            std::cout << "file adaptor 1 : get_size <async>" << std::endl;
             saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
 
             std::cout << " ===== creating new impl task ===== " << std::endl;
@@ -1094,11 +1100,10 @@ namespace saga
           return impl_->get_size ();
         }
 
-        template <class T>
+        template <enum saga::impl::call_mode M>
         saga::task get_size (void)
         {
-          T t;
-          return saga::task (impl_->get_size_async (t));
+          return saga::task (impl_->get_size (M));
         }
 
         void copy (std::string tgt)
