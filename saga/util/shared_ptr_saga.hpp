@@ -400,9 +400,9 @@ namespace saga
           return ptr_->get_ptype_demangled ();
         }
 
-        void dump (std::string msg)
+        void dump (std::string msg = "")
         {
-          // std::cout << " === dump    : " << get_ptype_demangled() << " - " << ptr_ << " - " << (*cnt_) << " : " << msg << std::endl;
+          std::cout << " === dump sp      : " << get_ptype_demangled() << " - " << ptr_ << " - " << (*cnt_) << " : " << msg << std::endl;
         }
     };
 

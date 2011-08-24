@@ -884,6 +884,14 @@ namespace saga
         { 
           return ((*cpi).*(call_)) (cc); 
         }
+
+        void dump (std::string msg = "")
+        {
+          std::cout << " === dump functor : call   : " << saga::util::demangle (typeid (call_).name ()) << std::endl;
+          std::cout << "                    IMPL   : " << saga::util::demangle (typeid (IMPL ).name ()) << std::endl;
+          std::cout << "                    CPI    : " << saga::util::demangle (typeid (CPI  ).name ()) << std::endl;
+          std::cout << "                    RET    : " << saga::util::demangle (typeid (RET  ).name ()) << std::endl;
+        }
     };
 
     //////////////////////////////////////////////////////////////////
@@ -912,6 +920,14 @@ namespace saga
                       saga::util::shared_ptr <saga::impl::call_context> cc)
         { 
           return ((*cpi).*(call_)) (cc, arg_1_); 
+        }
+
+        void dump (std::string msg = "")
+        {
+          std::cout << " === dump functor : call   : " << saga::util::demangle (typeid (call_).name ()) << std::endl;
+          std::cout << "                    IMPL   : " << saga::util::demangle (typeid (IMPL ).name ()) << std::endl;
+          std::cout << "                    CPI    : " << saga::util::demangle (typeid (CPI  ).name ()) << std::endl;
+          std::cout << "                    RET    : " << saga::util::demangle (typeid (RET  ).name ()) << std::endl;
         }
     };
 

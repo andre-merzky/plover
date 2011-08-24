@@ -34,7 +34,7 @@ namespace saga
 
       saga::util::shared_ptr <func_t> func (new func_t (&cpi_t::constructor));
 
-      func.dump ("task::ctor functor");
+      func->dump ("task::ctor functor");
 
       saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
 
@@ -54,7 +54,7 @@ namespace saga
 
       saga::util::shared_ptr <func_t> func (new func_t (&cpi_t::get_state));
 
-      func.dump ("task::get_state functor");
+      func->dump ("task::get_state functor");
 
       saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
 
@@ -101,7 +101,7 @@ namespace saga
 
         saga::util::shared_ptr <func_t> func (new func_t (&cpi_t::constructor, url));
 
-        func.dump ("file::ctor functor");
+        func->dump ("file::ctor functor");
 
         saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
 
@@ -128,7 +128,7 @@ namespace saga
         // pointer.  The second templ parameter is the functions return type
         saga::util::shared_ptr <func_t> func (new func_t (&cpi_t::get_size));
 
-        func.dump ("file::get_size functor");
+        func->dump ("file::get_size functor");
 
         // create a call context wich holds functor and implementation
         saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
@@ -158,7 +158,7 @@ namespace saga
         // pointer.  The second templ parameter is the functions return type
         saga::util::shared_ptr <func_t> func (new func_t (&cpi_t::get_size, m));
 
-        func.dump ("file::get_size <async> functor");
+        func->dump ("file::get_size <async> functor");
 
         // create a call context wich holds functor and implementation
         saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
@@ -186,7 +186,7 @@ namespace saga
 
         saga::util::shared_ptr <func_t> func (new func_t (&cpi_t::copy, tgt));
 
-        func.dump ("file::copy functor");
+        func->dump ("file::copy functor");
 
         saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
 
@@ -230,7 +230,7 @@ namespace saga
 
         saga::util::shared_ptr <func_t> func (new func_t (&cpi_t::constructor, url));
 
-        func.dump ("dir::ctor functor");
+        func->dump ("dir::ctor functor");
 
         saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
 
@@ -248,7 +248,7 @@ namespace saga
 
         saga::util::shared_ptr <func_t> func (new func_t (&cpi_t::get_url));
 
-        func.dump ("dir::get_url functor");
+        func->dump ("dir::get_url functor");
 
         saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
 
@@ -267,7 +267,7 @@ namespace saga
 
         saga::util::shared_ptr <func_t> func (new func_t (&cpi_t::open, url));
 
-        func.dump ("dir::open functor");
+        func->dump ("dir::open functor");
 
         saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
 
