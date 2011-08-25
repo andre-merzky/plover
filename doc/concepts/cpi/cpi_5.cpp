@@ -28,17 +28,13 @@ namespace saga
     {
       saga::util::scoped_lock sl (idata_->get_mutex ());
 
-      typedef saga::impl::task                            api_t;
+      typedef saga::impl::task                             api_t;
       typedef saga::impl::task_cpi                         cpi_t;
       typedef saga::impl::functor_0 <api_t, cpi_t, void_t> func_t;
 
-      saga::util::shared_ptr <func_t> func (new func_t (&cpi_t::constructor));
-
-      func->dump ("task::ctor functor");
+      saga::util::shared_ptr <func_t> func (new func_t ("constructor", &cpi_t::constructor));
 
       saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
-
-      cc->set_func_name ("task::constructor");
 
       engine_->call <api_t, cpi_t, void_t> (cc);
     }
@@ -52,13 +48,9 @@ namespace saga
       typedef saga::impl::task_cpi                                         cpi_t;
       typedef saga::impl::functor_0 <api_t, cpi_t, saga::impl::call_state> func_t;
 
-      saga::util::shared_ptr <func_t> func (new func_t (&cpi_t::get_state));
-
-      func->dump ("task::get_state functor");
+      saga::util::shared_ptr <func_t> func (new func_t ("get_state", &cpi_t::get_state));
 
       saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
-
-      cc->set_func_name ("task::get_state");
 
       saga::impl::call_state ret = engine_->call <api_t, cpi_t, call_state> (cc);
 
@@ -70,7 +62,7 @@ namespace saga
       return ret;
     }
 
-    result_t task::get_result (void)
+    saga::util::shared_ptr <result_t> task::get_result (void)
     {
     }
 
@@ -99,13 +91,9 @@ namespace saga
         typedef saga::impl::filesystem::file_cpi                          cpi_t;
         typedef saga::impl::functor_1 <api_t, cpi_t, void_t, std::string> func_t;
 
-        saga::util::shared_ptr <func_t> func (new func_t (&cpi_t::constructor, url));
-
-        func->dump ("file::ctor functor");
+        saga::util::shared_ptr <func_t> func (new func_t ("constructor", &cpi_t::constructor, url));
 
         saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
-
-        cc->set_func_name ("file::constructor");
 
         void_t ret = engine_->call <api_t, cpi_t, void_t> (cc);
 
@@ -126,14 +114,10 @@ namespace saga
 
         // create a functor which hold the cpi class' get_size() function
         // pointer.  The second templ parameter is the functions return type
-        saga::util::shared_ptr <func_t> func (new func_t (&cpi_t::get_size));
-
-        func->dump ("file::get_size functor");
+        saga::util::shared_ptr <func_t> func (new func_t ("get_size", &cpi_t::get_size));
 
         // create a call context wich holds functor and implementation
         saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
-
-        cc->set_func_name ("file::get_size");
 
         // the cc is given to the engine, so it can use the functor to call that
         // function on some cpi
@@ -156,14 +140,10 @@ namespace saga
 
         // create a functor which hold the cpi class' get_size() function
         // pointer.  The second templ parameter is the functions return type
-        saga::util::shared_ptr <func_t> func (new func_t (&cpi_t::get_size, m));
-
-        func->dump ("file::get_size <async> functor");
+        saga::util::shared_ptr <func_t> func (new func_t ("get_size", &cpi_t::get_size, m));
 
         // create a call context wich holds functor and implementation
         saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
-
-        cc->set_func_name ("file::get_size <async>");
 
         // the cc is given to the engine, so it can use the functor to call that
         // function on some cpi
@@ -184,13 +164,9 @@ namespace saga
         typedef saga::impl::filesystem::file_cpi          cpi_t;
         typedef saga::impl::functor_1 <api_t, cpi_t, void_t, std::string>    func_t;
 
-        saga::util::shared_ptr <func_t> func (new func_t (&cpi_t::copy, tgt));
-
-        func->dump ("file::copy functor");
+        saga::util::shared_ptr <func_t> func (new func_t ("copy", &cpi_t::copy, tgt));
 
         saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
-
-        cc->set_func_name ("file::copy");
 
         void_t ret = engine_->call <api_t, cpi_t, void_t> (cc);
 
@@ -228,13 +204,9 @@ namespace saga
         typedef saga::impl::functor_1 <api_t, cpi_t, 
                                        void_t, std::string> func_t;
 
-        saga::util::shared_ptr <func_t> func (new func_t (&cpi_t::constructor, url));
-
-        func->dump ("dir::ctor functor");
+        saga::util::shared_ptr <func_t> func (new func_t ("constructor",&cpi_t::constructor, url));
 
         saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
-
-        cc->set_func_name ("dir::constructor");
 
         return engine_->call <api_t, cpi_t, void_t> (cc);
       }
@@ -246,13 +218,9 @@ namespace saga
         typedef saga::impl::filesystem::dir_cpi                   cpi_t;
         typedef saga::impl::functor_0 <api_t, cpi_t, std::string> func_t;
 
-        saga::util::shared_ptr <func_t> func (new func_t (&cpi_t::get_url));
-
-        func->dump ("dir::get_url functor");
+        saga::util::shared_ptr <func_t> func (new func_t ("get_url", &cpi_t::get_url));
 
         saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
-
-        cc->set_func_name ("dir::get_url");
 
         return engine_->call <api_t, cpi_t, std::string> (cc);
       }
@@ -265,13 +233,9 @@ namespace saga
         typedef saga::impl::functor_1 <api_t, cpi_t, 
                                        saga::util::shared_ptr <saga::impl::filesystem::file>, std::string > func_t;
 
-        saga::util::shared_ptr <func_t> func (new func_t (&cpi_t::open, url));
-
-        func->dump ("dir::open functor");
+        saga::util::shared_ptr <func_t> func (new func_t ("open", &cpi_t::open, url));
 
         saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
-
-        cc->set_func_name ("dir::open");
 
         return engine_->call <api_t, cpi_t, saga::util::shared_ptr <saga::impl::filesystem::file> > (cc);
       }
@@ -292,7 +256,7 @@ int main ()
     // file copy and get size, sync
     if ( 0 )
     {
-      std::cout << " -sync file ops --------"  << std::endl;
+      std::cout << " -sync file ops ########"  << std::endl;
     
       saga::filesystem::file f ("/etc/passwd");
     
@@ -300,13 +264,13 @@ int main ()
     
       f.copy ("/tmp/passwd.bak");
     
-      std::cout << " -----------------------"  << std::endl;
+      std::cout << " #######################"  << std::endl;
     }
 
     // file open, sync
     if ( 0 )
     {
-      std::cout << " -sync dir ops ---------"  << std::endl;
+      std::cout << " -sync dir ops #########"  << std::endl;
     
       saga::filesystem::dir d ("/etc/");
       std::cout << "dir url: " << d.get_url () << std::endl;
@@ -314,23 +278,27 @@ int main ()
       saga::filesystem::file f = d.open ("passwd");
       std::cout << "file size: " << f.get_size () << std::endl;
     
-      std::cout << " -----------------------"  << std::endl;
+      std::cout << " #######################"  << std::endl;
     }
 
     // file get_size, async
     if ( 1 )
     {
-      std::cout << " -async file ops -------"  << std::endl;
+      std::cout << " -async file ops #######"  << std::endl;
       
       saga::filesystem::file f ("/etc/passwd");
-      
-      std::cout << "file size: " << f.get_size () << std::endl;
 
-      saga::task t = f.get_size <saga::impl::Async> ();
+      std::cout << " #######################"  << std::endl;
       
-      std::cout << "state: " << t.get_state () << std::endl;
+      // std::cout << "file size: " << f.get_size () << std::endl;
+
+      saga::task t = f.get_size <saga::impl::Sync> ();
+      
+      std::cout << " #######################"  << std::endl;
+
       std::cout << "state: " << saga::util::saga_enums.to_key <saga::impl::call_state> (t.get_state ()) << std::endl;
-      std::cout << " --- done --------------"  << std::endl;
+
+      std::cout << " ### done ##############"  << std::endl;
     }
 
   }

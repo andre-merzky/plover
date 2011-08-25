@@ -4,10 +4,6 @@
 
 #include <map>
 
-#define REGISTER_ENUM(TYPE,KEY,VAL) \
-    static saga::util::enum_register <TYPE> enum_ ## TYPE ## _ ## VAL ## _ (#KEY, static_cast <TYPE> (VAL))
-
-
 namespace saga
 {
   namespace util
@@ -30,14 +26,36 @@ namespace saga
         template <typename T>
         const char * to_key (T val)
         {
-          // FIXME: check exists, return "InvalidEnum" otherwise
-          return val_map_[typeid (T).name ()][val];
+          const char * type = typeid (T).name ();
+
+          if ( val_map_.find (type) == val_map_.end () )
+          {
+            return "InvalidEnumType";
+          }
+
+          if ( val_map_[type].find (val) == val_map_[type].end () )
+          {
+            return "InvalidEnum";
+          }
+
+          return val_map_[type][val];
         }
 
         template <typename T>
         T to_val (const char * key)
         {
-          // FIXME: check exists, return "InvalidEnum" otherwise
+          const char * type = typeid (T).name ();
+
+          if ( val_map_.find (type) == val_map_.end () )
+          {
+            return dynamic_cast <T> (-1); 
+          }
+
+          if ( val_map_[type].find (key) == val_map_[type].end () )
+          {
+            return dynamic_cast <T> (-1); 
+          }
+
           return key_map_[typeid (T).name ()][key];
         }
     };
@@ -54,8 +72,14 @@ namespace saga
           saga_enums.add <T> (key, val);
         }
     };
-  }
-}
+
+#define SAGA_UTIL_REGISTER_ENUM(TYPE,KEY,VAL) \
+    static saga::util::enum_register <TYPE> enum_ ## TYPE ## _ ## VAL ## _ (#KEY, static_cast <TYPE> (VAL))
+
+
+  } // namespace util
+
+} // namespace saga
 
 
 #endif // SAGA_UTIL_ENUMS_HPP

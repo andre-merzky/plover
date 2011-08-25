@@ -35,7 +35,7 @@ namespace saga
     //     not in use outside that reference counting scheme, 
     //     at time of deletion.
     //
-    //   - to support that, the get() and get<U>() methods 
+    //   - to support that, the get_ptr() and get_ptr<U>() methods 
     //     are private - the user should only be able to get 
     //     new shared pointers.
     //
@@ -116,7 +116,7 @@ namespace saga
 
         // note that the returned pointer is volatile, in the sense that it can
         // be deleted by the shared_ptr d'tor at any time.
-        T * get ()  const 
+        T * get_ptr ()  const 
         {
           if ( NULL == ptr_ )
           {
@@ -126,10 +126,10 @@ namespace saga
           return ptr_;
         }
 
-        // dyamic_cast'ing version of get.
-        // remarks to get() apply
+        // dyamic_cast'ing version of get_ptr.
+        // remarks to get_ptr() apply
         template <class U> 
-        U * get (void)
+        U * get_ptr (void)
         {
           if ( NULL == ptr_ )
           {
@@ -169,12 +169,12 @@ namespace saga
         // void share (saga::util::shareable * p)
         void share (T * p)
         {
-          if ( NULL != p )
+          if ( NULL != p && NULL != ptr_ )
           {
-            if ( ! get <saga::util::shareable> ()->is_shared () )
+            if ( ! get_ptr <saga::util::shareable> ()->is_shared () )
             {
               // std::cout << " === share   : " << get_ptype_demangled() << " - " << ptr_ << " - " << (*cnt_) << std::endl;
-              get <saga::util::shareable> ()->share (mtx_, cnt_);
+              get_ptr <saga::util::shareable> ()->share (mtx_, cnt_);
             }
           }
         }
@@ -183,12 +183,12 @@ namespace saga
         // void unshare (saga::util::shareable * p)
         void unshare (T * p)
         {
-          if ( NULL != p )
+          if ( NULL != p && NULL != ptr_ )
           {
-            if ( get <saga::util::shareable> ()->is_shared () )
+            if ( get_ptr <saga::util::shareable> ()->is_shared () )
             {
               // std::cout << " === unshare : " << get_ptype_demangled() << " - " << ptr_ << " - " << (*cnt_) << std::endl;
-              get <saga::util::shareable> ()->unshare ();
+              get_ptr <saga::util::shareable> ()->unshare ();
             }
           }
         }
@@ -306,6 +306,7 @@ namespace saga
         {
           if ( NULL == ptr_ )
           {
+            abort ();
             throw "trying to dereference NULL ptr";
           }
           
@@ -324,7 +325,7 @@ namespace saga
         shared_ptr <U> get_shared_ptr (void)
         {
           // FIXME: use casting copy c'tor to get new shared ptr
-          U* u = get <U> ();
+          U* u = get_ptr <U> ();
           shared_ptr <U> ret = shared_ptr <U> (mtx_, cnt_, u);
 
           return ret;
@@ -341,8 +342,8 @@ namespace saga
             return false;
           }
 
-          // use casting get to get a U* typed ptr
-          U * test = get <U> ();
+          // use casting get_ptr to get a U* typed ptr
+          U * test = get_ptr <U> ();
 
           if ( NULL == test )
           {
@@ -402,7 +403,7 @@ namespace saga
 
         void dump (std::string msg = "")
         {
-          std::cout << " === dump sp      : " << get_ptype_demangled() << " - " << ptr_ << " - " << (*cnt_) << " : " << msg << std::endl;
+          std::cout << msg << get_ptype_demangled () << " - " << ptr_ << " - " << (*cnt_) << std::endl;
         }
     };
 
