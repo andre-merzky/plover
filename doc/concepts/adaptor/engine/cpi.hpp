@@ -2,11 +2,13 @@
 #ifndef SAGA_ADAPTOR_CPI_HPP
 #define SAGA_ADAPTOR_CPI_HPP
 
+#include <saga/util/shareable.hpp>
+
 namespace saga
 {
   namespace cpi
   {
-    class object
+    class object : public saga::util::shareable
     {
       public:
         object (void) {};

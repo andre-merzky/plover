@@ -4,6 +4,7 @@
 
 #include <string>
 
+#include <saga/util/shareable.hpp>
 #include <saga/util/shared_ptr.hpp>
 
 #include "adaptor_registry.hpp"

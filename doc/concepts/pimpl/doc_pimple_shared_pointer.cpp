@@ -10,6 +10,7 @@
 // and thread safety issues of the pure PIMPL approach.
 //
 
+#include <saga/util/shareable.hpp>
 #include <saga/util/shared_ptr.hpp>
 
 #include <iostream>  // for debug messages
@@ -34,7 +35,7 @@ namespace impl
   // the hierarchy.  That is, depending on the application code, not really
   // required for the pimpl scheme to work.
   //
-  class pimpl 
+  class pimpl : public saga::util::shareable
   {
     private:
       // the impl::pimpl class needs to be polymorphic for the up/down casting of

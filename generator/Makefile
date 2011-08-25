@@ -24,3 +24,6 @@ test::
 	# @cat saga_simple/saga/api/testing/*pp
 
 
+distclean::
+	@rm -rf saga_simple/
+

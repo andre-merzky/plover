@@ -70,14 +70,12 @@ SAGA_CCFLAGS               = @SAGA_CCFLAGS@
 SAGA_CXXFLAGS              = @SAGA_CXXFLAGS@
 SAGA_LDFLAGS_EXT           = @SAGA_LDFLAGS_EXT@
 
-# SAGA_CXXFLAGS             += -I$(BOOST_LOCATION)/include
-
 SAGA_LEXT                  = so
 SAGA_AEXT                  = a
 
-SAGA_CCFLAGS              += $(SAGA_INC_FLAGS)
-SAGA_CXXFLAGS             += $(SAGA_INC_FLAGS)
-SAGA_LDFLAGS_EXT          += $(SAGA_LIB_FLAGS)
+SAGA_CCFLAGS              += $(SAGA_INC_FLAGS) -fPIC
+SAGA_CXXFLAGS             += $(SAGA_INC_FLAGS) -fPIC
+SAGA_LDFLAGS_EXT          += $(SAGA_LIB_FLAGS) -lpthread
 #
 ###########################################################
 

@@ -45,6 +45,7 @@
 #include <string>    // we use strings as exceptions *blush*
 
 #include <saga/util/demangle.hpp>
+#include <saga/util/shareable.hpp>
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -63,7 +64,7 @@ namespace impl
   // the hierarchy.  That is, depending on the application code, not really
   // required for the pimpl scheme to work.
   //
-  class pimpl 
+  class pimpl : public saga::util::shareable
   {
     private:
       // the impl::pimpl class needs to be polymorphic for the up/down casting of

@@ -12,5 +12,5 @@ SAGA_LIB_OBJ    += shareable.o
 
 include $(SAGA_ROOT)/make/saga.application.mk
 
-SAGA_LDFLAGS    += -lpthread
+test: $(SAGA_ARCNAME)
 

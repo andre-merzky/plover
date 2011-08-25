@@ -1104,11 +1104,12 @@ namespace saga
         file (saga::util::shared_ptr <saga::impl::filesystem::file> impl)
           : impl_ (impl)
         {
-          // FIXME: where to get the URL/idata?  Is coinstructor here really useful,
-          // as impl already exists?  Is it initialized?
-          // In general, need to clear up who is filling idata, when is adaptor
-          // initialized / bound
-          // (void) impl_->constructor (url);
+          // FIXME: where to get the URL/idata?  Is constructor here really useful,
+          // as impl already exists?  Is impl always initialized?
+          // In general, need to clear up who is filling idata, when the object
+          // is adaptor initialized / bound (void) 
+          //
+          // impl_->constructor (url);
         }
 
         int get_size (void)

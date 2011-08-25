@@ -8,6 +8,7 @@
 #include <typeinfo>
 
 #include <saga/util/demangle.hpp>
+#include <saga/util/shareable.hpp>
 #include <saga/util/shared_ptr.hpp>
 
 #include "cpi.hpp"
