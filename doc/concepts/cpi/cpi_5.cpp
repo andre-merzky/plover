@@ -64,6 +64,25 @@ namespace saga
 
     saga::util::shared_ptr <result_t> task::get_result (void)
     {
+      saga::util::scoped_lock sl (idata_->get_mutex ());
+
+      typedef saga::util::shared_ptr <result_t>            res_t;
+      typedef saga::impl::task                             api_t;
+      typedef saga::impl::task_cpi                         cpi_t;
+      typedef saga::impl::functor_0 <api_t, cpi_t, res_t > func_t;
+
+      saga::util::shared_ptr <func_t> func (new func_t ("get_result", &cpi_t::get_result));
+
+      saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
+
+      res_t ret = engine_->call <api_t, cpi_t, res_t> (cc);
+
+      if ( cc->get_state () == Failed )
+      {
+        throw " task::get_state failed";
+      }
+
+      return ret;
     }
 
     namespace filesystem
@@ -249,7 +268,7 @@ namespace saga
 
 int main ()
 {
-  mtrace();
+  SAGA_UTIL_STACKTRACE_C(main);
 
   try
   {
@@ -288,15 +307,20 @@ int main ()
       
       saga::filesystem::file f ("/etc/passwd");
 
-      std::cout << " #######################"  << std::endl;
+      std::cout << " 1 #####################"  << std::endl;
       
       // std::cout << "file size: " << f.get_size () << std::endl;
 
-      saga::task t = f.get_size <saga::impl::Sync> ();
+      saga::task t = f.get_size <saga::impl::Async> ();
+      :: sleep (3);
       
-      std::cout << " #######################"  << std::endl;
+      std::cout << " 2 #####################"  << std::endl;
 
       std::cout << "state: " << saga::util::saga_enums.to_key <saga::impl::call_state> (t.get_state ()) << std::endl;
+
+      std::cout << " 3 #####################"  << std::endl;
+
+      std::cout << "value: " << t.get_result <int> () << std::endl;
 
       std::cout << " ### done ##############"  << std::endl;
     }

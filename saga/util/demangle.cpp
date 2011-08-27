@@ -23,14 +23,24 @@ namespace saga
       size_t        size = 1024;
       static   char buf[1024];        
       int           status;        
+      std::string   ret;
       
       char * res = abi::__cxa_demangle (name.c_str (), buf, &size, &status);          
 
       // FIXME: eval status and check return value
       
       buf[sizeof (buf) - 1] = 0;
+
+      if ( res == NULL )
+      {
+        ret = name;
+      }
+      else
+      {
+        ret = res;
+      }
       
-      return (std::string (res));          
+      return (ret);
 
 #endif // HAVE_CXA_DEMANGLE
     }

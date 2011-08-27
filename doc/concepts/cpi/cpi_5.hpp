@@ -9,11 +9,13 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 #include <saga/util/mutex.hpp>
 #include <saga/util/scoped_lock.hpp>
 #include <saga/util/shareable.hpp>
 #include <saga/util/enums.hpp>
+#include <saga/util/stack_tracer.hpp>
 
 #define STR(x) #x
 
@@ -108,6 +110,8 @@ namespace saga
   {
     namespace test
     {
+      class task_adaptor_0;
+
       class file_adaptor_0;
       class file_adaptor_1;
 
@@ -237,15 +241,16 @@ namespace saga
     class functor_base : public saga::util::shareable
     {
       private:
-        std::string                                    name_;   // name of function call 
-        saga::util::shared_ptr <saga::impl::result_t > result_; // container for function call result
+        std::string                                   name_;   // name of function call 
+        saga::util::shared_ptr <saga::impl::result_t> result_; // container for function call result
 
       public: 
         functor_base (std::string name = "") 
           : name_    (name)
-          , result_  (new result_t)
+          , result_  (NULL)
         {
-          // std::cout << "functor_base ctor " << this << std::endl;
+          std::cout << "functor_base ctor " << this << std::endl;
+          result_.dump ("functor's result : ");
         }
 
         virtual ~functor_base (void) 
@@ -253,12 +258,13 @@ namespace saga
           // std::cout << "functor_base dtor " << this << std::endl;
         }
 
-        std::string get_name (void) { return name_; }
-
-        void     set_result    (saga::util::shared_ptr <saga::impl::result_t> r)   
-                                                                        { result_ = r;      }
+        std::string get_name    (void) { return name_;  }
+        void        set_result  (saga::util::shared_ptr <saga::impl::result_t> r)   
+        { result_ = r;   
+          result_.dump ("functor's new result : ");
+        }
         saga::util::shared_ptr <saga::impl::result_t>
-                 get_result    (void)                     { return result_;   }
+                    get_result  (void) { return result_;}
 
 
         virtual void dump (std::string msg = "")
@@ -621,6 +627,208 @@ namespace saga
   } // namespace impl
 
 
+  namespace impl
+  {
+    /////////////////////////////////////////////////////////////////
+    //
+    // functor: stores a cpi function pointer and call arguments, and 
+    // calls it on a given cpi
+    //
+    //////////////////////////////////////////////////////////////////
+    // functor with 0 args
+    template <typename IMPL, 
+              typename CPI, 
+              typename RET>
+    class functor_0 : public functor <IMPL, CPI, RET>
+    {
+      private:           
+        RET (CPI::* call_)(saga::util::shared_ptr <call_context>);
+
+      public: 
+        functor_0 (std::string name, 
+                   RET (CPI::*call )(saga::util::shared_ptr <call_context>))
+          : functor <IMPL, CPI, RET> (name)
+          , call_   (call) 
+        { 
+        }
+
+        RET call_cpi (saga::util::shared_ptr <CPI>                      cpi, 
+                      saga::util::shared_ptr <saga::impl::call_context> cc)
+        { 
+          return ((*cpi).*(call_)) (cc); 
+        }
+
+        void dump (std::string msg = "")
+        {
+          std::cout << "functor (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl;
+          std::cout << "    call        : " << saga::util::demangle (typeid (call_).name ()) << " : " << this->get_name () << std::endl;
+          std::cout << "    IMPL        : " << saga::util::demangle (typeid (IMPL ).name ()) << std::endl;
+          std::cout << "    CPI         : " << saga::util::demangle (typeid (CPI  ).name ()) << std::endl;
+          std::cout << "    RET         : " << saga::util::demangle (typeid (RET  ).name ()) << std::endl;
+          // this->get_result ()->dump  ("    result      : ");
+        }
+    };
+
+    //////////////////////////////////////////////////////////////////
+    // functor with 1 arg
+    template <typename IMPL, 
+              typename CPI, 
+              typename RET, 
+              typename ARG_1> 
+    class functor_1 : public functor <IMPL, CPI, RET>
+    {
+      private:           
+        RET (CPI::* call_)(saga::util::shared_ptr <call_context>, ARG_1); 
+        ARG_1       arg_1_;
+
+
+      public: 
+        functor_1 (std::string name, 
+                   RET (CPI::*call )(saga::util::shared_ptr <call_context>, ARG_1), 
+                   ARG_1 arg_1) 
+          : functor <IMPL, CPI, RET> (name)
+          , call_   (call) 
+          , arg_1_  (arg_1) 
+        { 
+        }
+
+        RET call_cpi (saga::util::shared_ptr <CPI>    cpi, 
+                      saga::util::shared_ptr <saga::impl::call_context> cc)
+        { 
+          return ((*cpi).*(call_)) (cc, arg_1_); 
+        }
+
+        void dump (std::string msg = "")
+        {
+          std::cout << "functor (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl;
+          std::cout << "    call        : " << saga::util::demangle (typeid (call_).name ()) << " : " << this->get_name () << std::endl;
+          std::cout << "    ARG 1       : " << saga::util::demangle (typeid (ARG_1).name ()) << " : " << arg_1_      << std::endl;
+          std::cout << "    IMPL        : " << saga::util::demangle (typeid (IMPL ).name ()) << std::endl;
+          std::cout << "    CPI         : " << saga::util::demangle (typeid (CPI  ).name ()) << std::endl;
+          std::cout << "    RET         : " << saga::util::demangle (typeid (RET  ).name ()) << std::endl;
+          // this->get_result ().dump  ("    result      : ");
+        }
+    };
+
+    //////////////////////////////////////////////////////////////////
+    //
+    // FIXME: functor versions for more args follow here....
+    //
+
+    //////////////////////////////////////////////////////////////////////
+    //
+    // the SAGA Engine implementation, which loads all adaptors, and 
+    // supports the SAGA file implementation.
+    //
+    // In reality, adaptor registration will be more complex:  if an adaptor
+    // registers, the engine will inspect it, to register it for all CPI's it
+    // knows about:
+    //
+    //   if ( adaptor.is_a <saga_object> () )
+    //     object_cpis.push_back (adaptor);
+    //   if ( adaptor.is_a <saga_attribute> () )
+    //     attribute_cpis.push_back (adaptor);
+    //   ...
+    //
+    // or slightly more clever ;-)
+    //
+    class engine : public saga::util::shareable
+    {
+      private:
+        std::vector <saga::util::shared_ptr <saga::impl::cpi_base> > cpis_;
+
+      public:
+        engine (void)
+        {
+          std::cout << "engine: register all adaptors" << std::endl;
+
+          // create and register adaptor instances
+          cpis_.push_back (open_adaptor <saga::adaptor::test::file_adaptor_0> ());
+          cpis_.push_back (open_adaptor <saga::adaptor::test::file_adaptor_1> ());
+          cpis_.push_back (open_adaptor <saga::adaptor::test::dir_adaptor_0>  ());
+          cpis_.push_back (open_adaptor <saga::adaptor::test::dir_adaptor_1>  ());
+          cpis_.push_back (open_adaptor <saga::adaptor::test::task_adaptor_0> ());
+        }
+
+        template <typename ADP>
+        saga::util::shared_ptr <saga::impl::cpi_base> open_adaptor (void)
+        {
+          return saga::util::shared_ptr <saga::impl::cpi_base> (new ADP);
+        }
+
+
+        // get_cpi's is used by the API class implementation to get an (ordered)
+        // list of adaptors to call
+        template <typename CPI>
+        std::vector <saga::util::shared_ptr <CPI> > get_cpis (void)
+        {
+          std::vector <saga::util::shared_ptr <CPI> > ret;
+
+          for ( unsigned int i = 0; i < cpis_.size (); i++ )
+          {
+            if ( cpis_[i].is_a <CPI> () )
+            {
+              ret.push_back (cpis_[i].get_shared_ptr <CPI> ());
+            }
+          }
+
+          return ret;
+        }
+
+        //////////////////////////////////////////////////////////////////
+        //
+        // 
+        //
+        template <typename IMPL, typename CPI, typename RET>
+        RET call (saga::util::shared_ptr <saga::impl::call_context> cc)
+        {
+          typedef saga::impl::functor_base             func_base_t;
+          typedef saga::impl::functor <IMPL, CPI, RET> func_cast_t;
+
+          // get the matching list of CPIs
+          std::vector <saga::util::shared_ptr <CPI> > cpis_ = get_cpis <CPI> ();
+
+          cc->set_state (Running);
+
+          // try one adaptor after the other, until one succeeds.
+          for ( unsigned int i = 0; i < cpis_.size (); i++ )
+          {
+            try
+            {
+              saga::util::shared_ptr <func_base_t> base   = cc->get_func ();
+              saga::util::shared_ptr <func_cast_t> casted = base.get_shared_ptr <func_cast_t> ();
+
+              RET ret = casted->call_cpi (cpis_[i], cc);
+
+              cc->set_state (Done);
+              std::cout << "adaptor " << i << " : succeeded for " << cc->get_func()->get_name () << std::endl;
+
+              return ret;
+            }
+            catch ( const char * m )
+            {
+              // something went wrong...
+              std::cout << "adaptor " << i << " : failed for " << cc->get_func()->get_name () << " : " << m << std::endl;
+            }
+            catch ( ... )
+            {
+              // something went wrong...
+              std::cout << "adaptor " << i << " : failed for " << cc->get_func()->get_name () << " : ???" << std::endl;
+            }
+          }
+
+          // no adaptor suceeded.  We don't have anything sensible to return, so
+          // we flag the failure, and throw.  That is redundant, but hey...
+          cc->set_state (Failed);
+
+          std::cout << "all adaptors failed for " << cc->get_func()->get_name () << std::endl;
+          throw "no adaptor suceeded";
+        }
+    };
+
+  } // namespace impl
+
+
   //////////////////////////////////////////////////////////////////////
   //
   // two independent CPI implementations, aka adaptors.
@@ -636,6 +844,37 @@ namespace saga
           typedef saga::impl::task               api_t;
           typedef saga::impl::task_cpi           cpi_t;
           typedef saga::impl::task_instance_data idata_t;
+
+          static void * threaded_cc (void * cc_sp)
+          {
+            saga::util::shared_ptr <saga::impl::call_context> * cc_tmp
+              = static_cast <saga::util::shared_ptr <saga::impl::call_context> *> (cc_sp);
+
+            saga::util::shared_ptr <saga::impl::call_context> cc = cc_tmp->get_shared_ptr (); 
+
+            std::cout << "thread created " << pthread_self () << std::endl;
+
+            // wait 'til task is getting run()
+            while ( cc->get_state () == saga::impl::New )
+            {
+              ::sleep (1); // FIXME: nanosleep, configurable timeout
+            }
+
+            ::sleep (10);
+
+            if ( cc->get_state () == saga::impl::Running )
+            {
+              std::cout << "thread starting " << pthread_self () << std::endl;
+
+              saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
+              impl->get_engine ()->call <api_t, cpi_t, void_t> (cc); // this will set state
+
+              // the sync call is now Done, and its result is stored
+            }
+
+            std::cout << "thread done " << pthread_self () << std::endl;
+          }
+
 
         public:
           task_adaptor_0 (void) 
@@ -691,13 +930,24 @@ namespace saga
             if ( t_cc->get_mode  () == saga::impl::Sync &&
                  t_cc->get_state () == saga::impl::New  )
             {
+              std::cout << " == sync task =====================================================" << std::endl;
               impl->get_engine ()->call <api_t, cpi_t, void_t> (t_cc); // this will set state
             }
             else if ( t_cc->get_mode  () == saga::impl::Async &&
                       t_cc->get_state () == saga::impl::New   )
             {
-              // TODO: create a thread, run the following line in the thread
-              impl->get_engine ()->call <api_t, cpi_t, void_t> (t_cc); // this will set state
+              std::cout << " == async task =====================================================" << std::endl;
+              pthread_t      thread;
+              pthread_attr_t att;
+
+              saga::util::shared_ptr <saga::impl::call_context> * tmp_cc 
+                    = new saga::util::shared_ptr <saga::impl::call_context> (t_cc.get_shared_ptr ());
+
+              std::cout << " task adaptor 0 : create new thread " << std::endl;
+
+              pthread_create (&thread, &att,
+                              saga::adaptor::test::task_adaptor_0::threaded_cc, 
+                              (void*)tmp_cc);
             }
 
             return void_t ();
@@ -730,7 +980,10 @@ namespace saga
 
             return t_cc->get_func ()->get_result ();
           }
+
       };
+
+
       class file_adaptor_0 : public saga::impl::filesystem::file_cpi
       {
         private:
@@ -812,7 +1065,7 @@ namespace saga
           {
             saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
 
-            std::cout << "file adaptor 1 : get_size" << std::endl;
+            std::cout << "file adaptor 1 : get_size ()" << std::endl;
             saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
 
             struct stat buf;
@@ -824,18 +1077,21 @@ namespace saga
           saga::util::shared_ptr <saga::impl::task> get_size (saga::util::shared_ptr <saga::impl::call_context> cc, 
                                                               saga::impl::call_mode                             m)
           { 
-            std::cout << " ===== get_size <> ()" << std::endl;
+            std::cout << " ===== file adaptor 1 : get_size <> ()" << std::endl;
             cc->dump ();
 
             if ( m == saga::impl::Sync )
             {
-              std::cout << " ===== get_size <Sync> ()" << std::endl;
+              std::cout << " ===== file adaptor 1 : get_size <Sync> ()" << std::endl;
 
               // call sync version: call the normal sync call, 
               // and set up a completed task with its result.
               saga::util::shared_ptr <saga::impl::result_t_detail_ <int> > res (new saga::impl::result_t_detail_ <int> ());
               
               res->set (get_size (cc));
+
+              std::cout << " file adaptor 1 : set result to" << std::endl;
+              res.dump ();
 
               cc->get_func ()->set_result (res);
 
@@ -849,14 +1105,14 @@ namespace saga
             else if ( m == saga::impl::Async ||
                       m == saga::impl::Task  )
             {
-              std::cout << " ===== get_size <Async> ()" << std::endl;
+              std::cout << " ===== file adaptor 1 : get_size <Async> ()" << std::endl;
 
               // async version: create a task straight away, and let the task 
               // adaptor deal with the async invocation of the sync call
               
               saga::util::shared_ptr <saga::impl::task> ret (new saga::impl::task (cc));
 
-              std::cout << " ===== get_size <Sync> () done ===== " << std::endl;
+              std::cout << " ===== get_size <Async> () done ===== " << std::endl;
               return ret;
             }
 
@@ -984,208 +1240,6 @@ namespace saga
   } // namespace adaptor
 
 
-  namespace impl
-  {
-    /////////////////////////////////////////////////////////////////
-    //
-    // functor: stores a cpi function pointer and call arguments, and 
-    // calls it on a given cpi
-    //
-    //////////////////////////////////////////////////////////////////
-    // functor with 0 args
-    template <typename IMPL, 
-              typename CPI, 
-              typename RET>
-    class functor_0 : public functor <IMPL, CPI, RET>
-    {
-      private:           
-        RET (CPI::* call_)(saga::util::shared_ptr <call_context>);
-
-      public: 
-        functor_0 (std::string name, 
-                   RET (CPI::*call )(saga::util::shared_ptr <call_context>))
-          : functor <IMPL, CPI, RET> (name)
-          , call_   (call) 
-        { 
-        }
-
-        RET call_cpi (saga::util::shared_ptr <CPI>                      cpi, 
-                      saga::util::shared_ptr <saga::impl::call_context> cc)
-        { 
-          return ((*cpi).*(call_)) (cc); 
-        }
-
-        void dump (std::string msg = "")
-        {
-          std::cout << "functor (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl;
-          std::cout << "    call        : " << saga::util::demangle (typeid (call_).name ()) << " : " << this->get_name () << std::endl;
-          std::cout << "    IMPL        : " << saga::util::demangle (typeid (IMPL ).name ()) << std::endl;
-          std::cout << "    CPI         : " << saga::util::demangle (typeid (CPI  ).name ()) << std::endl;
-          std::cout << "    RET         : " << saga::util::demangle (typeid (RET  ).name ()) << std::endl;
-          this->get_result ()->dump  ("    result      : ");
-        }
-    };
-
-    //////////////////////////////////////////////////////////////////
-    // functor with 1 arg
-    template <typename IMPL, 
-              typename CPI, 
-              typename RET, 
-              typename ARG_1> 
-    class functor_1 : public functor <IMPL, CPI, RET>
-    {
-      private:           
-        RET (CPI::* call_)(saga::util::shared_ptr <call_context>, ARG_1); 
-        ARG_1       arg_1_;
-
-
-      public: 
-        functor_1 (std::string name, 
-                   RET (CPI::*call )(saga::util::shared_ptr <call_context>, ARG_1), 
-                   ARG_1 arg_1) 
-          : functor <IMPL, CPI, RET> (name)
-          , call_   (call) 
-          , arg_1_  (arg_1) 
-        { 
-        }
-
-        RET call_cpi (saga::util::shared_ptr <CPI>    cpi, 
-                      saga::util::shared_ptr <saga::impl::call_context> cc)
-        { 
-          return ((*cpi).*(call_)) (cc, arg_1_); 
-        }
-
-        void dump (std::string msg = "")
-        {
-          std::cout << "functor (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl;
-          std::cout << "    call        : " << saga::util::demangle (typeid (call_).name ()) << " : " << this->get_name () << std::endl;
-          std::cout << "    ARG 1       : " << saga::util::demangle (typeid (ARG_1).name ()) << " : " << arg_1_      << std::endl;
-          std::cout << "    IMPL        : " << saga::util::demangle (typeid (IMPL ).name ()) << std::endl;
-          std::cout << "    CPI         : " << saga::util::demangle (typeid (CPI  ).name ()) << std::endl;
-          std::cout << "    RET         : " << saga::util::demangle (typeid (RET  ).name ()) << std::endl;
-          this->get_result ()->dump  ("    result      : ");
-        }
-    };
-
-    //////////////////////////////////////////////////////////////////
-    //
-    // FIXME: functor versions for more args follow here....
-    //
-
-    //////////////////////////////////////////////////////////////////////
-    //
-    // the SAGA Engine implementation, which loads all adaptors, and 
-    // supports the SAGA file implementation.
-    //
-    // In reality, adaptor registration will be more complex:  if an adaptor
-    // registers, the engine will inspect it, to register it for all CPI's it
-    // knows about:
-    //
-    //   if ( adaptor.is_a <saga_object> () )
-    //     object_cpis.push_back (adaptor);
-    //   if ( adaptor.is_a <saga_attribute> () )
-    //     attribute_cpis.push_back (adaptor);
-    //   ...
-    //
-    // or slightly more clever ;-)
-    //
-    class engine : public saga::util::shareable
-    {
-      private:
-        std::vector <saga::util::shared_ptr <saga::impl::cpi_base> > cpis_;
-
-      public:
-        engine (void)
-        {
-          std::cout << "engine: register all adaptors" << std::endl;
-
-          // create and register adaptor instances
-          cpis_.push_back (open_adaptor <saga::adaptor::test::file_adaptor_0> ());
-          cpis_.push_back (open_adaptor <saga::adaptor::test::file_adaptor_1> ());
-          cpis_.push_back (open_adaptor <saga::adaptor::test::dir_adaptor_0>  ());
-          cpis_.push_back (open_adaptor <saga::adaptor::test::dir_adaptor_1>  ());
-          cpis_.push_back (open_adaptor <saga::adaptor::test::task_adaptor_0> ());
-        }
-
-        template <typename ADP>
-        saga::util::shared_ptr <saga::impl::cpi_base> open_adaptor (void)
-        {
-          return saga::util::shared_ptr <saga::impl::cpi_base> (new ADP);
-        }
-
-
-        // get_cpi's is used by the API class implementation to get an (ordered)
-        // list of adaptors to call
-        template <typename CPI>
-        std::vector <saga::util::shared_ptr <CPI> > get_cpis (void)
-        {
-          std::vector <saga::util::shared_ptr <CPI> > ret;
-
-          for ( unsigned int i = 0; i < cpis_.size (); i++ )
-          {
-            if ( cpis_[i].is_a <CPI> () )
-            {
-              ret.push_back (cpis_[i].get_shared_ptr <CPI> ());
-            }
-          }
-
-          return ret;
-        }
-
-        //////////////////////////////////////////////////////////////////
-        //
-        // 
-        //
-        template <typename IMPL, typename CPI, typename RET>
-        RET call (saga::util::shared_ptr <saga::impl::call_context> cc)
-        {
-          typedef saga::impl::functor_base             func_base_t;
-          typedef saga::impl::functor <IMPL, CPI, RET> func_cast_t;
-
-          // get the matching list of CPIs
-          std::vector <saga::util::shared_ptr <CPI> > cpis_ = get_cpis <CPI> ();
-
-          cc->set_state (Running);
-
-          // try one adaptor after the other, until one succeeds.
-          for ( unsigned int i = 0; i < cpis_.size (); i++ )
-          {
-            try
-            {
-              saga::util::shared_ptr <func_base_t> base   = cc->get_func ();
-              saga::util::shared_ptr <func_cast_t> casted = base.get_shared_ptr <func_cast_t> ();
-
-              RET ret = casted->call_cpi (cpis_[i], cc);
-
-              cc->set_state (Done);
-              std::cout << "adaptor " << i << " : succeeded for " << cc->get_func()->get_name () << std::endl;
-
-              return ret;
-            }
-            catch ( const char * m )
-            {
-              // something went wrong...
-              std::cout << "adaptor " << i << " : failed for " << cc->get_func()->get_name () << " : " << m << std::endl;
-            }
-            catch ( ... )
-            {
-              // something went wrong...
-              std::cout << "adaptor " << i << " : failed for " << cc->get_func()->get_name () << " : ???" << std::endl;
-            }
-          }
-
-          // no adaptor suceeded.  We don't have anything sensible to return, so
-          // we flag the failure, and throw.  That is redundant, but hey...
-          cc->set_state (Failed);
-
-          std::cout << "all adaptors failed for " << cc->get_func()->get_name () << std::endl;
-          throw "no adaptor suceeded";
-        }
-    };
-
-  } // namespace impl
-
-
   //////////////////////////////////////////////////////////////////////
   //
   // API classes
@@ -1236,6 +1290,7 @@ namespace saga
         file (std::string url)
           : impl_ (new saga::impl::filesystem::file)
         {
+          SAGA_UTIL_STACKTRACE(file);
           (void) impl_->constructor (url);
         }
 

@@ -306,6 +306,7 @@ namespace saga
         {
           if ( NULL == ptr_ )
           {
+            std::cout << "trying to dereference NULL ptr" << std::endl;
             abort ();
             throw "trying to dereference NULL ptr";
           }

@@ -80,6 +80,7 @@ namespace saga
             // So we do not allow this, but only allows shared_this if
             // *this* was shared before (is valid_).
 
+            std::cout << "cannot get shared_ptr for unshared object" << std::endl;
             abort ();
             throw ("cannot get shared_ptr for unshared object");
 

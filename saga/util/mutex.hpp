@@ -22,23 +22,10 @@ namespace saga
         pthread_mutex_t mtx_;
          
         // forbid copy
-        mutex (mutex & that) 
-        {
-          // we must not be called
-          throw;  // FIXME: throw something sensible
-        }
-
-        mutex (const mutex & m)
-        {
-          // we must not be called
-          throw;  // FIXME: throw something sensible
-        }
-
-
-        // FIXME: define copy, assignment etc, and only allow for unlocked
-        // mutexes?
-
-
+        mutex             (      mutex & m) { throw "mutex copy construction is not allowed!"; } 
+        mutex             (const mutex & m) { throw "mutex copy construction is not allowed!"; } 
+        mutex & operator= (      mutex & m) { throw "mutex copy assignment   is not allowed!"; }
+        mutex & operator= (const mutex & m) { throw "mutex copy assignment   is not allowed!"; }
 
 
       public:
