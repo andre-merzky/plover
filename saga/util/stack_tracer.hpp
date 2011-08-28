@@ -17,12 +17,10 @@ namespace saga
         {
           for ( unsigned int i = 0; i < saga_util_stack_tracer_indent_; i++ )
           {
-            std::cout << "  ";
+            std::cout << "    ";
           }
         }
 
-        std::string func_;
-        std::string scope_;
         std::string sig_;
         std::string file_;
         int         line_;
@@ -30,15 +28,11 @@ namespace saga
 
 
       public:
-        stack_tracer (std::string func, 
-                      std::string scope, 
-                      std::string sig, 
+        stack_tracer (std::string sig, 
                       std::string file, 
                       int         line, 
                       std::string msg = "")
-          : func_     (func)
-          , scope_    (scope)
-          , sig_      (sig)
+          : sig_      (sig)
           , file_     (file)
           , line_     (line)
           , msg_      (msg)
@@ -55,64 +49,33 @@ namespace saga
             indent ();
           }
 
-          std::cout << scope_ << "::" << func_ << " [" << sig_ << "] in " << file_ << ":" << line_ << std::endl;
+          std::cout << sig_ << " : " << file_ << " +" << line_ << std::endl;
         }
 
         ~stack_tracer (void)
         {
           std::cout << " <--  ";
           indent ();
-          std::cout << scope_ << "::" << func_ << " [" << sig_ << "]" << std::endl;
+          std::cout << sig_ << " <-- " << std::endl;
 
           saga_util_stack_tracer_indent_--;
         }
     };
 
+#define SAGA_UTIL_TYPEID(x) saga::util::type_id::fn (x, #x)
+
 //-------------------------------------------------------------
-#define SAGA_UTIL_STACKTRACE_C(FUNC)                          \
-    std::string saga_util_stack_tracer_scope_ ("");           \
-    std::string saga_util_stack_tracer_sig_   ("");           \
-    try {                                                     \
-      saga_util_stack_tracer_sig_   = typeid (FUNC).name ();  \
-    } catch (...) {}                                          \
-    saga::util::stack_tracer                                  \
+#define SAGA_UTIL_STACKTRACE()                                \
+  saga::util::stack_tracer                                    \
     saga_util_stack_tracer_instance_ (                        \
-      #FUNC,                                                  \
-      saga::util::demangle (saga_util_stack_tracer_scope_),   \
-      saga::util::demangle (saga_util_stack_tracer_sig_),     \
-      __FILE__, __LINE__)                                     \
+      __PRETTY_FUNCTION__, __FILE__, __LINE__)                \
 //-------------------------------------------------------------
 
 //-------------------------------------------------------------
-#define SAGA_UTIL_STACKTRACE(FUNC)                            \
-    std::string saga_util_stack_tracer_scope_ ("");           \
-    std::string saga_util_stack_tracer_sig_   ("");           \
-    try {                                                     \
-      saga_util_stack_tracer_scope_ = typeid(*this).name ();  \
-      saga_util_stack_tracer_sig_   = typeid (FUNC).name ();  \
-    } catch (...) {}                                          \
-    saga::util::stack_tracer                                  \
+#define SAGA_UTIL_STACKTRACE_MSG(MSG)                         \
+  saga::util::stack_tracer                                    \
     saga_util_stack_tracer_instance_ (                        \
-      #FUNC,                                                  \
-      saga::util::demangle (saga_util_stack_tracer_scope_),   \
-      saga::util::demangle (saga_util_stack_tracer_sig_),     \
-      __FILE__, __LINE__)                                     \
-//-------------------------------------------------------------
-
-//-------------------------------------------------------------
-#define SAGA_UTIL_STACKTRACE_MSG(FUNC,MSG)                    \
-    std::string saga_util_stack_tracer_scope_ ("");           \
-    std::string saga_util_stack_tracer_sig_   ("");           \
-    try {                                                     \
-      saga_util_stack_tracer_scope_ = typeid(*this).name ();  \
-      saga_util_stack_tracer_sig_   = typeid (FUNC).name ();  \
-    } catch (...) {}                                          \
-    saga::util::stack_tracer                                  \
-    saga_util_stack_tracer_instance_ (                        \
-      #FUNC,                                                  \
-      saga::util::demangle (saga_util_stack_tracer_scope_),   \
-      saga::util::demangle (saga_util_stack_tracer_sig_),     \
-      __FILE__, __LINE__, MSG)                                \
+      __PRETTY_FUNCTION__, __FILE__, __LINE__, MSG)           \
 //-------------------------------------------------------------
 
 

@@ -13,12 +13,14 @@ namespace saga
       : engine_ (the_engine            ) // FIXME: no need to create a new engine - get it from the session!
       , idata_  (new task_instance_data)
     {
+      SAGA_UTIL_STACKTRACE ();
     }
 
     task::task (saga::util::shared_ptr <saga::impl::call_context> cc)
       : engine_ (the_engine            ) // FIXME: no need to create a new engine - get it from the session!
       , idata_  (new task_instance_data)
     {
+      SAGA_UTIL_STACKTRACE ();
       saga::util::scoped_lock sl (idata_->get_mutex ());
 
       idata_->cc = cc;
@@ -26,6 +28,7 @@ namespace saga
 
     void_t task::constructor (void)
     {
+      SAGA_UTIL_STACKTRACE ();
       saga::util::scoped_lock sl (idata_->get_mutex ());
 
       typedef saga::impl::task                             api_t;
@@ -42,6 +45,7 @@ namespace saga
 
     saga::impl::call_state task::get_state (void)
     {
+      SAGA_UTIL_STACKTRACE ();
       saga::util::scoped_lock sl (idata_->get_mutex ());
 
       typedef saga::impl::task                                             api_t;
@@ -64,6 +68,7 @@ namespace saga
 
     saga::util::shared_ptr <result_t> task::get_result (void)
     {
+      SAGA_UTIL_STACKTRACE ();
       saga::util::scoped_lock sl (idata_->get_mutex ());
 
       typedef saga::util::shared_ptr <result_t>            res_t;
@@ -92,6 +97,7 @@ namespace saga
         : engine_ (the_engine            ) // FIXME: no need to create a new engine - get it from the session!
         , idata_  (new file_instance_data)
       {
+        SAGA_UTIL_STACKTRACE ();
         idata_->valid = false;
         idata_->url   = "";
         idata_->pos   = 0;
@@ -100,6 +106,7 @@ namespace saga
       //////////////////////////////////////////////////////////////////
       void_t file::constructor (std::string url)
       {
+        SAGA_UTIL_STACKTRACE ();
         saga::util::scoped_lock sl (idata_->get_mutex ());
 
         idata_->url   = url;
@@ -127,6 +134,7 @@ namespace saga
       //////////////////////////////////////////////////////////////////
       int file::get_size (void)
       {
+        SAGA_UTIL_STACKTRACE ();
         typedef saga::impl::filesystem::file              api_t;
         typedef saga::impl::filesystem::file_cpi          cpi_t;
         typedef saga::impl::functor_0 <api_t, cpi_t, int> func_t;
@@ -153,6 +161,7 @@ namespace saga
       //////////////////////////////////////////////////////////////////
       saga::util::shared_ptr <saga::impl::task> file::get_size (saga::impl::call_mode m)
       {
+        SAGA_UTIL_STACKTRACE ();
         typedef saga::impl::filesystem::file                                                                            api_t;
         typedef saga::impl::filesystem::file_cpi                                                                        cpi_t;
         typedef saga::impl::functor_1 <api_t, cpi_t, saga::util::shared_ptr <saga::impl::task>, saga::impl::call_mode> func_t;
@@ -179,6 +188,7 @@ namespace saga
       //////////////////////////////////////////////////////////////////
       void_t file::copy (std::string tgt)
       {
+        SAGA_UTIL_STACKTRACE ();
         typedef saga::impl::filesystem::file              api_t;
         typedef saga::impl::filesystem::file_cpi          cpi_t;
         typedef saga::impl::functor_1 <api_t, cpi_t, void_t, std::string>    func_t;
@@ -205,6 +215,7 @@ namespace saga
         : engine_ (the_engine           ) // FIXME: no need to create a new engine - get it from the session!
         , idata_  (new dir_instance_data)
       {
+        SAGA_UTIL_STACKTRACE ();
         idata_->valid = false;
         idata_->url   = "";
         idata_->pos   = 0;
@@ -213,6 +224,7 @@ namespace saga
       //////////////////////////////////////////////////////////////////
       void_t dir::constructor (std::string url)
       {
+        SAGA_UTIL_STACKTRACE ();
         saga::util::scoped_lock sl (idata_->get_mutex ());
         idata_->url   = url;
         idata_->pos   = 0;
@@ -233,6 +245,7 @@ namespace saga
       //////////////////////////////////////////////////////////////////
       std::string dir::get_url (void)
       {
+        SAGA_UTIL_STACKTRACE ();
         typedef saga::impl::filesystem::dir                       api_t;
         typedef saga::impl::filesystem::dir_cpi                   cpi_t;
         typedef saga::impl::functor_0 <api_t, cpi_t, std::string> func_t;
@@ -247,6 +260,7 @@ namespace saga
       //////////////////////////////////////////////////////////////////
       saga::util::shared_ptr <saga::impl::filesystem::file> dir::open (std::string url)
       {
+        SAGA_UTIL_STACKTRACE ();
         typedef saga::impl::filesystem::dir                       api_t;
         typedef saga::impl::filesystem::dir_cpi                   cpi_t;
         typedef saga::impl::functor_1 <api_t, cpi_t, 
@@ -268,7 +282,7 @@ namespace saga
 
 int main ()
 {
-  SAGA_UTIL_STACKTRACE_C(main);
+  SAGA_UTIL_STACKTRACE ();
 
   try
   {

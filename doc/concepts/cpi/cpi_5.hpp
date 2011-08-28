@@ -157,6 +157,7 @@ namespace saga
       public:
         virtual ~result_t (void) 
         {
+          SAGA_UTIL_STACKTRACE ();
         }
 
         virtual void dump (std::string msg = "") 
@@ -249,18 +250,22 @@ namespace saga
           : name_    (name)
           , result_  (NULL)
         {
+          SAGA_UTIL_STACKTRACE ();
           std::cout << "functor_base ctor " << this << std::endl;
           result_.dump ("functor's result : ");
         }
 
         virtual ~functor_base (void) 
         {
+          SAGA_UTIL_STACKTRACE ();
           // std::cout << "functor_base dtor " << this << std::endl;
         }
 
         std::string get_name    (void) { return name_;  }
         void        set_result  (saga::util::shared_ptr <saga::impl::result_t> r)   
-        { result_ = r;   
+        { 
+          SAGA_UTIL_STACKTRACE ();
+          result_ = r;   
           result_.dump ("functor's new result : ");
         }
         saga::util::shared_ptr <saga::impl::result_t>
@@ -283,9 +288,13 @@ namespace saga
         functor (std::string name)
           : functor_base (name)
         {
+          SAGA_UTIL_STACKTRACE ();
         }
 
-        virtual ~functor (void) { }
+        virtual ~functor (void) 
+        {
+          SAGA_UTIL_STACKTRACE ();
+        }
 
         virtual RET call_cpi (saga::util::shared_ptr <CPI>  cpi, 
                               saga::util::shared_ptr <saga::impl::call_context>  cc) = 0;
@@ -331,6 +340,7 @@ namespace saga
           , impl_  (impl)
           , state_ (New)
         {
+          SAGA_UTIL_STACKTRACE ();
         }
 
         saga::util::shared_ptr <functor_base> get_func (void)           { return func_;     } 
@@ -385,17 +395,20 @@ namespace saga
 
         virtual void_t constructor (saga::util::shared_ptr <call_context> cc)
         { 
+          SAGA_UTIL_STACKTRACE ();
           throw "constructor: NotImplemented"; 
         } 
 
         virtual saga::impl::call_state get_state (saga::util::shared_ptr <call_context> cc)
         {
+          SAGA_UTIL_STACKTRACE ();
           throw "get_state : NotImplemented"; 
         }
 
         // FIXME: cont here (any needed)
         virtual saga::util::shared_ptr <saga::impl::result_t> get_result (saga::util::shared_ptr <call_context> cc)
         { 
+          SAGA_UTIL_STACKTRACE ();
           throw "get_result : NotImplemented"; 
         } 
     };
@@ -412,11 +425,13 @@ namespace saga
       public:
         task_instance_data (void)
         {
+          SAGA_UTIL_STACKTRACE ();
           std::cout << "task idata ctor" << std::endl;
         }
 
         ~task_instance_data (void)
         {
+          SAGA_UTIL_STACKTRACE ();
           std::cout << "task idata dtor" << std::endl;
         }
 
@@ -445,7 +460,11 @@ namespace saga
         }
 
         // FIXME: this needs to move into some cpi_base
-        saga::util::shared_ptr <saga::impl::engine> get_engine (void) { return engine_; }
+        saga::util::shared_ptr <saga::impl::engine> get_engine (void) 
+        { 
+          SAGA_UTIL_STACKTRACE ();
+          return engine_; 
+        }
 
     }; // class task
 
@@ -462,16 +481,21 @@ namespace saga
       class file_cpi : public saga::impl::cpi_base
       {
         public:
-          virtual ~file_cpi (void) { };
+          virtual ~file_cpi (void) 
+          {
+            SAGA_UTIL_STACKTRACE ();
+          };
 
           virtual void_t constructor (saga::util::shared_ptr <call_context> cc, 
                                       std::string                           url) 
           { 
+            SAGA_UTIL_STACKTRACE ();
             throw "constructor: NotImplemented"; 
           } 
 
           virtual int get_size (saga::util::shared_ptr <call_context> cc)
           { 
+            SAGA_UTIL_STACKTRACE ();
             throw "get_size : NotImplemented"; 
           } 
 
@@ -485,12 +509,14 @@ namespace saga
           virtual saga::util::shared_ptr <saga::impl::task> get_size (saga::util::shared_ptr <call_context> cc, 
                                                                       saga::impl::call_mode                 m)
           { 
+            SAGA_UTIL_STACKTRACE ();
             throw "get_size <...> : NotImplemented"; 
           } 
 
           virtual void_t copy (saga::util::shared_ptr <call_context> cc, 
                                std::string                           tgt)
           {
+            SAGA_UTIL_STACKTRACE ();
             throw "copy : NotImplemented"; 
           }
       };
@@ -549,22 +575,28 @@ namespace saga
       class dir_cpi : public saga::impl::cpi_base
       {
         public:
-          virtual ~dir_cpi (void) { };
+          virtual ~dir_cpi (void) 
+          {
+            SAGA_UTIL_STACKTRACE ();
+          };
 
           virtual void_t constructor (saga::util::shared_ptr <call_context> cc, 
                                       std::string                           url) 
           { 
+            SAGA_UTIL_STACKTRACE ();
             throw "constructor: NotImplemented"; 
           } 
 
           virtual std::string get_url (saga::util::shared_ptr <call_context> cc)
           { 
+            SAGA_UTIL_STACKTRACE ();
             throw "get_url : NotImplemented"; 
           } 
 
           virtual saga::util::shared_ptr <saga::impl::filesystem::file> open (saga::util::shared_ptr <call_context> cc, 
                                                                               std::string                           url)
           {
+            SAGA_UTIL_STACKTRACE ();
             throw "open : NotImplemented"; 
           }
       };
@@ -650,11 +682,13 @@ namespace saga
           : functor <IMPL, CPI, RET> (name)
           , call_   (call) 
         { 
+          SAGA_UTIL_STACKTRACE ();
         }
 
         RET call_cpi (saga::util::shared_ptr <CPI>                      cpi, 
                       saga::util::shared_ptr <saga::impl::call_context> cc)
         { 
+          SAGA_UTIL_STACKTRACE ();
           return ((*cpi).*(call_)) (cc); 
         }
 
@@ -690,11 +724,13 @@ namespace saga
           , call_   (call) 
           , arg_1_  (arg_1) 
         { 
+          SAGA_UTIL_STACKTRACE ();
         }
 
         RET call_cpi (saga::util::shared_ptr <CPI>    cpi, 
                       saga::util::shared_ptr <saga::impl::call_context> cc)
         { 
+          SAGA_UTIL_STACKTRACE ();
           return ((*cpi).*(call_)) (cc, arg_1_); 
         }
 
@@ -740,6 +776,7 @@ namespace saga
       public:
         engine (void)
         {
+          SAGA_UTIL_STACKTRACE ();
           std::cout << "engine: register all adaptors" << std::endl;
 
           // create and register adaptor instances
@@ -753,6 +790,7 @@ namespace saga
         template <typename ADP>
         saga::util::shared_ptr <saga::impl::cpi_base> open_adaptor (void)
         {
+          SAGA_UTIL_STACKTRACE ();
           return saga::util::shared_ptr <saga::impl::cpi_base> (new ADP);
         }
 
@@ -782,13 +820,12 @@ namespace saga
         template <typename IMPL, typename CPI, typename RET>
         RET call (saga::util::shared_ptr <saga::impl::call_context> cc)
         {
+          SAGA_UTIL_STACKTRACE ();
           typedef saga::impl::functor_base             func_base_t;
           typedef saga::impl::functor <IMPL, CPI, RET> func_cast_t;
 
           // get the matching list of CPIs
           std::vector <saga::util::shared_ptr <CPI> > cpis_ = get_cpis <CPI> ();
-
-          cc->set_state (Running);
 
           // try one adaptor after the other, until one succeeds.
           for ( unsigned int i = 0; i < cpis_.size (); i++ )
@@ -847,6 +884,7 @@ namespace saga
 
           static void * threaded_cc (void * cc_sp)
           {
+            SAGA_UTIL_STACKTRACE ();
             saga::util::shared_ptr <saga::impl::call_context> * cc_tmp
               = static_cast <saga::util::shared_ptr <saga::impl::call_context> *> (cc_sp);
 
@@ -879,16 +917,17 @@ namespace saga
         public:
           task_adaptor_0 (void) 
           { 
-            std::cout << " ===== creating new task instance ===== " << std::endl;
-            std::cout << "task adaptor 0 : ctor" << std::endl; 
+            SAGA_UTIL_STACKTRACE ();
           } 
+
           ~task_adaptor_0 (void) 
           {
-            std::cout << "task adaptor 0 : dtor" << std::endl; 
+            SAGA_UTIL_STACKTRACE ();
           } 
 
           void_t constructor (saga::util::shared_ptr <saga::impl::call_context> cc)
           {
+            SAGA_UTIL_STACKTRACE ();
             saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
 
             std::cout << "task adaptor 0 : constructor ()" << std::endl;
@@ -955,6 +994,7 @@ namespace saga
 
           saga::impl::call_state get_state (saga::util::shared_ptr <saga::impl::call_context> cc)
           {
+            SAGA_UTIL_STACKTRACE ();
             saga::util::shared_ptr <saga::impl::task> impl (cc->get_impl ()); 
 
             std::cout << "task adaptor 0 : get_state ()" << std::endl;
@@ -970,6 +1010,7 @@ namespace saga
 
           saga::util::shared_ptr <saga::impl::result_t> get_result (saga::util::shared_ptr <saga::impl::call_context> cc)
           {
+            SAGA_UTIL_STACKTRACE ();
             saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
 
             std::cout << "task adaptor 0 : get_result ()" << std::endl;
@@ -993,12 +1034,13 @@ namespace saga
           typedef saga::impl::filesystem::file_instance_data idata_t;
 
         public:
-          file_adaptor_0    (void) { std::cout << "file adaptor 0 : ctor" << std::endl; } 
-          ~file_adaptor_0   (void) { std::cout << "file adaptor 0 : dtor" << std::endl; } 
+          file_adaptor_0    (void) { } 
+          ~file_adaptor_0   (void) { } 
 
           void_t constructor (saga::util::shared_ptr <saga::impl::call_context> cc, 
                               std::string                           url) 
           {
+            SAGA_UTIL_STACKTRACE ();
             saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
 
             std::cout << "file adaptor 0 : constructor (" << url << ")" << std::endl;
@@ -1011,6 +1053,7 @@ namespace saga
 
           int get_size (saga::util::shared_ptr <saga::impl::call_context> cc)
           {
+            SAGA_UTIL_STACKTRACE ();
             saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
 
             std::cout << "file adaptor 0 : get_size" << std::endl;
@@ -1020,6 +1063,7 @@ namespace saga
           saga::util::shared_ptr <saga::impl::task> get_size (saga::util::shared_ptr <saga::impl::call_context> cc, 
                                                               saga::impl::call_mode                             m)
           { 
+            SAGA_UTIL_STACKTRACE ();
             std::cout << "file adaptor 0 : get_size <async>" << std::endl;
             throw "oops";
           } 
@@ -1027,6 +1071,7 @@ namespace saga
           void_t copy (saga::util::shared_ptr <saga::impl::call_context> cc,
                        std::string                                       tgt)
           {
+            SAGA_UTIL_STACKTRACE ();
             saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
 
             std::cout << "file adaptor 0 : copy " << tgt << std::endl;
@@ -1045,12 +1090,13 @@ namespace saga
           typedef saga::impl::filesystem::file_instance_data idata_t;
 
         public:
-          file_adaptor_1    (void) { std::cout << "file adaptor 1 : ctor" << std::endl; } 
-          ~file_adaptor_1   (void) { std::cout << "file adaptor 1 : dtor" << std::endl; } 
+          file_adaptor_1    (void) { } 
+          ~file_adaptor_1   (void) { } 
 
           void_t constructor (saga::util::shared_ptr <saga::impl::call_context> cc,
                               std::string                                       url) 
           { 
+            SAGA_UTIL_STACKTRACE ();
             saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
 
             std::cout << "file adaptor 1 : constructor (" << url << ")" << std::endl;
@@ -1063,6 +1109,7 @@ namespace saga
 
           int get_size (saga::util::shared_ptr <saga::impl::call_context> cc)
           {
+            SAGA_UTIL_STACKTRACE ();
             saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
 
             std::cout << "file adaptor 1 : get_size ()" << std::endl;
@@ -1077,7 +1124,14 @@ namespace saga
           saga::util::shared_ptr <saga::impl::task> get_size (saga::util::shared_ptr <saga::impl::call_context> cc, 
                                                               saga::impl::call_mode                             m)
           { 
+            SAGA_UTIL_STACKTRACE ();
             std::cout << " ===== file adaptor 1 : get_size <> ()" << std::endl;
+
+            // in all cases, we allocate the result _t for the task's cc
+            saga::util::shared_ptr <saga::impl::result_t_detail_ <int> > res (new saga::impl::result_t_detail_ <int> ());
+            cc->get_func ()->set_result (res);
+
+
             cc->dump ();
 
             if ( m == saga::impl::Sync )
@@ -1085,15 +1139,10 @@ namespace saga
               std::cout << " ===== file adaptor 1 : get_size <Sync> ()" << std::endl;
 
               // call sync version: call the normal sync call, 
-              // and set up a completed task with its result.
-              saga::util::shared_ptr <saga::impl::result_t_detail_ <int> > res (new saga::impl::result_t_detail_ <int> ());
-              
-              res->set (get_size (cc));
+              // and complete task with its result.
 
-              std::cout << " file adaptor 1 : set result to" << std::endl;
-              res.dump ();
-
-              cc->get_func ()->set_result (res);
+              int size = get_size (cc);
+              res->set (size);
 
               cc->set_state (saga::impl::Done);
 
@@ -1122,6 +1171,7 @@ namespace saga
           void_t copy (saga::util::shared_ptr <saga::impl::call_context> cc,
                        std::string                                       tgt)
           {
+            SAGA_UTIL_STACKTRACE ();
             saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
 
             std::cout << "file adaptor 1 : copy " << tgt << std::endl;
@@ -1149,12 +1199,20 @@ namespace saga
           typedef saga::impl::filesystem::dir_instance_data idata_t;
 
         public:
-          dir_adaptor_0    (void) { std::cout << "dir adaptor 0 : ctor" << std::endl; } 
-          ~dir_adaptor_0   (void) { std::cout << "dir adaptor 0 : dtor" << std::endl; } 
+          dir_adaptor_0    (void) 
+          { 
+            SAGA_UTIL_STACKTRACE ();
+          } 
+          
+          ~dir_adaptor_0   (void) 
+          { 
+            SAGA_UTIL_STACKTRACE ();
+          } 
 
           void_t constructor (saga::util::shared_ptr <saga::impl::call_context> cc,
                               std::string                                       url) 
           { 
+            SAGA_UTIL_STACKTRACE ();
             saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
 
             std::cout << "dir adaptor 0 : constructor (" << url << ")" << std::endl;
@@ -1167,6 +1225,7 @@ namespace saga
 
           std::string get_url (saga::util::shared_ptr <saga::impl::call_context> cc)
           {
+            SAGA_UTIL_STACKTRACE ();
             saga::util::shared_ptr <saga::impl::filesystem::dir> impl (cc->get_impl ());  
 
             std::cout << "dir adaptor 0 : get_url" << std::endl;
@@ -1183,12 +1242,20 @@ namespace saga
           typedef saga::impl::filesystem::dir_instance_data idata_t;
 
         public:
-          dir_adaptor_1    (void) { std::cout << "dir adaptor 1 : ctor" << std::endl; } 
-          ~dir_adaptor_1   (void) { std::cout << "dir adaptor 1 : dtor" << std::endl; } 
+          dir_adaptor_1    (void) 
+          { 
+            SAGA_UTIL_STACKTRACE ();
+          } 
+
+          ~dir_adaptor_1   (void) 
+          { 
+            SAGA_UTIL_STACKTRACE ();
+          } 
 
           void_t constructor (saga::util::shared_ptr <saga::impl::call_context> cc,
                               std::string                                       url) 
           { 
+            SAGA_UTIL_STACKTRACE ();
             saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
 
             std::cout << "dir adaptor 1 : constructor (" << url << ")" << std::endl;
@@ -1201,6 +1268,7 @@ namespace saga
 
           std::string get_url (saga::util::shared_ptr <saga::impl::call_context> cc)
           {
+            SAGA_UTIL_STACKTRACE ();
             saga::util::shared_ptr <saga::impl::filesystem::dir> impl (cc->get_impl ());  
 
             saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
@@ -1214,6 +1282,7 @@ namespace saga
           saga::util::shared_ptr <saga::impl::filesystem::file> open (saga::util::shared_ptr <saga::impl::call_context> cc, 
                                                                       std::string                                       url)
           {
+            SAGA_UTIL_STACKTRACE ();
             saga::util::shared_ptr <saga::impl::filesystem::dir> impl (cc->get_impl ());  
 
             saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
@@ -1253,23 +1322,27 @@ namespace saga
       task (void)
         : impl_ (new saga::impl::task)
       {
+        SAGA_UTIL_STACKTRACE ();
         (void) impl_->constructor ();
       }
 
       task (saga::util::shared_ptr <saga::impl::task> impl)
         : impl_ (impl)
       {
+        SAGA_UTIL_STACKTRACE ();
         (void) impl_->constructor ();
       }
 
       saga::impl::call_state get_state (void)
       {
+        SAGA_UTIL_STACKTRACE ();
         return impl_->get_state ();
       }
 
       template <typename T>
       T get_result (void)
       {
+        SAGA_UTIL_STACKTRACE ();
         saga::util::shared_ptr <saga::impl::result_t> result = impl_->get_result (); 
         saga::util::shared_ptr <saga::impl::result_t_detail_ <T> > casted = result.get_shared_ptr <saga::impl::result_t_detail_ <T> > ();
         // FIXME: error check
@@ -1290,13 +1363,14 @@ namespace saga
         file (std::string url)
           : impl_ (new saga::impl::filesystem::file)
         {
-          SAGA_UTIL_STACKTRACE(file);
+          SAGA_UTIL_STACKTRACE ();
           (void) impl_->constructor (url);
         }
 
         file (saga::util::shared_ptr <saga::impl::filesystem::file> impl)
           : impl_ (impl)
         {
+          SAGA_UTIL_STACKTRACE ();
           // FIXME: where to get the URL/idata?  Is constructor here really useful,
           // as impl already exists?  Is impl always initialized?
           // In general, need to clear up who is filling idata, when the object
@@ -1307,17 +1381,20 @@ namespace saga
 
         int get_size (void)
         {
+          SAGA_UTIL_STACKTRACE ();
           return impl_->get_size ();
         }
 
         template <enum saga::impl::call_mode M>
         saga::task get_size (void)
         {
+          SAGA_UTIL_STACKTRACE ();
           return saga::task (impl_->get_size (M));
         }
 
         void copy (std::string tgt)
         {
+          SAGA_UTIL_STACKTRACE ();
           (void) impl_->copy (tgt);
         }
     };
@@ -1331,16 +1408,19 @@ namespace saga
         dir (std::string url)
           : impl_ (new saga::impl::filesystem::dir)
         {
+          SAGA_UTIL_STACKTRACE ();
           (void) impl_->constructor (url);
         }
 
         std::string get_url (void)
         {
+          SAGA_UTIL_STACKTRACE ();
           return impl_->get_url ();
         }
 
         saga::filesystem::file open (std::string url)
         {
+          SAGA_UTIL_STACKTRACE ();
           return saga::filesystem::file (impl_->open (url));
         }
     };
