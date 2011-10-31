@@ -8,59 +8,73 @@ namespace saga
 {
   namespace util
   {
-    static unsigned int saga_util_stack_tracer_indent_ = 0;
-
     class stack_tracer
     {
       private:
+        static unsigned int indent_;
+
+        const char * sig_;
+        const char * file_;
+        int          line_;
+        const char * msg_;
+
         void indent (void)
         {
-          for ( unsigned int i = 0; i < saga_util_stack_tracer_indent_; i++ )
+          if ( enabled )
           {
-            std::cout << "    ";
+            for ( unsigned int i = 0; i < indent_; i++ )
+            {
+              std::cout << "    ";
+            }
           }
         }
 
-        std::string sig_;
-        std::string file_;
-        int         line_;
-        std::string msg_;
-
 
       public:
-        stack_tracer (std::string sig, 
-                      std::string file, 
-                      int         line, 
-                      std::string msg = "")
+        static bool enabled;
+
+        stack_tracer (const char * sig, 
+                      const char * file, 
+                      int          line, 
+                      const char * msg = "")
           : sig_      (sig)
           , file_     (file)
           , line_     (line)
           , msg_      (msg)
         {
-          saga_util_stack_tracer_indent_++;
+          indent_++;
 
-          std::cout << "  --> ";
-          indent ();
-
-          if ( ! msg_.empty () )
+          if ( enabled )
           {
-            std::cout << msg_ << std::endl;
-            std::cout << "    > ";
+            std::cout << "  --> ";
             indent ();
-          }
 
-          std::cout << sig_ << " : " << file_ << " +" << line_ << std::endl;
+            if ( 0 == sizeof (msg_) )
+            {
+              std::cout << msg_ << std::endl;
+              std::cout << "    > ";
+              indent ();
+            }
+
+            std::cout << sig_ << " : " << file_ << " +" << line_ << " -->" << std::endl;
+          }
         }
 
         ~stack_tracer (void)
         {
-          std::cout << " <--  ";
-          indent ();
-          std::cout << sig_ << " <-- " << std::endl;
+          if ( enabled )
+          {
+            std::cout << " <--  ";
+            indent ();
+            std::cout << sig_ << " : " << file_ << " +" << line_ << " <--" << std::endl;
+          }
 
-          saga_util_stack_tracer_indent_--;
+          indent_--;
         }
     };
+
+    unsigned int stack_tracer::indent_ = 0;
+    bool         stack_tracer::enabled = false;
 
 #define SAGA_UTIL_TYPEID(x) saga::util::type_id::fn (x, #x)
 

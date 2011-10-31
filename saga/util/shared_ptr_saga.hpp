@@ -13,6 +13,7 @@
 #include <iostream>  // for stdout/stderr
 #include <typeinfo>  // for std::bad_cast
 
+#include <stdlib.h> // FIXME: only temporarily needed for abort()
 
 namespace saga
 {
@@ -307,7 +308,7 @@ namespace saga
           if ( NULL == ptr_ )
           {
             std::cout << "trying to dereference NULL ptr" << std::endl;
-            abort ();
+            ::abort (); // FIXME
             throw "trying to dereference NULL ptr";
           }
           

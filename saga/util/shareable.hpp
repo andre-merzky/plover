@@ -48,8 +48,8 @@ namespace saga
         {
         }
 
-      public:
 
+      public:
         // calling this method in the shared_pre c'tors allows to catch
         // shared_ptr on non-shareable objects on compile time
         bool is_shareable (void);
@@ -105,6 +105,11 @@ namespace saga
             throw "Cannot call get_mutex() from unshared instance";
 
           return mtx_;
+        }
+
+        virtual void dump (std::string msg = "")
+        {
+          std::cout << "shareable  (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl;          
         }
     };
 
