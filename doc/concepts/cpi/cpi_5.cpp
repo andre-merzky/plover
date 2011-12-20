@@ -53,7 +53,7 @@ namespace saga
 
       engine_->call <api_t, cpi_t> (cc);
 
-      if ( cc->get_task_state () == Failed )
+      if ( cc->get_call_state () == Failed )
       {
         throw " task::constructor () indicates failed";
       }
@@ -78,9 +78,9 @@ namespace saga
 
       engine_->call <api_t, cpi_t> (cc);
 
-      if ( cc->get_state () == Failed )
+      if ( cc->get_call_state () == Failed )
       {
-        throw " task::get_state failed - can't get result";
+        throw " task::get_state failed - can't get state";
       }
 
       return cc->get_result <res_t> ();
@@ -104,9 +104,9 @@ namespace saga
 
       engine_->call <api_t, cpi_t> (cc);
 
-      if ( cc->get_task_state () == Failed )
+      if ( cc->get_call_state () == Failed )
       {
-        throw " task::get_task_state indicates failed";
+        throw " task::get_call_state indicates failed";
       }
 
       return cc->get_result <res_t> ();
@@ -148,7 +148,7 @@ namespace saga
 
         engine_->call <api_t, cpi_t> (cc);
 
-        if ( cc->get_task_state () == Failed )
+        if ( cc->get_call_state () == Failed )
         {
           throw " file::constructor indicates failed";
         }
@@ -178,7 +178,7 @@ namespace saga
         // function on some cpi
         engine_->call <api_t, cpi_t> (cc);
 
-        if ( cc->get_task_state () == Failed )
+        if ( cc->get_call_state () == Failed )
         {
           throw " file::get_size indicates failed";
         }
@@ -208,7 +208,7 @@ namespace saga
         // function on some cpi
         engine_->call <api_t, cpi_t> (cc);
 
-        if ( cc->get_task_state () == Failed )
+        if ( cc->get_call_state () == Failed )
         {
           throw " file::get_size <> () indicates failed";
         }
@@ -239,7 +239,7 @@ namespace saga
 
         engine_->call <api_t, cpi_t> (cc);
 
-        if ( cc->get_task_state () == Failed )
+        if ( cc->get_call_state () == Failed )
         {
           throw " file::copy () indicates failed";
         }
@@ -284,7 +284,7 @@ namespace saga
 
         engine_->call <api_t, cpi_t> (cc);
         
-        if ( cc->get_task_state () == Failed )
+        if ( cc->get_call_state () == Failed )
         {
           throw " dir::constructor () indicates failed";
         }
@@ -309,7 +309,7 @@ namespace saga
 
         engine_->call <api_t, cpi_t> (cc);
 
-        if ( cc->get_task_state () == Failed )
+        if ( cc->get_call_state () == Failed )
         {
           throw " dir::get_url () indicates failed";
         }
@@ -335,7 +335,7 @@ namespace saga
 
         engine_->call <api_t, cpi_t> (cc);
 
-        if ( cc->get_task_state () == Failed )
+        if ( cc->get_call_state () == Failed )
         {
           throw " dir::open () indicates failed";
         }
@@ -358,20 +358,6 @@ int main ()
 
   try
   {
-    // file copy and get size, sync
-    if ( 0 )
-    {
-      std::cout << " -sync file ops ########"  << std::endl;
-    
-      saga::filesystem::file f ("/etc/passwd");
-    
-      std::cout << "file size: " << f.get_size () << std::endl;
-    
-      f.copy ("/tmp/passwd.bak");
-    
-      std::cout << " #######################"  << std::endl;
-    }
-
     // file open, sync
     if ( 0 )
     {
@@ -386,37 +372,62 @@ int main ()
       std::cout << " #######################"  << std::endl;
     }
 
+
+    // file copy and get size, sync
+    if ( 0 )
+    {
+      std::cout << " -sync file ops ########"  << std::endl;
+    
+      saga::filesystem::file f ("/etc/passwd");
+    
+      std::cout << "file size: " << f.get_size () << std::endl;
+    
+      f.copy ("/tmp/passwd.bak");
+    
+      std::cout << " #######################"  << std::endl;
+    }
+
+
     // file get_size, async
     if ( 1 )
     {
-      std::cout << " -async file ops #######"  << std::endl;
+      std::cout << " 0 ############################################################"  << std::endl;
+      std::cout << " 0 # async get_size ###########################################"  << std::endl;
+      std::cout << " 0 ############################################################"  << std::endl;
       
       saga::filesystem::file f ("/etc/passwd");
 
-      std::cout << " 1 #####################"  << std::endl;
+      std::cout << " 1 ############################################################"  << std::endl;
+      std::cout << " 1 ############################################################"  << std::endl;
+      std::cout << " 1 ############################################################"  << std::endl;
       
-      // std::cout << "file size: " << f.get_size () << std::endl;
-
       saga::task t = f.get_size <saga::impl::Async> ();
       
-      std::cout << " 2 #####################"  << std::endl;
+      std::cout << " 2 ############################################################"  << std::endl;
+      std::cout << " 2 ############################################################"  << std::endl;
+      std::cout << " 2 ############################################################"  << std::endl;
 
       saga::impl::call_state s = t.get_state ();
 
-      while ( s == saga::impl::New     ||
-              s == saga::impl::Running )
-      {
-        std::cout << "state: " << saga::util::saga_enums.to_key <saga::impl::call_state> (t.get_state ()) << std::endl;
-        ::sleep (1);
-        s = t.get_state ();
-      }
+      // while ( s == saga::impl::New     ||
+      //         s == saga::impl::Running )
+      // {
+      //   std::cout << "state: " << saga::util::saga_enums.to_key <saga::impl::call_state> (t.get_state ()) << std::endl;
+      //   ::sleep (1);
+      //   s = t.get_state ();
+      // }
 
       std::cout << "state: " << saga::util::saga_enums.to_key <saga::impl::call_state> (t.get_state ()) << std::endl;
-      std::cout << " 3 #####################"  << std::endl;
+
+      std::cout << " 3 ############################################################"  << std::endl;
+      std::cout << " 3 ############################################################"  << std::endl;
+      std::cout << " 3 ############################################################"  << std::endl;
 
       std::cout << "value: " << t.get_result <int> () << std::endl;
 
-      std::cout << " ### done ##############"  << std::endl;
+      std::cout << " 4 ############################################################"  << std::endl;
+      std::cout << " 4 ############################################################"  << std::endl;
+      std::cout << " 4 ############################################################"  << std::endl;
 
       ::sleep (2);
     }

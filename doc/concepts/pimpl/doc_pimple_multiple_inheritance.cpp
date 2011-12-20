@@ -176,7 +176,7 @@ class pimpl
 
 
   private:
-    // here we keep the pointer to the impl instance, cast to it's base type
+    // here we keep the pointer to the impl instance, cast' to it's base type
     impl::pimpl * impl_;
 
     // make our class hierarchy polymorph.  This method can be removed - the
@@ -195,7 +195,7 @@ class pimpl
     // class hierarchy will pass down the impl pointer - all others will invoke 
     // this c'tor for their base class.
     pimpl (_noimpl_enum) 
-      : impl_ (NULL)
+      : impl_ (NULL) // ?? FIXME
     {
       std::cout << " facade  pimpl   c'tor (no impl)" << std::endl; 
       
@@ -247,7 +247,7 @@ class pimpl
     // performs type checking at run time.  If that is starting to hurt your
     // program, you may consider to cache the returned and casted impl pointers
     // either here, or in your derived class.  The complexity will increase
-    // however as one then needs to check for dangling pointers...
+    // obviously...
     template <typename T>
     T *  get_impl (void)              
     { 
@@ -442,9 +442,9 @@ class context : public object, public attribs
 {
   public:
     context (void) 
-      : pimpl   (new impl::context ()) // store new impl pointer in pimpl base
-      , object  (pimpl::NO_IMPL)      // no impl pointer for the ...
-      , attribs (pimpl::NO_IMPL)      // ... other base classes
+      : pimpl   (new impl::context ()) // store new impl pointer in virt. pimpl base
+      , object  (pimpl::NO_IMPL)       // no impl pointer for the ...
+      , attribs (pimpl::NO_IMPL)       // ... other base classes
     { 
       std::cout << " facade  context c'tor" << std::endl; 
       impl_test ();
