@@ -181,6 +181,23 @@ namespace saga
 
     typedef singleton <enums> saga_enums;
 
+    // singleton call shortcuts
+    template <typename T>
+    T saga_enum_to_val (const char * key, 
+                        bool         icase = false)
+    {
+       return saga::util::saga_enums::get_singleton ()->to_val <T> (key, icase);
+    }
+
+    template <typename T>
+    std::string saga_enum_to_key (T val)
+    {
+       return saga::util::saga_enums::get_singleton ()->to_key (val);
+    }
+
+
+
+
     template <typename T>
     class enum_register
     {

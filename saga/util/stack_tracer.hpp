@@ -3,6 +3,7 @@
 #define SAGA_UTIL_STACKTRACER_HPP
 
 #include <iostream>
+#include <saga/util/logging.hpp>
 
 namespace saga
 {
@@ -13,20 +14,24 @@ namespace saga
       private:
         static unsigned int indent_;
 
-        const char * sig_;
-        const char * file_;
+        std::string  sig_;
+        std::string  file_;
         int          line_;
-        const char * msg_;
+        std::string  msg_;
 
-        void indent (void)
+        std::string indent (void)
         {
+          std::string ret;
+
           if ( enabled )
           {
             for ( unsigned int i = 0; i < indent_; i++ )
             {
-              std::cout << "    ";
+              ret += "  ";
             }
           }
+
+          return ret;
         }
 
 
@@ -42,21 +47,30 @@ namespace saga
           , line_     (line)
           , msg_      (msg)
         {
+          std::string out;
+
           indent_++;
 
           if ( enabled )
           {
-            std::cout << "  --> ";
-            indent ();
+            out += "  --> ";
+            out += indent ();
 
             if ( 0 == sizeof (msg_) )
             {
-              std::cout << msg_ << std::endl;
-              std::cout << "    > ";
-              indent ();
+              out += msg_;
+              out += "    > \n";
+              out += indent ();
             }
 
-            std::cout << sig_ << " : " << file_ << " +" << line_ << " -->" << std::endl;
+            out += sig_;
+            out += " : ";
+            out += file_;
+            out += " +";
+            out += saga::util::itoa (line_);
+            out += " -->";
+
+            saga::util::log (saga::util::logging::Debug, "stack trace level" + saga::util::itoa (indent_), out);
           }
         }
 
@@ -64,9 +78,18 @@ namespace saga
         {
           if ( enabled )
           {
-            std::cout << " <--  ";
-            indent ();
-            std::cout << sig_ << " : " << file_ << " +" << line_ << " <--" << std::endl;
+            std::string out;
+
+            out += " <--  ";
+            out += indent ();
+            out += sig_;
+            out += " : ";
+            out += file_;
+            out += " +";
+            out += saga::util::itoa (line_);
+            out += " <--";
+
+            saga::util::log (saga::util::logging::Debug, "stack trace level" + saga::util::itoa (indent_), out);
           }
 
           indent_--;
@@ -76,7 +99,9 @@ namespace saga
     unsigned int stack_tracer::indent_ = 0;
     bool         stack_tracer::enabled = false;
 
-#define SAGA_UTIL_TYPEID(x) saga::util::type_id::fn (x, #x)
+// //-------------------------------------------------------------
+// #define SAGA_UTIL_TYPEID(x) saga::util::type_id::fn (x, #x)   \
+// //-------------------------------------------------------------
 
 //-------------------------------------------------------------
 #define SAGA_UTIL_STACKTRACE()                                \

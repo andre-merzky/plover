@@ -6,7 +6,7 @@
 #include <saga/util/logging.hpp>
 #include <saga/util/scoped_lock.hpp>
 
-#define SAGA_UTIL_LOGGING_SEVERITY_DEFAULT saga::util::Warning;
+#define SAGA_UTIL_LOGGING_SEVERITY_DEFAULT saga::util::logging::Warning;
 #define SAGA_UTIL_LOGGING_TAGS_DEFAULT     "+must,-mustnot,may" // FIXME: should be empty by default
 #define SAGA_UTIL_LOGGING_TARGET_DEFAULT   "./saga_simple.%p.%t.log"
 
@@ -17,6 +17,7 @@ namespace saga
     logging::logging (void)
       : per_thread_  (false)
       , per_process_ (false)
+      , tags_star_   (false)
     {
       // getenv, getpid, open files, ...
 
@@ -49,25 +50,28 @@ namespace saga
       //
       // set tag filter
       //
-      tags_str_ = SAGA_UTIL_LOGGING_TAGS_DEFAULT;
+      std::string tags_str = SAGA_UTIL_LOGGING_TAGS_DEFAULT;
 
       const char * tags_tmp = ::getenv ("SAGA_LOG_TAGS");
       if ( NULL != tags_tmp )
       {
-        tags_str_ = tags_tmp;
+        tags_str = tags_tmp;
       }
 
-      std::vector <std::string> all_tags = saga::util::split (tags_str_, ", ");
+      std::vector <std::string> all_tags = saga::util::split (tags_str, ", ");
 
       for ( unsigned int i = 0; i < all_tags.size (); i++ )
       {
         std::string tag = all_tags[i];
-        std::cout << "tag: " << all_tags[i] << std::endl;
 
         // note that the substring operations below MAY result in empty tags.
         if ( ! tag.empty () )
         {
-          if ( tag.size () > 1 && tag[0] == '+' )
+          if ( tag == "*" )
+          {
+            tags_star_ = true;
+          }
+          else if ( tag.size () > 1 && tag[0] == '+' )
           {
             tags_must_.push_back (tag.substr (1));
           }
@@ -136,7 +140,7 @@ namespace saga
     //
     //
     //
-    std::ostream & logging::str_ (void)
+    std::ostream & logging::logs (void)
     {
       // by default, use stream 0
       pthread_t tid = 0;
@@ -210,15 +214,15 @@ namespace saga
     //
     //
     //
-    void logging::log (saga::util::severity s,   // severity level of message
-                       std::string          t,   // tags for message
-                       std::string          m)   // log message
+    void logging::log (severity    s,   // severity level of message
+                       std::string t,   // tags for message
+                       std::string m)   // log message
     { 
       if ( matches_severity (s) )
       {
         if ( matches_tags (t) )
         {
-          std::ostream & str = str_ ();
+          std::ostream & str = logs ();
           str << "logging: " << m << std::endl;
         }
       }
@@ -228,7 +232,7 @@ namespace saga
     //
     //
     //
-    bool logging::matches_severity (saga::util::severity s)
+    bool logging::matches_severity (severity s)
     {
       if ( s < severity_ )
       {
@@ -250,6 +254,11 @@ namespace saga
     //
     bool logging::matches_tags (std::string t)
     {
+      // we log all messages if '*' is part of requested tags
+      if ( tags_star_ )
+        return true;
+
+
       bool must_match = false;
       std::vector <std::string> tags = saga::util::split (t, ", ");
 
@@ -314,9 +323,9 @@ namespace saga
     }
 
 
-    void log (saga::util::severity s,   // severity level of message
-              std::string          t,   // tags for message
-              std::string          m)
+    void log (saga::util::logging::severity  s,   // severity level of message
+              std::string                    t,   // tags for message
+              std::string                    m)
     {
       saga::util::the_logger::get_singleton ()->log (s, t, m);
     }

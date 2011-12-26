@@ -352,7 +352,9 @@ namespace saga
 
 int main ()
 {
-  saga::util::stack_tracer::enabled = false;
+  LOG (DEBUG, "trace, main", " trace: > main");
+
+  saga::util::stack_tracer::enabled = true;
 
   SAGA_UTIL_STACKTRACE ();
 
@@ -412,12 +414,12 @@ int main ()
       // while ( s == saga::impl::New     ||
       //         s == saga::impl::Running )
       // {
-      //   std::cout << "state: " << saga::util::saga_enums.to_key <saga::impl::call_state> (t.get_state ()) << std::endl;
+      //   std::cout << "state: " << saga::util::saga_enum_to_key <saga::impl::call_state> (t.get_state ()) << std::endl;
       //   ::sleep (1);
       //   s = t.get_state ();
       // }
 
-      std::cout << "state: " << saga::util::saga_enums.to_key <saga::impl::call_state> (t.get_state ()) << std::endl;
+      std::cout << "state: " << saga::util::saga_enum_to_key <saga::impl::call_state> (t.get_state ()) << std::endl;
 
       std::cout << " 3 ############################################################"  << std::endl;
       std::cout << " 3 ############################################################"  << std::endl;

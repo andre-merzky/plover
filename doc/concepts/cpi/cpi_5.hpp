@@ -18,7 +18,24 @@
 #include <saga/util/scoped_lock.hpp>
 #include <saga/util/shareable.hpp>
 #include <saga/util/enums.hpp>
+#include <saga/util/logging.hpp>
 #include <saga/util/stack_tracer.hpp>
+
+
+#define LOG       saga::util::log
+
+#define NOISE     saga::util::logging::Noise    
+#define DEBUG     saga::util::logging::Debug    
+#define INFO      saga::util::logging::Info     
+#define NOTICE    saga::util::logging::Notice   
+#define WARNING   saga::util::logging::Warning  
+#define ERROR     saga::util::logging::Error    
+#define CRITICAL  saga::util::logging::Critical 
+#define ALERT     saga::util::logging::Alert    
+#define EMERGENCY saga::util::logging::Emergency
+
+
+namespace su = saga::util;
 
 // In the cpi_4 example, we introduces a functor class, which allows the
 // engine to more indirectly mediate between API and adaptor, and also 
@@ -170,7 +187,7 @@ namespace saga
 
         virtual void dump (std::string msg = "") 
         { 
-          std::cout << msg << " - (base result type)" << std::endl; 
+          su::log (su::logging::Debug, "dump, result_t", msg + " - (base result type)");
         }
     };
 
@@ -421,10 +438,10 @@ namespace saga
         {
           // FIXME: to_key can throw
           std::cout      <<   "call_context (" << this << ") : " << msg << std::endl;
-          std::cout      <<   "    cpi  mode   : " << saga::util::saga_enums.to_key <saga::impl::cpi_mode>   (cpi_mode_  ) << std::endl;
-          std::cout      <<   "    call mode   : " << saga::util::saga_enums.to_key <saga::impl::call_mode>  (mode_      ) << std::endl;
-          std::cout      <<   "    call state  : " << saga::util::saga_enums.to_key <saga::impl::call_state> (call_state_) << std::endl;
-          std::cout      <<   "    task state  : " << saga::util::saga_enums.to_key <saga::impl::call_state> (task_state_) << std::endl;
+          std::cout      <<   "    cpi  mode   : " << saga::util::saga_enum_to_key <saga::impl::cpi_mode>   (cpi_mode_  ) << std::endl;
+          std::cout      <<   "    call mode   : " << saga::util::saga_enum_to_key <saga::impl::call_mode>  (mode_      ) << std::endl;
+          std::cout      <<   "    call state  : " << saga::util::saga_enum_to_key <saga::impl::call_state> (call_state_) << std::endl;
+          std::cout      <<   "    task state  : " << saga::util::saga_enum_to_key <saga::impl::call_state> (task_state_) << std::endl;
           std::cout      <<   "    func name   : " << func_name_ << std::endl;
           std::cout      <<   "    func args   : " << func_args_ << std::endl;
           impl_.dump         ("    IMPL_       : ");
@@ -1136,8 +1153,8 @@ namespace saga
             // endlessly
 
             // FIXME: to_key can throw
-            std::cout << "cpi_mode  : " << saga::util::saga_enums.to_key <saga::impl::call_mode>  (idata->t_cc->get_mode ())       << std::endl;
-            std::cout << "task_state: " << saga::util::saga_enums.to_key <saga::impl::call_state> (idata->t_cc->get_task_state ()) << std::endl;
+            std::cout << "cpi_mode  : " << saga::util::saga_enum_to_key <saga::impl::call_mode>  (idata->t_cc->get_mode ())       << std::endl;
+            std::cout << "task_state: " << saga::util::saga_enum_to_key <saga::impl::call_state> (idata->t_cc->get_task_state ()) << std::endl;
 
 
             if ( idata->t_cc->get_mode       () == saga::impl::Sync &&
