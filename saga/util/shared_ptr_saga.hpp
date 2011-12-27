@@ -6,14 +6,15 @@
 # warning "this include should only be used with TR1 undefined"
 #endif
 
-#include <saga/util/demangle.hpp>
-#include <saga/util/scoped_lock.hpp>
-
 #include <exception> // for std exception types
 #include <iostream>  // for stdout/stderr
 #include <typeinfo>  // for std::bad_cast
 
 #include <stdlib.h> // FIXME: only temporarily needed for abort()
+
+#include <saga/util/logging.hpp>
+#include <saga/util/demangle.hpp>
+#include <saga/util/scoped_lock.hpp>
 
 namespace saga
 {
@@ -307,7 +308,7 @@ namespace saga
         {
           if ( NULL == ptr_ )
           {
-            std::cout << "trying to dereference NULL ptr" << std::endl;
+            saga::util::log (saga::util::logging::Warning, "shared_ptr internal", "trying to dereference NULL ptr");
             ::abort (); // FIXME
             throw "trying to dereference NULL ptr";
           }
@@ -405,7 +406,8 @@ namespace saga
 
         void dump (std::string msg = "")
         {
-          std::cout << msg << get_ptype_demangled () << " - " << ptr_ << " - " << (*cnt_) << std::endl;
+          saga::util::log (saga::util::logging::Info, "shared_ptr dump", 
+                           msg + get_ptype_demangled () + " - " + ptr_ + " - " + (*cnt_));
         }
     };
 

@@ -10,8 +10,8 @@
 
 #include <pthread.h>
 
-#include <saga/util/mutex.hpp>
 #include <saga/util/enums.hpp>
+#include <saga/util/mutex.hpp>
 
 namespace saga
 {

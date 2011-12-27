@@ -132,51 +132,7 @@ namespace saga
         }
 
 
-        void dump (void)
-        {
-          {
-            std::map <std::string, std::map <std::string, int> > :: iterator i1;
-
-            for ( i1  = key_map_.begin (); 
-                  i1 != key_map_.end   ();
-                  i1++ )
-            {
-              std::cout << "  " << i1->first << std::endl;
-
-              std::map <std::string, int> :: iterator i2;
-
-              for ( i2  = key_map_[i1->first].begin (); 
-                    i2 != key_map_[i1->first].end   ();
-                    i2++ )
-              {
-                std::cout << "    " << i2->first << " \t" << i2->second << std::endl;
-              }
-            }
-            std::cout << std::endl;
-          }
-
-
-          {
-            std::map <std::string, std::map <int, std::string> > :: iterator i1;
-
-            for ( i1  = val_map_.begin (); 
-                  i1 != val_map_.end   ();
-                  i1++ )
-            {
-              std::cout << "  " << i1->first << std::endl;
-
-              std::map <int, std::string> :: iterator i2;
-
-              for ( i2  = val_map_[i1->first].begin (); 
-                    i2 != val_map_[i1->first].end   ();
-                    i2++ )
-              {
-                std::cout << "    " << i2->first << " \t" << i2->second << std::endl;
-              }
-            }
-            std::cout << std::endl;
-          }
-        }
+        void dump (void);
     };
 
     typedef singleton <enums> saga_enums;
