@@ -17,7 +17,7 @@ namespace saga
 
     void impl_base::dump (std::string msg)
     {
-      std::cout << "impl_base (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) 
+      LOGSTR (DEBUG, "impl_base dump") << "impl_base (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) 
                 << " : " << msg  << std::endl;
       engine_.dump ("    engine_     : ");
       engine_->dump();
@@ -191,9 +191,9 @@ namespace saga
       {
         SAGA_UTIL_STACKTRACE ();
 
-        typedef saga::util::shared_ptr <saga::impl::task>                                                               res_t;
-        typedef saga::impl::filesystem::file                                                                            api_t;
-        typedef saga::impl::filesystem::file_cpi                                                                        cpi_t;
+        typedef saga::util::shared_ptr <saga::impl::task>                                                              res_t;
+        typedef saga::impl::filesystem::file                                                                           api_t;
+        typedef saga::impl::filesystem::file_cpi                                                                       cpi_t;
         typedef saga::impl::functor_1 <api_t, cpi_t, saga::util::shared_ptr <saga::impl::task>, saga::impl::call_mode> func_t;
 
         // create a functor which hold the cpi class' get_size() function
@@ -352,8 +352,6 @@ namespace saga
 
 int main ()
 {
-  LOG (DEBUG, "trace, main", " trace: > main");
-
   saga::util::stack_tracer::enabled = true;
 
   SAGA_UTIL_STACKTRACE ();
@@ -363,73 +361,63 @@ int main ()
     // file open, sync
     if ( 0 )
     {
-      std::cout << " -sync dir ops #########"  << std::endl;
+      LOGSTR (INFO, "main tag") << " -sync dir ops #########"  << std::endl;
     
       saga::filesystem::dir d ("/etc/");
-      std::cout << "dir url: " << d.get_url () << std::endl;
+      LOGSTR (INFO, "main tag") << "dir url: " << d.get_url () << std::endl;
     
       saga::filesystem::file f = d.open ("passwd");
-      std::cout << "file size: " << f.get_size () << std::endl;
+      LOGSTR (INFO, "main tag") << "file size: " << f.get_size () << std::endl;
     
-      std::cout << " #######################"  << std::endl;
+      LOGSTR (INFO, "main tag") << " #######################"  << std::endl;
     }
 
 
     // file copy and get size, sync
     if ( 0 )
     {
-      std::cout << " -sync file ops ########"  << std::endl;
+      LOGSTR (INFO, "main tag") << " -sync file ops ########"  << std::endl;
     
       saga::filesystem::file f ("/etc/passwd");
     
-      std::cout << "file size: " << f.get_size () << std::endl;
+      LOGSTR (INFO, "main tag") << "file size: " << f.get_size () << std::endl;
     
       f.copy ("/tmp/passwd.bak");
     
-      std::cout << " #######################"  << std::endl;
+      LOGSTR (INFO, "main tag") << " #######################"  << std::endl;
     }
 
 
     // file get_size, async
     if ( 1 )
     {
-      std::cout << " 0 ############################################################"  << std::endl;
-      std::cout << " 0 # async get_size ###########################################"  << std::endl;
-      std::cout << " 0 ############################################################"  << std::endl;
+      LOGSTR (INFO, "main tag") << " 0 # async get_size ###########################################"  << std::endl;
       
       saga::filesystem::file f ("/etc/passwd");
 
-      std::cout << " 1 ############################################################"  << std::endl;
-      std::cout << " 1 ############################################################"  << std::endl;
-      std::cout << " 1 ############################################################"  << std::endl;
+      LOGSTR (INFO, "main tag") << " 1 ############################################################"  << std::endl;
       
       saga::task t = f.get_size <saga::impl::Async> ();
       
-      std::cout << " 2 ############################################################"  << std::endl;
-      std::cout << " 2 ############################################################"  << std::endl;
-      std::cout << " 2 ############################################################"  << std::endl;
+      LOGSTR (INFO, "main tag") << " 2 ############################################################"  << std::endl;
 
       saga::impl::call_state s = t.get_state ();
 
-      // while ( s == saga::impl::New     ||
-      //         s == saga::impl::Running )
-      // {
-      //   std::cout << "state: " << saga::util::saga_enum_to_key <saga::impl::call_state> (t.get_state ()) << std::endl;
-      //   ::sleep (1);
-      //   s = t.get_state ();
-      // }
+      while ( s == saga::impl::New     ||
+              s == saga::impl::Running )
+      {
+        LOGSTR (INFO, "main tag") << "state: " << saga::util::saga_enum_to_key <saga::impl::call_state> (t.get_state ()) << std::endl;
+        ::sleep (1);
+        s = t.get_state ();
+      }
 
-      std::cout << "state: " << saga::util::saga_enum_to_key <saga::impl::call_state> (t.get_state ()) << std::endl;
+      LOGSTR (INFO, "main tag") << "state: " << saga::util::saga_enum_to_key <saga::impl::call_state> (t.get_state ()) << std::endl;
 
-      std::cout << " 3 ############################################################"  << std::endl;
-      std::cout << " 3 ############################################################"  << std::endl;
-      std::cout << " 3 ############################################################"  << std::endl;
+      LOGSTR (INFO, "main tag") << " 3 ############################################################"  << std::endl;
 
-      std::cout << "value: " << t.get_result <int> () << std::endl;
+      LOGSTR (INFO, "main tag") << "value: " << t.get_result <int> () << std::endl;
 
-      std::cout << " 4 ############################################################"  << std::endl;
-      std::cout << " 4 ############################################################"  << std::endl;
-      std::cout << " 4 ############################################################"  << std::endl;
+      LOGSTR (INFO, "main tag") << " 4 ############################################################"  << std::endl;
 
       ::sleep (2);
     }
@@ -442,7 +430,7 @@ int main ()
   }
   catch ( const char * err )
   {
-    std::cerr << "error: " << err << std::endl;
+    std::cerr << "error const char *: " << err << std::endl;
     return 1;
   }
 

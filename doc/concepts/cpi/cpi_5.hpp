@@ -23,6 +23,7 @@
 
 
 #define LOG       saga::util::log
+#define LOGSTR    saga::util::logstr
 
 #define NOISE     saga::util::logging::Noise    
 #define DEBUG     saga::util::logging::Debug    
@@ -217,9 +218,10 @@ namespace saga
 
         void dump (std::string msg = "")
         {
-          std::cout << "result_t_detail_ (" << this << ") : " 
-                    << saga::util::demangle (typeid (*this).name ()) 
-                    << " : " << t_ << std::endl;
+          LOGSTR (DEBUG, "result_t_detail dump") 
+            << this << ") : " 
+            << saga::util::demangle (typeid (*this).name ()) 
+            << " : " << t_ << std::endl;
         }
 
     };
@@ -325,7 +327,10 @@ namespace saga
 
         virtual void dump (std::string msg = "")
         {
-          std::cout << "functor_base (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << std::endl;
+          LOGSTR (DEBUG, "functor_base dump")
+            << " (" << this << ") : " 
+            << saga::util::demangle (typeid (*this).name ()) 
+            << std::endl;
         }
 
     };
@@ -348,10 +353,11 @@ namespace saga
 
         virtual void dump (std::string msg = "")
         {
-          std::cout  << "functor         : " << this << " : " << saga::util::demangle (typeid (*this).name ()) << std::endl;
-          std::cout  << "    IMPL        : " << saga::util::demangle (typeid (IMPL ).name ()) << std::endl;
-          std::cout  << "    CPI         : " << saga::util::demangle (typeid (CPI  ).name ()) << std::endl;
-          std::cout  << "    RET         : " << saga::util::demangle (typeid (RET  ).name ()) << std::endl;
+          LOGSTR (DEBUG, "functor dump")
+            << "functor         : " << this << " : " << saga::util::demangle (typeid (*this).name ()) << std::endl
+            << "    IMPL        : " << saga::util::demangle (typeid (IMPL ).name ()) << std::endl
+            << "    CPI         : " << saga::util::demangle (typeid (CPI  ).name ()) << std::endl
+            << "    RET         : " << saga::util::demangle (typeid (RET  ).name ()) << std::endl;
           get_result ().dump ("    result_     : ");
           get_result ()->dump();
         }
@@ -437,13 +443,14 @@ namespace saga
         void dump (std::string msg = "")
         {
           // FIXME: to_key can throw
-          std::cout      <<   "call_context (" << this << ") : " << msg << std::endl;
-          std::cout      <<   "    cpi  mode   : " << saga::util::saga_enum_to_key <saga::impl::cpi_mode>   (cpi_mode_  ) << std::endl;
-          std::cout      <<   "    call mode   : " << saga::util::saga_enum_to_key <saga::impl::call_mode>  (mode_      ) << std::endl;
-          std::cout      <<   "    call state  : " << saga::util::saga_enum_to_key <saga::impl::call_state> (call_state_) << std::endl;
-          std::cout      <<   "    task state  : " << saga::util::saga_enum_to_key <saga::impl::call_state> (task_state_) << std::endl;
-          std::cout      <<   "    func name   : " << func_name_ << std::endl;
-          std::cout      <<   "    func args   : " << func_args_ << std::endl;
+          LOGSTR (DEBUG, "call_context dump")
+            <<   "call_context (" << this << ") : " << msg << std::endl
+            <<   "    cpi  mode   : " << saga::util::saga_enum_to_key <saga::impl::cpi_mode>   (cpi_mode_  ) << std::endl
+            <<   "    call mode   : " << saga::util::saga_enum_to_key <saga::impl::call_mode>  (mode_      ) << std::endl
+            <<   "    call state  : " << saga::util::saga_enum_to_key <saga::impl::call_state> (call_state_) << std::endl
+            <<   "    task state  : " << saga::util::saga_enum_to_key <saga::impl::call_state> (task_state_) << std::endl
+            <<   "    func name   : " << func_name_ << std::endl
+            <<   "    func args   : " << func_args_ << std::endl;
           impl_.dump         ("    IMPL_       : ");
           impl_->dump        ();
           result_.dump       ("    result_: ");
@@ -489,7 +496,10 @@ namespace saga
 
         virtual void dump (std::string msg = "")
         {
-          std::cout << "cpi_base (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl;
+          LOGSTR (DEBUG, "cpi_base dump")
+            << "cpi_base (" << this << ") : " 
+            << saga::util::demangle (typeid (*this).name ()) << " : " 
+            << msg << std::endl;
         }
     };
 
@@ -540,8 +550,9 @@ namespace saga
 
         void dump (std::string msg = "")
         {
-          std::cout << "task_instance_data (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl;
-          std::cout << "    t_cc        : " << std::endl;
+          LOGSTR (DEBUG, "task_instance_data dump") 
+            << "(" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl
+            << "    t_cc        : " << std::endl;
           t_cc.dump ();
           t_cc->dump ();  // should give infinite recursion!
         }
@@ -569,7 +580,8 @@ namespace saga
 
         virtual void dump (std::string msg = "")
         {
-          std::cout << "impl::task (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl;
+          LOGSTR (DEBUG, "task dump") 
+            << "impl::task (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl;
           idata_.dump ("    idata_      : ");
           idata_->dump();
         }
@@ -645,10 +657,11 @@ namespace saga
 
           void dump (std::string msg = "")
           {
-            std::cout << "file_instance_data (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl;
-            std::cout << "    valid       : " << valid << std::endl;
-            std::cout << "    url         : " << url   << std::endl;
-            std::cout << "    pos         : " << pos   << std::endl;
+            LOGSTR (DEBUG, "file_instance_data dump") 
+              << "file_instance_data (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl
+              << "    valid       : " << valid << std::endl
+              << "    url         : " << url   << std::endl
+              << "    pos         : " << pos   << std::endl;
           }
       };
 
@@ -686,7 +699,8 @@ namespace saga
 
           void dump (std::string msg = "")
           {
-            std::cout << "impl::file (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl;
+            LOGSTR (DEBUG, "impl::file dump") 
+              << "impl::file (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl;
             idata_.dump  ("    idata_      : ");
             idata_->dump ();
             impl_base::dump ();
@@ -741,10 +755,11 @@ namespace saga
 
           void dump (std::string msg = "")
           {
-            std::cout << "dir_instance_data (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl;
-            std::cout << "    valid       : " << valid << std::endl;
-            std::cout << "    url         : " << url   << std::endl;
-            std::cout << "    pos         : " << pos   << std::endl;
+            LOGSTR (DEBUG, "dir_instance_data dump") 
+              << "dir_instance_data (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl
+              << "    valid       : " << valid << std::endl
+              << "    url         : " << url   << std::endl
+              << "    pos         : " << pos   << std::endl;
           }
       };
 
@@ -781,7 +796,8 @@ namespace saga
 
           void dump (std::string msg = "")
           {
-            std::cout << "impl::dir (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl;
+            LOGSTR (DEBUG, "impl::dir dump") 
+              << "impl::dir (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl;
             idata_.dump ("    idata_      : ");
             idata_->dump();
           }
@@ -831,11 +847,12 @@ namespace saga
 
         void dump (std::string msg = "")
         {
-          std::cout << "functor (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl;
-          std::cout << "    call        : " << saga::util::demangle (typeid (call_).name ()) << " : " << this->get_name () << std::endl;
-          std::cout << "    IMPL        : " << saga::util::demangle (typeid (IMPL ).name ()) << std::endl;
-          std::cout << "    CPI         : " << saga::util::demangle (typeid (CPI  ).name ()) << std::endl;
-          std::cout << "    RET         : " << saga::util::demangle (typeid (RET  ).name ()) << std::endl;
+          LOGSTR (DEBUG, "functor_0 dump") 
+            << "functor (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl
+            << "    call        : " << saga::util::demangle (typeid (call_).name ()) << " : " << this->get_name () << std::endl
+            << "    IMPL        : " << saga::util::demangle (typeid (IMPL ).name ()) << std::endl
+            << "    CPI         : " << saga::util::demangle (typeid (CPI  ).name ()) << std::endl
+            << "    RET         : " << saga::util::demangle (typeid (RET  ).name ()) << std::endl;
           this->get_result ().dump ("    result_     : ");
           this->get_result ()->dump();
         }
@@ -865,6 +882,11 @@ namespace saga
           SAGA_UTIL_STACKTRACE ();
         }
 
+        void set_arg_1 (ARG_1 a1)
+        {
+          arg_1_ = a1;
+        }
+
         void call_cpi (saga::util::shared_ptr <cpi_base>                 cpi, 
                        saga::util::shared_ptr <saga::impl::call_context> cc)
         { 
@@ -878,12 +900,13 @@ namespace saga
 
         void dump (std::string msg = "")
         {
-          std::cout << "functor (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl;
-          std::cout << "    call        : " << saga::util::demangle (typeid (call_).name ()) << " : " << this->get_name () << std::endl;
-          std::cout << "    ARG 1       : " << saga::util::demangle (typeid (ARG_1).name ()) << " : " << arg_1_      << std::endl;
-          std::cout << "    IMPL        : " << saga::util::demangle (typeid (IMPL ).name ()) << std::endl;
-          std::cout << "    CPI         : " << saga::util::demangle (typeid (CPI  ).name ()) << std::endl;
-          std::cout << "    RET         : " << saga::util::demangle (typeid (RET  ).name ()) << std::endl;
+          LOGSTR (DEBUG, "functor_1 dump") 
+            << "functor (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl
+            << "    call        : " << saga::util::demangle (typeid (call_).name ()) << " : " << this->get_name () << std::endl
+            << "    ARG 1       : " << saga::util::demangle (typeid (ARG_1).name ()) << " : " << arg_1_      << std::endl
+            << "    IMPL        : " << saga::util::demangle (typeid (IMPL ).name ()) << std::endl
+            << "    CPI         : " << saga::util::demangle (typeid (CPI  ).name ()) << std::endl
+            << "    RET         : " << saga::util::demangle (typeid (RET  ).name ()) << std::endl;
           this->get_result ().dump ("    result_     : ");
           this->get_result ()->dump();
         }
@@ -920,7 +943,8 @@ namespace saga
         engine (void)
         {
           SAGA_UTIL_STACKTRACE ();
-          std::cout << "engine: register all adaptors" << std::endl;
+
+          LOGSTR (INFO, "engine") << "engine: register all adaptors";
 
           // create and register adaptor instances
           cpis_.push_back (open_adaptor <saga::adaptor::test::file_adaptor_0> ());
@@ -969,45 +993,51 @@ namespace saga
           // typedef saga::impl::functor <IMPL, CPI, RET> func_cast_t;
 
           // get the matching list of CPIs
-          std::vector <saga::util::shared_ptr <CPI> > cpis_ = get_cpis <CPI> ();
+          std::vector <saga::util::shared_ptr <CPI> > cpis = get_cpis <CPI> ();
 
           // try one adaptor after the other, until one succeeds.
-          for ( unsigned int i = 0; i < cpis_.size (); i++ )
+          LOGSTR (INFO, "engine call") << "calling cpis " << cpis.size () << std::endl;
+          for ( unsigned int i = 0; i < cpis.size (); i++ )
           {
+            LOGSTR (INFO, "engine call") << "calling cpi " << i << " / " << cpis.size () << std::endl;
             try
             {
+              LOGSTR (INFO, "engine call") << "adaptor " << i << " : calling " << cc->get_func()->get_name () << std::endl;
+
               saga::util::shared_ptr <func_base_t> base   = cc->get_func ();
               // saga::util::shared_ptr <func_cast_t> casted = base.get_shared_ptr <func_cast_t> ();
 
-              base->call_cpi (cpis_[i], cc);
+              base->call_cpi (cpis[i], cc);
               cc->set_call_state (Done);
-              std::cout << "adaptor " << i << " : succeeded for " << cc->get_func()->get_name () << std::endl;
+              LOGSTR (INFO, "engine call") << "adaptor " << i << " : succeeded for " << cc->get_func()->get_name () << std::endl;
 
               return;
             }
             catch ( const char * m )
             {
               // something went wrong...
-              std::cout << "adaptor " << i << " : failed for " << cc->get_func()->get_name () << " : " << m << std::endl;
+              LOGSTR (INFO, "engine call") << "adaptor " << i << " : failed for " << cc->get_func()->get_name () << " : " << m << std::endl;
             }
             catch ( ... )
             {
               // something went wrong...
-              std::cout << "adaptor " << i << " : failed for " << cc->get_func()->get_name () << " : ???" << std::endl;
+              LOGSTR (INFO, "engine call") << "adaptor " << i << " : failed for " << cc->get_func()->get_name () << " : ???" << std::endl;
             }
+            LOGSTR (INFO, "engine call") << "calling cpi done " << i << " / " << cpis.size () << std::endl;
           }
 
           // no adaptor suceeded.  We don't have anything sensible to return, so
           // we flag the failure, and throw.  That is redundant, but hey...
           cc->set_call_state (Failed);
 
-          std::cout << "all adaptors failed for " << cc->get_func()->get_name () << std::endl;
+          LOGSTR (INFO, "engine call") << "all adaptors failed for " << cc->get_func()->get_name () << std::endl;
           throw "no adaptor suceeded";
         }
 
         void dump (std::string msg = "")
         {
-          std::cout << "engine (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl;
+          LOGSTR (DEBUG, "engine dump") 
+            << "engine (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl;
 
           for ( unsigned int i = 0; i < cpis_.size (); i++ )
           {
@@ -1039,63 +1069,105 @@ namespace saga
 
           static void * threaded_cc (void * cc_sp)
           {
-            std::cout << " @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@" << std::endl;
-
-            SAGA_UTIL_STACKTRACE ();
-            saga::util::shared_ptr <saga::impl::call_context> * cc_tmp
-              = static_cast <saga::util::shared_ptr <saga::impl::call_context> *> (cc_sp);
-
-            typedef saga::impl::task     api_t;
-            typedef saga::impl::task_cpi cpi_t;
-            typedef saga::impl::task_cpi ret_t;
-
-            saga::util::shared_ptr <saga::impl::call_context> cc = cc_tmp->get_shared_ptr (); 
-
-            std::cout << "thread created " << pthread_self () << std::endl;
-
-            cc->dump ();
-
-            // wait 'til task is getting run()
-            while ( cc->get_task_state () == saga::impl::New )
+            saga::util::shared_ptr <saga::impl::call_context> cc; 
+            try
             {
-              ::sleep (3); // FIXME: nanosleep, configurable timeout
-            }
+              LOGSTR (INFO, "task_adaptor_0 threaded_cc") << " @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@" << std::endl;
 
-            if ( cc->get_task_state () == saga::impl::Running )
-            {
-              std::cout << "thread starting " << pthread_self () << std::endl;
+              SAGA_UTIL_STACKTRACE ();
+              saga::util::shared_ptr <saga::impl::call_context> * cc_tmp
+                = static_cast <saga::util::shared_ptr <saga::impl::call_context> *> (cc_sp);
 
-              saga::util::shared_ptr <saga::impl::impl_base> impl (cc->get_impl ()); 
+              typedef saga::impl::task     api_t;
+              typedef saga::impl::task_cpi cpi_t;
+              typedef saga::impl::task_cpi ret_t;
 
-              std::cout << " 1 xxxxxxxxxxxxxxx" << std::endl;
+              cc = cc_tmp->get_shared_ptr (); 
 
-              impl->dump ("impl sp: ");
+              LOGSTR (INFO, "task_adaptor_0 threaded_cc") << "thread created " << pthread_self () << std::endl;
 
-              std::cout << " 2 xxxxxxxxxxxxxxx" << std::endl;
+              cc->dump ();
 
-              saga::util::shared_ptr <saga::impl::engine> engine = impl->get_engine ();
-
-              // engine.dump  ();
-              // engine->dump ();
-
-              std::cout << " 3 xxxxxxxxxxxxxxx" << std::endl;
-
-              int i = 0;
-              while ( i < 10 )
+              // wait 'til task is getting run()
+              while ( cc->get_task_state () == saga::impl::New )
               {
-                std::cout << "thread is running " << i << std::endl;
-                ::sleep (1);
-                i++;
+                ::sleep (3); // FIXME: nanosleep, configurable timeout
               }
 
-              engine->call <api_t, cpi_t> (cc); // this will set state
+              if ( cc->get_task_state () == saga::impl::Running )
+              {
+                LOGSTR (INFO, "task_adaptor_0 threaded_cc") << "thread starting " << pthread_self () << std::endl;
 
-              std::cout << " 4 xxxxxxxxxxxxxxx" << std::endl;
+                saga::util::shared_ptr <saga::impl::impl_base> impl (cc->get_impl ()); 
 
-              // the sync call is now Done, and its result is stored
+                LOGSTR (INFO, "task_adaptor_0 threaded_cc") << " 1 xxxxxxxxxxxxxxx" << std::endl;
+
+                impl->dump ("impl sp: ");
+
+                LOGSTR (INFO, "task_adaptor_0 threaded_cc") << " 2 xxxxxxxxxxxxxxx" << std::endl;
+
+                saga::util::shared_ptr <saga::impl::engine> engine = impl->get_engine ();
+
+                // engine.dump  ();
+                // engine->dump ();
+
+                LOGSTR (INFO, "task_adaptor_0 threaded_cc") << " 3 xxxxxxxxxxxxxxx" << std::endl;
+
+                int i = 0;
+                while ( i < 10 )
+                {
+                  LOGSTR (INFO, "task_adaptor_0 threaded_cc") << "thread is running " << i << std::endl;
+                  ::sleep (1);
+                  i++;
+                }
+
+                LOGSTR (INFO, "task_adaptor_0 threaded_cc") << " 4 xxxxxxxxxxxxxxx" << std::endl;
+
+                // FIXME: now, we need to actually split
+                // the call_context into call_context, op_context, and
+                // task_context, like:
+                //
+                //   task t = get_size <async> ();
+                //
+                //  the (async get_size) call is Done when a valid task object returned
+                //  (call_context).
+                //
+                //  The op is done when the task has the resulting size stored
+                //  (op_context) --> maps to task state / context.  
+                //
+                //  An op thus represents some adaptor operation.  But, a task
+                //  state might be comprised of multiple op states (same for
+                //  sync calls btw) - thus the split again...
+                //
+                //  Anyway, for this quick demo, we simply reset the cc to
+                //  Sync/New
+                //
+             // cc->get_func ()->set_arg_1 (saga::impl::Sync);
+                cc->set_mode               (saga::impl::Sync);
+                cc->set_call_state         (saga::impl::New);
+                cc->dump ();
+
+                LOGSTR (INFO, "task_adaptor_0 threaded_cc") << " 5 xxxxxxxxxxxxxxx" << std::endl;
+
+                engine->call <api_t, cpi_t> (cc); // this will set task and call state
+
+                LOGSTR (INFO, "task_adaptor_0 threaded_cc") << " 6 xxxxxxxxxxxxxxx" << std::endl;
+
+                // the sync call is now Done, and its result is stored
+              }
+
+              LOGSTR (INFO, "task_adaptor_0 threaded_cc") << "thread done " << pthread_self () << std::endl;
             }
-
-            std::cout << "thread done " << pthread_self () << std::endl;
+            catch ( const std::exception & e )
+            {
+              LOGSTR (ERROR, "threaded_cc catch") << "exception: " << e.what () << std::endl;
+              cc->set_task_state (saga::impl::Failed);
+            }
+            catch ( const char * msg )
+            {
+              LOGSTR (ERROR, "threaded_cc catch") << "exception: " << msg       << std::endl;
+              cc->set_task_state (saga::impl::Failed);
+            }
           }
 
 
@@ -1117,13 +1189,16 @@ namespace saga
             SAGA_UTIL_STACKTRACE ();
             saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
 
-            std::cout << "task adaptor 0 : constructor ()" << std::endl;
+            LOGSTR (INFO, "task_adaptor_0 ctor") 
+              << "task adaptor 0 : constructor ()" << std::endl;
             
             saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
 
-            std::cout << " ==idata cc =====================================================" << std::endl;
+            LOGSTR (INFO, "task_adaptor_0 ctor") 
+              << " ==idata cc =====================================================" << std::endl;
             idata->t_cc->dump ();
-            std::cout << " ================================================================" << std::endl;
+            LOGSTR (INFO, "task_adaptor_0 ctor") 
+              << " ================================================================" << std::endl;
 
             // our new task exists, and idata->cc is the call it is operating
             // on.  That call's state depends on the runmode and the previous
@@ -1153,14 +1228,16 @@ namespace saga
             // endlessly
 
             // FIXME: to_key can throw
-            std::cout << "cpi_mode  : " << saga::util::saga_enum_to_key <saga::impl::call_mode>  (idata->t_cc->get_mode ())       << std::endl;
-            std::cout << "task_state: " << saga::util::saga_enum_to_key <saga::impl::call_state> (idata->t_cc->get_task_state ()) << std::endl;
+            LOGSTR (INFO, "task_adaptor_0 ctor") 
+              << "cpi_mode  : " << saga::util::saga_enum_to_key <saga::impl::call_mode>  (idata->t_cc->get_mode ())       << std::endl
+              << "task_state: " << saga::util::saga_enum_to_key <saga::impl::call_state> (idata->t_cc->get_task_state ()) << std::endl;
 
 
             if ( idata->t_cc->get_mode       () == saga::impl::Sync &&
                  idata->t_cc->get_task_state () == saga::impl::New  )
             {
-              std::cout << " == sync task =====================================================" << std::endl;
+              LOGSTR (INFO, "task_adaptor_0 ctor") 
+                << " == sync task =====================================================" << std::endl;
 
               // idata->t_cc->task_state is Done, cc->call_state is set by call()
               impl->get_engine ()->call <api_t, cpi_t> (idata->t_cc); 
@@ -1169,11 +1246,13 @@ namespace saga
             else if ( idata->t_cc->get_mode       () == saga::impl::Async &&
                       idata->t_cc->get_task_state () == saga::impl::New   )
             {
-              std::cout << " == async task =====================================================" << std::endl;
+              LOGSTR (INFO, "task_adaptor_0 ctor") 
+                << " == async task =====================================================" << std::endl;
               pthread_t      thread;
               pthread_attr_t att;
 
-              std::cout << " task adaptor 0 : create new thread " << std::endl;
+              LOGSTR (INFO, "task_adaptor_0 ctor") 
+                << " task adaptor 0 : create new thread " << std::endl;
 
               saga::util::shared_ptr <saga::impl::call_context> * tmp = new saga::util::shared_ptr <saga::impl::call_context> (idata->t_cc);
 
@@ -1182,19 +1261,23 @@ namespace saga
                                         (void*)&(idata->t_cc));
               if ( 0 != err )
               {
-                std::cout << " @@@ could not create thread: " << ::strerror (err) <<
+                LOGSTR (INFO, "task_adaptor_0 ctor") 
+                  << " @@@ could not create thread: " << ::strerror (err) <<
                   std::endl;
                 throw "oops";
               }
 
               // async call is done, thread state is set to Running, and then
               // maintained by the thread itself.
+              // FIXME: sync with thread, so that any state setting there is done
+              //        after the one below
               cc->set_call_state (saga::impl::Done); 
               idata->t_cc->set_task_state (saga::impl::Running);
             }
             else
             {
-              std::cout << " == no   task =====================================================" << std::endl;
+              LOGSTR (INFO, "task_adaptor_0 ctor") 
+                << " == no   task =====================================================" << std::endl;
             }
 
             return;
@@ -1208,7 +1291,8 @@ namespace saga
 
             saga::util::shared_ptr <saga::impl::task> impl (cc->get_impl ()); 
 
-            std::cout << "task adaptor 0 : get_state ()" << std::endl;
+            LOGSTR (INFO, "task_adaptor_0 get_state") 
+              << "task adaptor 0 : get_state ()" << std::endl;
 
             saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
 
@@ -1226,13 +1310,16 @@ namespace saga
 
             saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
 
-            std::cout << "task adaptor 0 : get_result ()" << std::endl;
+            LOGSTR (INFO, "task_adaptor_0 get_result") 
+              << "task adaptor 0 : get_result ()" << std::endl;
 
             saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
 
-            std::cout << "=-----------------------------------------------" << std::endl;
+            LOGSTR (INFO, "task_adaptor_0 get_result") 
+              << "=-----------------------------------------------" << std::endl;
             idata->t_cc->dump ();
-            std::cout << "=-----------------------------------------------" << std::endl;
+            LOGSTR (INFO, "task_adaptor_0 get_result") 
+              << "=-----------------------------------------------" << std::endl;
 
             cc->set_result <res_t> (idata->t_cc->get_result ());
             cc->set_call_state (saga::impl::Done);
@@ -1260,7 +1347,7 @@ namespace saga
             SAGA_UTIL_STACKTRACE ();
             saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
 
-            std::cout << "file adaptor 0 : constructor (" << url << ")" << std::endl;
+            LOGSTR (INFO, "file_adaptor_0 ctor") << "file adaptor 0 : constructor (" << url << ")" << std::endl;
             
             saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
             idata->url = url;
@@ -1277,7 +1364,7 @@ namespace saga
 
             cc->set_call_state (saga::impl::Failed);
 
-            std::cout << "file adaptor 0 : get_size" << std::endl;
+            LOGSTR (INFO, "file_adaptor_0 get_size") << "file adaptor 0 : get_size" << std::endl;
             throw "oops";
           }
 
@@ -1288,7 +1375,7 @@ namespace saga
 
             cc->set_call_state (saga::impl::Failed);
 
-            std::cout << "file adaptor 0 : get_size <async>" << std::endl;
+            LOGSTR (INFO, "file_adaptor_0 get_size async") << "file adaptor 0 : get_size <async>" << std::endl;
             throw "oops";
 
           } 
@@ -1301,7 +1388,7 @@ namespace saga
 
             cc->set_call_state (saga::impl::Failed);
 
-            std::cout << "file adaptor 0 : copy " << tgt << std::endl;
+            LOGSTR (INFO, "file_adaptor_0 copy") << "file adaptor 0 : copy " << tgt << std::endl;
             throw "oops";
             return;
           }
@@ -1326,7 +1413,7 @@ namespace saga
             SAGA_UTIL_STACKTRACE ();
             saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
 
-            std::cout << "file adaptor 1 : constructor (" << url << ")" << std::endl;
+            LOGSTR (INFO, "file_adaptor_1 ctor") << "file adaptor 1 : constructor (" << url << ")" << std::endl;
             
             saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
             idata->url = url;
@@ -1341,7 +1428,7 @@ namespace saga
             SAGA_UTIL_STACKTRACE ();
             saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
 
-            std::cout << "file adaptor 1 : get_size ()" << std::endl;
+            LOGSTR (INFO, "file_adaptor_1 get_size") << "file adaptor 1 : get_size ()" << std::endl;
             saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
 
             struct stat buf;
@@ -1355,7 +1442,7 @@ namespace saga
                          saga::impl::call_mode                             m)
           { 
             SAGA_UTIL_STACKTRACE ();
-            std::cout << " ===== file adaptor 1 : get_size <> ()" << std::endl;
+            LOGSTR (INFO, "file_adaptor_1 get_size") << " ===== file adaptor 1 : get_size <> ()" << std::endl;
 
             cc->set_mode (m);
 
@@ -1363,7 +1450,7 @@ namespace saga
 
             if ( m == saga::impl::Sync )
             {
-              std::cout << " ===== file adaptor 1 : get_size <Sync> ()" << std::endl;
+              LOGSTR (INFO, "file_adaptor_1 get_size") << " ===== file adaptor 1 : get_size <Sync> ()" << std::endl;
 
               // call the normal sync call, 
               // this is setting result and state
@@ -1374,13 +1461,13 @@ namespace saga
 
               cc->set_result <saga::util::shared_ptr <saga::impl::task> > (ret);
 
-              std::cout << " ===== get_size <Sync> () done ===== " << std::endl;
+              LOGSTR (INFO, "file_adaptor_1 get_size") << " ===== get_size <Sync> () done ===== " << std::endl;
               return;
             }
             else if ( m == saga::impl::Async ||
                       m == saga::impl::Task  )
             {
-              std::cout << " ===== file adaptor 1 : get_size <Async> ()" << std::endl;
+              LOGSTR (INFO, "file_adaptor_1 get_size") << " ===== file adaptor 1 : get_size <Async> ()" << std::endl;
 
               // async version: create a task straight away, and let the task 
               // adaptor deal with the async invocation of the sync call
@@ -1391,7 +1478,7 @@ namespace saga
 
               cc->set_result <saga::util::shared_ptr <saga::impl::task> > (ret);
 
-              std::cout << " ===== get_size <Async> () done ===== " << std::endl;
+              LOGSTR (INFO, "file_adaptor_1 get_size") << " ===== get_size <Async> () done ===== " << std::endl;
 
               return;
             }
@@ -1405,7 +1492,7 @@ namespace saga
             SAGA_UTIL_STACKTRACE ();
             saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
 
-            std::cout << "file adaptor 1 : copy " << tgt << std::endl;
+            LOGSTR (INFO, "file_adaptor_1 copy") << "file adaptor 1 : copy " << tgt << std::endl;
 
             saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
 
@@ -1451,7 +1538,7 @@ namespace saga
             SAGA_UTIL_STACKTRACE ();
             saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
 
-            std::cout << "dir adaptor 0 : constructor (" << url << ")" << std::endl;
+            LOGSTR (INFO, "dir_adaptor_0 ctor") << "dir adaptor 0 : constructor (" << url << ")" << std::endl;
 
             saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
             idata->url = url;
@@ -1466,7 +1553,7 @@ namespace saga
             SAGA_UTIL_STACKTRACE ();
             saga::util::shared_ptr <saga::impl::filesystem::dir> impl (cc->get_impl ());  
 
-            std::cout << "dir adaptor 0 : get_url" << std::endl;
+            LOGSTR (INFO, "dir_adaptor_0 get_url") << "dir adaptor 0 : get_url" << std::endl;
             throw "oops";
           }
       };
@@ -1496,7 +1583,7 @@ namespace saga
             SAGA_UTIL_STACKTRACE ();
             saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
 
-            std::cout << "dir adaptor 1 : constructor (" << url << ")" << std::endl;
+            LOGSTR (INFO, "dir_adaptor_1 ctor") << "dir adaptor 1 : constructor (" << url << ")" << std::endl;
 
             saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
             idata->url = url;
@@ -1513,7 +1600,7 @@ namespace saga
 
             saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
 
-            std::cout << "dir adaptor 1 : get_url: " << idata->url << std::endl;
+            LOGSTR (INFO, "dir_adaptor_1 get_url") << "dir adaptor 1 : get_url: " << idata->url << std::endl;
 
             cc->set_result <std::string> (idata->url);
             cc->set_call_state (saga::impl::Done);
@@ -1535,7 +1622,7 @@ namespace saga
 
             std::string new_url = idata->url + "/" + url;
 
-            std::cout << "dir adaptor 1 : open: " << new_url << std::endl;
+            LOGSTR (INFO, "dir_adaptor_1 open") << "dir adaptor 1 : open: " << new_url << std::endl;
 
             // FIXME: error checks
             res_t ret (new saga::impl::filesystem::file);
@@ -1595,14 +1682,16 @@ namespace saga
         saga::util::shared_ptr <saga::impl::result_t> result = impl_->get_result (); 
         saga::util::shared_ptr <saga::impl::result_t_detail_ <T> > casted = result.get_shared_ptr <saga::impl::result_t_detail_ <T> > ();
         // FIXME: error check
-        std::cout << " ##############################################################" << std::endl;
-        std::cout << " ------------------------------------ " << saga::util::demangle (typeid (T).name ()) << std::endl;
+        LOGSTR (DEBUG, "task get_result") << " 1 ##############################################################" << std::endl;
+        LOGSTR (DEBUG, "task get_result") << " ------------------------------------ " << saga::util::demangle (typeid (T).name ()) << std::endl;
         impl_.dump ();
-        std::cout << " ------------------------------------ " << std::endl;
+        LOGSTR (DEBUG, "task get_result") << " ------------------------------------ " << std::endl;
         impl_->dump ();
-        std::cout << " ##############################################################" << std::endl;
+        LOGSTR (DEBUG, "task get_result") << " 2 ##############################################################" << std::endl;
 
-        return casted->get ();
+        T t = casted->get ();
+        LOGSTR (DEBUG, "task get_result") << " 3 ##############################################################" << std::endl;
+        return t;
       }
   };
 
