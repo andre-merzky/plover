@@ -7,6 +7,8 @@ SAGA_BIN     += cpi_3
 SAGA_BIN     += cpi_4
 SAGA_BIN     += cpi_5
 
+SAGA_SUBDIRS += cpi_6
+
 include $(SAGA_ROOT)/make/saga.mk
 
 SAGA_LDFLAGS  += -L../../../saga/util/ -lsaga_util -lpthread

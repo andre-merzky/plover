@@ -1,7 +1,6 @@
 
 #include <stdlib.h>    // for ::getenv()
 
-
 #include <saga/util/utils.hpp>
 #include <saga/util/logging.hpp>
 #include <saga/util/scoped_lock.hpp>
@@ -14,10 +13,12 @@ namespace saga
 {
   namespace util
   {
+    // static class member initialization
     logging::logging (void)
       : per_thread_  (false)
       , per_process_ (false)
       , tags_star_   (false)
+      , serial_      (0)
     {
       // getenv, getpid, open files, ...
 
@@ -108,6 +109,18 @@ namespace saga
       {
         per_process_ = true;
       }
+
+      {
+        // we always open a stream to /dev/null, for not logging anything
+        nostream_ = new std::fstream ("/dev/null", std::ios_base::out);
+        
+        if ( ! nostream_->good () )
+        {
+          std::cerr << "cannot open log stream to /dev/null "
+                    << " -- using stderr" << std::endl;
+          nostream_ = &std::cerr;
+        }
+      }
     }
 
 
@@ -133,6 +146,8 @@ namespace saga
         }
       }
 
+      delete nostream_;
+
     }
 
 
@@ -140,73 +155,97 @@ namespace saga
     //
     //
     //
-    std::ostream & logging::logs (void)
+    std::ostream & logging::logstr (severity    s,   // severity level of log
+                                    std::string t)   // tags for log
     {
-      // by default, use stream 0
-      pthread_t tid = 0;
-
-      // if per_thread logging is enabled, use the stream for this thread id (!0)
-      if ( per_thread_ )
+      if ( matches_severity (s) &&
+           matches_tags     (t) )
       {
-        tid = pthread_self ();
-      }
+        // by default, use stream 0
+        pthread_t tid = 0;
 
-      // do we have a valid ostream?
-      if ( streams_.find (tid) == streams_.end () )
-      {
-        // need to open a new stream for this thread.  
-        // TODO: needs locking
-        if ( "stdout"    == spec_ ||
-             "std::cout" == spec_ ||
-             "cout"      == spec_ ||
-             "out"       == spec_ )
+        // if per_thread logging is enabled, use the stream for this thread id (!0)
+        if ( per_thread_ )
         {
-          std::cerr << "log stream uses cout" << std::endl;
-          streams_[tid] = &std::cout;
+          tid = pthread_self ();
         }
-        else if ( "stderr"    == spec_ ||
-                  "std::cerr" == spec_ ||
-                  "cerr"      == spec_ ||
-                  "err"       == spec_ )
+
+        // do we have a valid ostream?
+        if ( streams_.find (tid) == streams_.end () )
         {
-          std::cerr << "log stream uses cerr" << std::endl;
-          streams_[tid] = &std::cerr;
-        }
-        else
-        {
-          // spec is assumed to be a file name, fopen it
-          std::string spec (spec_);
-
-          size_t pos = spec.find ("\%t");
-          if ( std::string::npos != pos )
+          // need to open a new stream for this thread.  
+          // TODO: needs locking
+          if ( "stdout"    == spec_ ||
+               "std::cout" == spec_ ||
+               "cout"      == spec_ ||
+               "out"       == spec_ )
           {
-            spec.replace (pos, 2, saga::util::itoa (tid));
+            std::cerr << "log stream uses cout" << std::endl;
+            streams_[tid] = &std::cout;
           }
-
-          pos = spec.find ("\%p");
-          if ( std::string::npos != pos )
+          else if ( "stderr"    == spec_ ||
+                    "std::cerr" == spec_ ||
+                    "cerr"      == spec_ ||
+                    "err"       == spec_ )
           {
-            spec.replace (pos, 2, saga::util::itoa (getpid ()));
-          }
-
-          std::fstream * str = new std::fstream (spec.c_str (), std::ios_base::out);
-          streams_[tid] = str;
-
-          if ( ! streams_[tid]->good () )
-          {
-            std::cerr << "cannot open log stream for " << spec 
-                      << " -- using stderr"            << std::endl;
+            std::cerr << "log stream uses cerr" << std::endl;
             streams_[tid] = &std::cerr;
           }
           else
           {
-            // std::cerr << "opened log stream for " << spec << std::endl;
+            // spec is assumed to be a file name, fopen it
+            std::string spec (spec_);
+
+            size_t pos = spec.find ("\%t");
+            if ( std::string::npos != pos )
+            {
+              spec.replace (pos, 2, saga::util::itoa (tid));
+            }
+
+            pos = spec.find ("\%p");
+            if ( std::string::npos != pos )
+            {
+              spec.replace (pos, 2, saga::util::itoa (getpid ()));
+            }
+
+            streams_[tid] = new std::fstream (spec.c_str (), std::ios_base::out);
+
+            if ( ! streams_[tid]->good () )
+            {
+              std::cerr << "cannot open log stream for " << spec 
+                        << " -- using stderr"            << std::endl;
+              streams_[tid] = &std::cerr;
+            }
+            else
+            {
+              // std::cerr << "opened log stream for " << spec << std::endl;
+            }
           }
         }
-      }
 
-      // we are now sure to have a valid stream
-      return (*streams_[tid]);
+        // we are now sure to have a valid stream
+        //
+        // but before we return it, we log the log header, so that the
+        // receipient can just go ahead and log the log messages...
+        //
+        char head[256];
+        snprintf (head, 255, " %-6lld : %-10s : %-30s : ", serial_,
+                  saga::util::saga_enums::get_singleton ()->to_key (s).c_str (),
+                  t.c_str ());
+
+        (*streams_[tid]) << head;
+
+        serial_++;
+
+        // now we can return the stream, to be used for the log message
+        return (*streams_[tid]);
+      }
+      else
+      {
+        // std::cout << "logging to /dev/null" << std::endl;
+        // no logging required - stream to /dev/null
+        return (*nostream_);
+      }
     }
 
 
@@ -214,18 +253,11 @@ namespace saga
     //
     //
     //
-    void logging::log (severity    s,   // severity level of message
-                       std::string t,   // tags for message
+    void logging::log (severity    s,   // severity level of log
+                       std::string t,   // tags for log
                        std::string m)   // log message
     { 
-      if ( matches_severity (s) )
-      {
-        if ( matches_tags (t) )
-        {
-          std::ostream & str = logs ();
-          str << "logging: " << m << std::endl;
-        }
-      }
+      logstr (s, t) << "logging: " << m << std::endl;
     }
 
     ////////////////////////////////////////////////////////////////////
@@ -323,11 +355,17 @@ namespace saga
     }
 
 
-    void log (saga::util::logging::severity  s,   // severity level of message
-              std::string                    t,   // tags for message
+    void log (saga::util::logging::severity  s,   // severity level of log
+              std::string                    t,   // tags for log
               std::string                    m)
     {
       saga::util::the_logger::get_singleton ()->log (s, t, m);
+    }
+
+    std::ostream & logstr (saga::util::logging::severity  s,   // severity level of log
+                           std::string                    t)   // tags for log
+    {
+      return saga::util::the_logger::get_singleton ()->logstr (s, t);
     }
 
   } // namespace util

@@ -164,7 +164,7 @@ namespace saga
         //  the below functions are supposed to allow using our shared_ptr class
         //  with types which are not anchored in shareables.  The current
         //  formulation does not yet work, as the overloaded function is only
-        //  triggered for //  shareable pointers, not for pointers of derived 
+        //  triggered for shareable pointers, not for pointers of derived 
         //  classes.
 
         // template <class U> void share (U * p) { }
@@ -212,10 +212,8 @@ namespace saga
           , cnt_     (new long)
           , mtx_     (new saga::util::mutex)
         {
-          // init counter
+          // init and increment the counter
           (*cnt_) = 0;
-
-          // increment the counter
           inc_ ();
 
           share (ptr_);
@@ -308,7 +306,7 @@ namespace saga
         {
           if ( NULL == ptr_ )
           {
-            saga::util::log (saga::util::logging::Warning, "shared_ptr internal", "trying to dereference NULL ptr");
+            saga::util::log (saga::util::logging::Critical, "shared_ptr internal", "trying to dereference NULL ptr");
             ::abort (); // FIXME
             throw "trying to dereference NULL ptr";
           }
@@ -406,8 +404,12 @@ namespace saga
 
         void dump (std::string msg = "")
         {
-          saga::util::log (saga::util::logging::Info, "shared_ptr dump", 
-                           msg + get_ptype_demangled () + " - " + ptr_ + " - " + (*cnt_));
+          saga::util::logstr (saga::util::logging::Info, "shared_ptr dump") 
+            << msg 
+            << get_ptype_demangled () << " - " 
+            << ptr_ << " - " 
+            << (*cnt_) 
+            << std::endl;
         }
     };
 

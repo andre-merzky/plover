@@ -13,6 +13,20 @@
 #include <saga/util/enums.hpp>
 #include <saga/util/mutex.hpp>
 
+#define LOG       saga::util::log
+#define LOGSTR    saga::util::logstr
+
+#define NOISE     saga::util::logging::Noise    
+#define DEBUG     saga::util::logging::Debug    
+#define INFO      saga::util::logging::Info     
+#define NOTICE    saga::util::logging::Notice   
+#define WARNING   saga::util::logging::Warning  
+#define ERROR     saga::util::logging::Error    
+#define CRITICAL  saga::util::logging::Critical 
+#define ALERT     saga::util::logging::Alert    
+#define EMERGENCY saga::util::logging::Emergency
+
+
 namespace saga
 {
   namespace util
@@ -72,6 +86,12 @@ namespace saga
     // opening - otherwise messages are appended to the log files.
     //
     //
+    // TODO:
+    //   - we should implement our own log ostream class, which applies some
+    //     formatting (new header for each line, etc)
+    //   - flexible line formatting (%i=log index, %s=severity, %m=msg, %p=pid,
+    //     %P=tid, %t=tags of message, %T=matched tags)
+    //
     class logging
     {
       public:
@@ -92,8 +112,11 @@ namespace saga
         // big fat logging lock
         static saga::util::mutex * mtx_;
 
+        unsigned long long                   serial_;
+
         std::map <pthread_t, std::ostream * >  
                                              streams_;     // map of ostreams per thread
+        std::ostream                      *  nostream_;    // logging to /dev/null
         std::string                          spec_;        // output file name spec
 
         severity                             severity_;
@@ -114,11 +137,12 @@ namespace saga
         ~logging (void);
 
         // get an opened log stream for this thread/process
-        std::ostream & logs (void);
+        std::ostream & logstr (severity      s,   // severity level of log
+                               std::string   t);  // tags for log
 
-        void log (severity     s,   // severity level of message
-                  std::string  t,   // tags for message
-                  std::string  m);  // log message
+        void           log    (severity      s,   // severity level of log
+                               std::string   t,   // tags for log
+                               std::string   m);  // log message
     };
 
     SAGA_UTIL_REGISTER_ENUM_S (saga::util::logging::severity, saga__util__logging__severity, Noise    , 0);
@@ -137,6 +161,10 @@ namespace saga
     void log (saga::util::logging::severity s,   // severity level of message
               std::string                   t,   // tags for message
               std::string                   m);
+
+    // shortcut for getting a log stream from the_loger
+    std::ostream & logstr (saga::util::logging::severity s,   // severity level of message
+                           std::string                   t);  // tags for message
 
   } // namespace util
 

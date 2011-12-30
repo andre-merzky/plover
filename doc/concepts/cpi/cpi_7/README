@@ -1,0 +1,7 @@
+
+[see cpi_6/README]
+
+cpi_7 restructures call contexts and state management, and separates that
+cleanly from async method calls and task states.  That will allow us to fully
+implement async ops, completely outside of the SAGA engine.
+
