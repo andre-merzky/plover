@@ -8,24 +8,30 @@
 
 namespace saga
 {
-  task::task (void)
-    : impl_ (new saga::impl::task)
+  namespace async
   {
-    SAGA_UTIL_STACKTRACE ();
-    (void) impl_->constructor ();
-  }
 
-  task::task (saga::util::shared_ptr <saga::impl::task> impl)
-    : impl_ (impl)
-  {
-    SAGA_UTIL_STACKTRACE ();
-    (void) impl_->constructor ();
-  }
+    task::task (void)
+      : impl_ (new saga::impl::task)
+    {
+      SAGA_UTIL_STACKTRACE ();
+      (void) impl_->constructor ();
+    }
 
-  saga::impl::call_state task::get_state (void)
-  {
-    SAGA_UTIL_STACKTRACE ();
-    return impl_->get_state ();
-  }
+    task::task (saga::util::shared_ptr <saga::impl::task> impl)
+      : impl_ (impl)
+    {
+      SAGA_UTIL_STACKTRACE ();
+      (void) impl_->constructor ();
+    }
+
+    saga::task::state task::get_state (void)
+    {
+      SAGA_UTIL_STACKTRACE ();
+      return impl_->get_state ();
+    }
+
+  } // namespace async
+
 } // namespace saga
 
