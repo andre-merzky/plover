@@ -29,22 +29,6 @@ namespace saga
       All        = 5
     };
 
-    enum call_mode  // FIXME: eventually becomes saga::task::mode
-    { 
-      Sync  = 0,
-      Async = 1,
-      Task  = 2
-    };
-
-    enum call_state { // FIXME: eventually becomes saga::task::state
-      Unknown    = 0,
-      New        = 1,
-      Running    = 2,
-      Done       = 3,
-      Failed     = 4,
-      Canceled   = 5
-    };
-
 
     // make handling void call signatures in templates easier
     class void_t 
@@ -180,9 +164,9 @@ namespace saga
       private:
         saga::util::shared_ptr <shareable>    impl_;            // calling object (has session)
         saga::impl::cpi_mode                  cpi_mode_;        // collect, simple, ...
-        saga::impl::call_mode                 mode_;            // sync, async, task
-        saga::impl::call_state                call_state_;      // new, running, done, failed ...
-        saga::impl::call_state                task_state_;      // new, running, done, failed ...
+   ///  saga::impl::call_mode                 mode_;            // sync, async, task
+   ///  saga::impl::call_state                call_state_;      // new, running, done, failed ...
+   ///  saga::impl::call_state                task_state_;      // new, running, done, failed ...
     //  saga::exception                       exception_;       // exception stack collected from adaptors_used_/failed
     //  saga::util::timestamp                 created_;         // created time stamp
     //  saga::util::timestamp                 start_;           // start time stamp
@@ -205,14 +189,14 @@ namespace saga
         saga::util::shared_ptr <functor_base> get_func (void);
         saga::util::shared_ptr <shareable>    get_impl (void);
 
-        void                   set_call_state (saga::impl::call_state s);
-        saga::impl::call_state get_call_state (void);
+    /// void                   set_call_state (saga::impl::call_state s);
+    /// saga::impl::call_state get_call_state (void);
 
-        void                   set_task_state (saga::impl::call_state s);
-        saga::impl::call_state get_task_state (void);
+    /// void                   set_task_state (saga::impl::call_state s);
+    /// saga::impl::call_state get_task_state (void);
 
-        void                   set_mode       (saga::impl::call_mode  m);
-        saga::impl::call_mode  get_mode       (void);
+    /// void                   set_mode       (saga::impl::call_mode  m);
+    /// saga::impl::call_mode  get_mode       (void);
 
 
         template <typename T>
@@ -460,7 +444,7 @@ namespace saga
               // saga::util::shared_ptr <func_cast_t> casted = base.get_shared_ptr <func_cast_t> ();
 
               base->call_cpi (cpis[i], cc);
-              cc->set_call_state (Done);
+              // cc->set_call_state (Done);
               LOGSTR (INFO, "engine call") << "adaptor " << i << " : succeeded for " << cc->get_func()->get_name () << std::endl;
 
               return;
@@ -480,7 +464,7 @@ namespace saga
 
           // no adaptor suceeded.  We don't have anything sensible to return, so
           // we flag the failure, and throw.  That is redundant, but hey...
-          cc->set_call_state (Failed);
+          // cc->set_call_state (Failed);
 
           LOGSTR (INFO, "engine call") << "all adaptors failed for " << cc->get_func()->get_name () << std::endl;
           throw "no adaptor suceeded";

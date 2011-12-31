@@ -20,17 +20,6 @@ namespace saga
     SAGA_UTIL_REGISTER_ENUM (cpi_mode  , Filter    , 4);
     SAGA_UTIL_REGISTER_ENUM (cpi_mode  , All       , 5);
 
-    SAGA_UTIL_REGISTER_ENUM (call_mode , Sync      , 0);
-    SAGA_UTIL_REGISTER_ENUM (call_mode , Async     , 1);
-    SAGA_UTIL_REGISTER_ENUM (call_mode , Task      , 2);
-
-    SAGA_UTIL_REGISTER_ENUM (call_state, Unknown   , 0);
-    SAGA_UTIL_REGISTER_ENUM (call_state, New       , 1);
-    SAGA_UTIL_REGISTER_ENUM (call_state, Running   , 2);
-    SAGA_UTIL_REGISTER_ENUM (call_state, Done      , 3);
-    SAGA_UTIL_REGISTER_ENUM (call_state, Failed    , 4);
-    SAGA_UTIL_REGISTER_ENUM (call_state, Canceled  , 5);
-
 
     std::ostream & operator<< (std::ostream & o, void_t const & v)
     {
@@ -96,8 +85,8 @@ namespace saga
       : func_        (func)
         , impl_        (impl)
         , cpi_mode_    (Simple)
-        , mode_        (Sync)
-        , call_state_  (New)
+   ///  , mode_        (Sync)
+   ///  , call_state_  (New)
         , task_state_  (New)
         , result_      ((new saga::impl::result_t_detail_ <saga::impl::void_t> ()))
     {
@@ -107,14 +96,14 @@ namespace saga
     saga::util::shared_ptr <functor_base>           call_context::get_func (void)  { return func_;      } 
     saga::util::shared_ptr <saga::util::shareable>  call_context::get_impl (void)  { return impl_;      } 
 
-    void                   call_context::set_call_state (saga::impl::call_state s) { call_state_ = s;   }
-    saga::impl::call_state call_context::get_call_state (void                    ) { return call_state_;}
+    /// void                   call_context::set_call_state (saga::impl::call_state s) { call_state_ = s;   }
+    /// saga::impl::call_state call_context::get_call_state (void                    ) { return call_state_;}
 
-    void                   call_context::set_task_state (saga::impl::call_state s) { task_state_ = s;   }
-    saga::impl::call_state call_context::get_task_state (void)                     { return task_state_;}
+    /// void                   call_context::set_task_state (saga::impl::call_state s) { task_state_ = s;   }
+    /// saga::impl::call_state call_context::get_task_state (void)                     { return task_state_;}
 
-    void                   call_context::set_mode       (saga::impl::call_mode  m) { mode_  = m;        }
-    saga::impl::call_mode  call_context::get_mode       (void                    ) { return mode_;      }
+    /// void                   call_context::set_mode       (saga::impl::call_mode  m) { mode_  = m;        }
+    /// saga::impl::call_mode  call_context::get_mode       (void                    ) { return mode_;      }
 
     saga::util::shared_ptr <saga::impl::result_t> call_context::get_result (void)
     {
@@ -127,9 +116,9 @@ namespace saga
       LOGSTR (DEBUG, "call_context dump")
         <<   "call_context (" << this << ") : " << msg << std::endl
         <<   "    cpi  mode   : " << saga::util::saga_enum_to_key <saga::impl::cpi_mode>   (cpi_mode_  ) << std::endl
-        <<   "    call mode   : " << saga::util::saga_enum_to_key <saga::impl::call_mode>  (mode_      ) << std::endl
-        <<   "    call state  : " << saga::util::saga_enum_to_key <saga::impl::call_state> (call_state_) << std::endl
-        <<   "    task state  : " << saga::util::saga_enum_to_key <saga::impl::call_state> (task_state_) << std::endl
+   ///  <<   "    call mode   : " << saga::util::saga_enum_to_key <saga::impl::call_mode>  (mode_      ) << std::endl
+   ///  <<   "    call state  : " << saga::util::saga_enum_to_key <saga::impl::call_state> (call_state_) << std::endl
+   ///  <<   "    task state  : " << saga::util::saga_enum_to_key <saga::impl::call_state> (task_state_) << std::endl
         <<   "    func name   : " << func_name_ << std::endl
         <<   "    func args   : " << func_args_ << std::endl;
       impl_.dump         ("    IMPL_       : ");
