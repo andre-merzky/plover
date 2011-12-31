@@ -43,7 +43,7 @@ namespace saga
 
         engine_->call <api_t, cpi_t> (cc);
 
-        if ( cc->get_call_state () == Failed )
+        if ( cc->get_call_state () == saga::async::Failed )
         {
           throw " file::constructor indicates failed";
         }
@@ -73,7 +73,7 @@ namespace saga
         // function on some cpi
         engine_->call <api_t, cpi_t> (cc);
 
-        if ( cc->get_call_state () == Failed )
+        if ( cc->get_call_state () == saga::async::Failed )
         {
           throw " file::get_size indicates failed";
         }
@@ -82,14 +82,14 @@ namespace saga
       }
 
       //////////////////////////////////////////////////////////////////
-      saga::util::shared_ptr <saga::impl::task> file::get_size (saga::impl::call_mode m)
+      saga::util::shared_ptr <saga::impl::async::task> file::get_size (saga::async::mode m)
       {
         SAGA_UTIL_STACKTRACE ();
 
-        typedef saga::util::shared_ptr <saga::impl::task>                                                              res_t;
-        typedef saga::impl::filesystem::file                                                                           api_t;
-        typedef saga::impl::filesystem::file_cpi                                                                       cpi_t;
-        typedef saga::impl::functor_1 <api_t, cpi_t, saga::util::shared_ptr <saga::impl::task>, saga::impl::call_mode> func_t;
+        typedef saga::util::shared_ptr <saga::impl::async::task>                                                          res_t;
+        typedef saga::impl::filesystem::file                                                                              api_t;
+        typedef saga::impl::filesystem::file_cpi                                                                          cpi_t;
+        typedef saga::impl::functor_1 <api_t, cpi_t, saga::util::shared_ptr <saga::impl::async::task>, saga::async::mode> func_t;
 
         // create a functor which hold the cpi class' get_size() function
         // pointer.  The second templ parameter is the functions return type
@@ -103,7 +103,7 @@ namespace saga
         // function on some cpi
         engine_->call <api_t, cpi_t> (cc);
 
-        if ( cc->get_call_state () == Failed )
+        if ( cc->get_call_state () == saga::async::Failed )
         {
           throw " file::get_size <> () indicates failed";
         }
@@ -134,7 +134,7 @@ namespace saga
 
         engine_->call <api_t, cpi_t> (cc);
 
-        if ( cc->get_call_state () == Failed )
+        if ( cc->get_call_state () == saga::async::Failed )
         {
           throw " file::copy () indicates failed";
         }

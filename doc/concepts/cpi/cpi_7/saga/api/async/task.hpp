@@ -1,13 +1,15 @@
 
-#ifndef SAGA_API_TASK_TASK_HPP
-#define SAGA_API_TASK_TASK_HPP
+#ifndef SAGA_API_ASYNC_TASK_HPP
+#define SAGA_API_ASYNC_TASK_HPP
 
 #include <string>
 
 #include <saga/util/logging.hpp>
 #include <saga/util/stack_tracer.hpp>
 
-#include <saga/impl/task/task.hpp>
+#include <saga/api/async/state.hpp>
+
+#include <saga/impl/async/task.hpp>
 
 namespace saga
 {
@@ -15,15 +17,14 @@ namespace saga
   {
     class task
     {
-      public:
       private:
-        saga::util::shared_ptr <saga::impl::task> impl_;
+        saga::util::shared_ptr <saga::impl::async::task> impl_;
 
       public:
         task (void);
-        task (saga::util::shared_ptr <saga::impl::task> impl);
+        task (saga::util::shared_ptr <saga::impl::async::task> impl);
 
-        saga::impl::call_state get_state (void);
+        saga::async::state get_state (void);
 
         template <typename T>
           T get_result (void)
@@ -49,5 +50,5 @@ namespace saga
 
 } // namespace saga
 
-#endif //  SAGA_API_TASK_TASK_HPP
+#endif //  SAGA_API_ASYNC_TASK_HPP
 

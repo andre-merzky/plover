@@ -4,7 +4,8 @@
 
 #include <saga/api/filesystem/file.hpp>
 #include <saga/api/filesystem/dir.hpp>
-#include <saga/api/task/task.hpp>
+#include <saga/api/async/task.hpp>
+#include <saga/api/async/state.hpp>
 
 #endif // SAGA_SAGA_HPP
 

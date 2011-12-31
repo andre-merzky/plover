@@ -32,7 +32,7 @@ namespace saga
       }
 
       void file_cpi::constructor (saga::util::shared_ptr <call_context> cc, 
-                                          std::string                           url) 
+                                  std::string                           url) 
       { 
         SAGA_UTIL_STACKTRACE ();
         throw "constructor: NotImplemented"; 
@@ -52,7 +52,7 @@ namespace saga
       //  but the returned task's state can easily be adjusted by the
       //  calling functor or by the engine.
       void file_cpi::get_size (saga::util::shared_ptr <call_context> cc, 
-                                       saga::impl::call_mode                 m)
+                              saga::async::mode                      m)
       { 
         SAGA_UTIL_STACKTRACE ();
         throw "get_size <...> : NotImplemented"; 

@@ -7,7 +7,7 @@
 #include <saga/util/shareable.hpp>
 #include <saga/util/stack_tracer.hpp>
 
-#include <saga/api/task/state.hpp>
+#include <saga/api/async/state.hpp>
 #include <saga/engine/engine.hpp>
 
 namespace saga
@@ -35,7 +35,7 @@ namespace saga
           //  but the returned task's state can easily be adjusted by the
           //  calling functor or by the engine.
           virtual void get_size    (saga::util::shared_ptr <call_context> cc, 
-                                    saga::task::mode                      m);
+                                    saga::async::mode                     m);
       };
 
     } // namespace filesystem

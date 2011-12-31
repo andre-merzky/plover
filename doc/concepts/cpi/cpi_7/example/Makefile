@@ -8,13 +8,13 @@ include $(SAGA_ROOT)/make/saga.mk
 SAGA_CXXFLAGS += -I$(SAGA_PWD)/../
 
 SAGA_LDFLAGS  += -L$(SAGA_PWD)/../saga/api/filesystem/  -lsaga_api_filesystem
-SAGA_LDFLAGS  += -L$(SAGA_PWD)/../saga/api/task/        -lsaga_api_task
+SAGA_LDFLAGS  += -L$(SAGA_PWD)/../saga/api/async/       -lsaga_api_async
 
 SAGA_LDFLAGS  += -L$(SAGA_PWD)/../saga/impl/filesystem/ -lsaga_impl_filesystem
-SAGA_LDFLAGS  += -L$(SAGA_PWD)/../saga/impl/task/       -lsaga_impl_task
+SAGA_LDFLAGS  += -L$(SAGA_PWD)/../saga/impl/async/      -lsaga_impl_async
 
 SAGA_LDFLAGS  += -L$(SAGA_PWD)/../saga/cpi/filesystem/  -lsaga_cpi_filesystem
-SAGA_LDFLAGS  += -L$(SAGA_PWD)/../saga/cpi/task/        -lsaga_cpi_task
+SAGA_LDFLAGS  += -L$(SAGA_PWD)/../saga/cpi/async/       -lsaga_cpi_async
 
 SAGA_LDFLAGS  += -L$(SAGA_PWD)/../saga/engine/          -lsaga_engine
 

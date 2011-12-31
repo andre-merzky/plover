@@ -8,7 +8,7 @@
 #include <saga/util/logging.hpp>
 #include <saga/util/stack_tracer.hpp>
 
-#include <saga/api/task/state.hpp>
+#include <saga/api/async/state.hpp>
 #include <saga/engine/engine.hpp>
 
 namespace saga
@@ -20,7 +20,7 @@ namespace saga
       class task_instance_data : public saga::util::shareable
       {
         // saga::impl::task_instance_data manages the state information for one
-        // specific saga::task instance.  Note that this state is shared by all
+        // specific saga::async::task instance.  Note that this state is shared by all
         // task adaptors: they can obtained a scoped-locked copy of it via
         // get_instance_data()
         private:
@@ -50,7 +50,7 @@ namespace saga
           task (saga::util::shared_ptr <saga::impl::call_context> cc);
 
           void_t                            constructor (void);
-          saga::async::task::state          get_state   (void);
+          saga::async::state                get_state   (void);
           saga::util::shared_ptr <result_t> get_result  (void);
 
           // allow adaptor to obtain instance data (unlocked)

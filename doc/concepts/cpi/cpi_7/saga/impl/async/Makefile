@@ -1,7 +1,7 @@
 
 SAGA_ROOT     = $(shell pwd)/../../../../../../../
 
-SAGA_LIB     += saga_impl_task
+SAGA_LIB     += saga_impl_async
 SAGA_LIB_OBJ += task.o
 
 include $(SAGA_ROOT)/make/saga.mk

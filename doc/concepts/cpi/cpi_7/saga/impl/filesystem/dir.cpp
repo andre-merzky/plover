@@ -43,7 +43,7 @@ namespace saga
 
         engine_->call <api_t, cpi_t> (cc);
         
-        if ( cc->get_call_state () == Failed )
+        if ( cc->get_call_state () == saga::async::Failed )
         {
           throw " dir::constructor () indicates failed";
         }
@@ -68,7 +68,7 @@ namespace saga
 
         engine_->call <api_t, cpi_t> (cc);
 
-        if ( cc->get_call_state () == Failed )
+        if ( cc->get_call_state () == saga::async::Failed )
         {
           throw " dir::get_url () indicates failed";
         }
@@ -94,7 +94,7 @@ namespace saga
 
         engine_->call <api_t, cpi_t> (cc);
 
-        if ( cc->get_call_state () == Failed )
+        if ( cc->get_call_state () == saga::async::Failed )
         {
           throw " dir::open () indicates failed";
         }

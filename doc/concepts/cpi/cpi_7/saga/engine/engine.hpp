@@ -10,6 +10,8 @@
 #include <saga/util/logging.hpp>
 #include <saga/util/stack_tracer.hpp>
 
+#include <saga/api/async/state.hpp>
+
 namespace saga
 {
   namespace impl
@@ -161,11 +163,12 @@ namespace saga
     //
     class call_context : public saga::util::shareable
     {
+      // FIXME: don't use async::state
       private:
         saga::util::shared_ptr <shareable>    impl_;            // calling object (has session)
         saga::impl::cpi_mode                  cpi_mode_;        // collect, simple, ...
    ///  saga::impl::call_mode                 mode_;            // sync, async, task
-   ///  saga::impl::call_state                call_state_;      // new, running, done, failed ...
+        saga::async::state                    call_state_;      // new, running, done, failed ...
    ///  saga::impl::call_state                task_state_;      // new, running, done, failed ...
     //  saga::exception                       exception_;       // exception stack collected from adaptors_used_/failed
     //  saga::util::timestamp                 created_;         // created time stamp
@@ -189,8 +192,8 @@ namespace saga
         saga::util::shared_ptr <functor_base> get_func (void);
         saga::util::shared_ptr <shareable>    get_impl (void);
 
-    /// void                   set_call_state (saga::impl::call_state s);
-    /// saga::impl::call_state get_call_state (void);
+        void                   set_call_state (saga::async::state s);
+        saga::async::state     get_call_state (void);
 
     /// void                   set_task_state (saga::impl::call_state s);
     /// saga::impl::call_state get_task_state (void);
@@ -444,7 +447,7 @@ namespace saga
               // saga::util::shared_ptr <func_cast_t> casted = base.get_shared_ptr <func_cast_t> ();
 
               base->call_cpi (cpis[i], cc);
-              // cc->set_call_state (Done);
+              cc->set_call_state (saga::async::Done);
               LOGSTR (INFO, "engine call") << "adaptor " << i << " : succeeded for " << cc->get_func()->get_name () << std::endl;
 
               return;
@@ -464,7 +467,7 @@ namespace saga
 
           // no adaptor suceeded.  We don't have anything sensible to return, so
           // we flag the failure, and throw.  That is redundant, but hey...
-          // cc->set_call_state (Failed);
+          cc->set_call_state (saga::async::Failed);
 
           LOGSTR (INFO, "engine call") << "all adaptors failed for " << cc->get_func()->get_name () << std::endl;
           throw "no adaptor suceeded";

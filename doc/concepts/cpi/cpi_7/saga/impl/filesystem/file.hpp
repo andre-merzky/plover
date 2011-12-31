@@ -8,7 +8,7 @@
 #include <saga/util/logging.hpp>
 #include <saga/util/stack_tracer.hpp>
 
-#include <saga/impl/task/task.hpp>
+#include <saga/impl/async/task.hpp>
 #include <saga/engine/engine.hpp>
 
 namespace saga
@@ -68,7 +68,7 @@ namespace saga
           int get_size (void);
 
           // async version of same call
-          saga::util::shared_ptr <saga::impl::task> get_size (saga::impl::call_mode);
+          saga::util::shared_ptr <saga::impl::async::task> get_size (saga::async::mode);
 
           // other calls for copy
           void_t copy (std::string tgt);

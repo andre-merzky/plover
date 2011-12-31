@@ -39,7 +39,7 @@ namespace saga
                             std::string                                       url);
           void get_size    (saga::util::shared_ptr <saga::impl::call_context> cc);
           void get_size    (saga::util::shared_ptr <saga::impl::call_context> cc, 
-                            saga::impl::call_mode                             m);
+                            saga::async::mode                                 m);
           void copy        (saga::util::shared_ptr <saga::impl::call_context> cc,
                             std::string                                       tgt);
       };

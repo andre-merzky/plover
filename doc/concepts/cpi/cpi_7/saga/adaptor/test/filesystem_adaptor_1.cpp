@@ -33,7 +33,7 @@ namespace saga
         saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
         idata->url = url;
 
-        cc->set_call_state (saga::impl::Done);
+        cc->set_call_state (saga::async::Done);
 
         return;
       } 
@@ -50,48 +50,48 @@ namespace saga
         (void) stat (idata->url.c_str (), &buf);
 
         cc->set_result <int> (buf.st_size);
-        cc->set_call_state (saga::impl::Done);
+        cc->set_call_state (saga::async::Done);
       }
 
       void file_adaptor_1::get_size (saga::util::shared_ptr <saga::impl::call_context> cc, 
-                                     saga::impl::call_mode                             m)
+                                     saga::async::mode                                 m)
       { 
         SAGA_UTIL_STACKTRACE ();
         LOGSTR (INFO, "file_adaptor_1 get_size") << " ===== file adaptor 1 : get_size <> ()" << std::endl;
 
-        cc->set_mode (m);
+        // cc->set_mode (m);
 
         cc->dump ();
 
-        if ( m == saga::impl::Sync )
+        if ( m == saga::async::Sync )
         {
           LOGSTR (INFO, "file_adaptor_1 get_size") << " ===== file adaptor 1 : get_size <Sync> ()" << std::endl;
 
           // call the normal sync call, 
           // this is setting result and state
           get_size (cc); 
-          cc->set_call_state (saga::impl::Done);
+          cc->set_call_state (saga::async::Done);
 
-          saga::util::shared_ptr <saga::impl::task> ret (new saga::impl::task (cc));
+          saga::util::shared_ptr <saga::impl::async::task> ret (new saga::impl::async::task (cc));
 
-          cc->set_result <saga::util::shared_ptr <saga::impl::task> > (ret);
+          cc->set_result <saga::util::shared_ptr <saga::impl::async::task> > (ret);
 
           LOGSTR (INFO, "file_adaptor_1 get_size") << " ===== get_size <Sync> () done ===== " << std::endl;
           return;
         }
-        else if ( m == saga::impl::Async ||
-                  m == saga::impl::Task  )
+        else if ( m == saga::async::Async ||
+                  m == saga::async::Task  )
         {
           LOGSTR (INFO, "file_adaptor_1 get_size") << " ===== file adaptor 1 : get_size <Async> ()" << std::endl;
 
           // async version: create a task straight away, and let the task 
           // adaptor deal with the async invocation of the sync call
 
-          saga::util::shared_ptr <saga::impl::task> ret (new saga::impl::task (cc));
+          saga::util::shared_ptr <saga::impl::async::task> ret (new saga::impl::async::task (cc));
 
-          cc->set_call_state (saga::impl::Done);
+          cc->set_call_state (saga::async::Done);
 
-          cc->set_result <saga::util::shared_ptr <saga::impl::task> > (ret);
+          cc->set_result <saga::util::shared_ptr <saga::impl::async::task> > (ret);
 
           LOGSTR (INFO, "file_adaptor_1 get_size") << " ===== get_size <Async> () done ===== " << std::endl;
 
@@ -115,12 +115,12 @@ namespace saga
 
         if ( res != 0 )
         {
-          cc->set_call_state (saga::impl::Failed);
+          cc->set_call_state (saga::async::Failed);
           // cc->set_error ("system command error"); // TODO
         }
         else
         {
-          cc->set_call_state (saga::impl::Done);
+          cc->set_call_state (saga::async::Done);
         }
 
         return;
@@ -148,7 +148,7 @@ namespace saga
         saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
         idata->url = url;
 
-        cc->set_call_state (saga::impl::Done);
+        cc->set_call_state (saga::async::Done);
 
         return;
       } 
@@ -163,7 +163,7 @@ namespace saga
         LOGSTR (INFO, "dir_adaptor_1 get_url") << "dir adaptor 1 : get_url: " << idata->url << std::endl;
 
         cc->set_result <std::string> (idata->url);
-        cc->set_call_state (saga::impl::Done);
+        cc->set_call_state (saga::async::Done);
 
         return;
       }
@@ -194,7 +194,7 @@ namespace saga
         ret->constructor (new_url);
 
         cc->set_result <res_t> (ret);
-        cc->set_call_state (saga::impl::Done);
+        cc->set_call_state (saga::async::Done);
 
         return;
       }

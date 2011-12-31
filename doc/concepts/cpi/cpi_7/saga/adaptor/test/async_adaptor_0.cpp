@@ -2,7 +2,7 @@
 #include <string.h>
 #include <errno.h>
 
-#include "task_adaptor_0.hpp"
+#include "async_adaptor_0.hpp"
 
 namespace saga
 {
@@ -10,24 +10,24 @@ namespace saga
   {
     namespace test // test adaptprs
     {
-      void * task_adaptor_0::threaded_cc (void * cc_sp)
+      void * async_adaptor_0::threaded_cc (void * cc_sp)
       {
         saga::util::shared_ptr <saga::impl::call_context> cc; 
         try
         {
-          LOGSTR (INFO, "task_adaptor_0 threaded_cc") << " @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@" << std::endl;
+          LOGSTR (INFO, "async_adaptor_0 threaded_cc") << " @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@" << std::endl;
 
           SAGA_UTIL_STACKTRACE ();
           saga::util::shared_ptr <saga::impl::call_context> * cc_tmp
             = static_cast <saga::util::shared_ptr <saga::impl::call_context> *> (cc_sp);
 
-          typedef saga::impl::task     api_t;
-          typedef saga::impl::task_cpi cpi_t;
-          typedef saga::impl::task_cpi ret_t;
+          typedef saga::impl::async::task     api_t;
+          typedef saga::impl::async::task_cpi cpi_t;
+          typedef saga::impl::async::task_cpi ret_t;
 
           cc = cc_tmp->get_shared_ptr (); 
 
-          LOGSTR (INFO, "task_adaptor_0 threaded_cc") << "thread created " << pthread_self () << std::endl;
+          LOGSTR (INFO, "async_adaptor_0 threaded_cc") << "thread created " << pthread_self () << std::endl;
 
           cc->dump ();
 
@@ -39,32 +39,32 @@ namespace saga
 
           if ( cc->get_task_state () == saga::impl::Running )
           {
-            LOGSTR (INFO, "task_adaptor_0 threaded_cc") << "thread starting " << pthread_self () << std::endl;
+            LOGSTR (INFO, "async_adaptor_0 threaded_cc") << "thread starting " << pthread_self () << std::endl;
 
             saga::util::shared_ptr <saga::impl::impl_base> impl (cc->get_impl ()); 
 
-            LOGSTR (INFO, "task_adaptor_0 threaded_cc") << " 1 xxxxxxxxxxxxxxx" << std::endl;
+            LOGSTR (INFO, "async_adaptor_0 threaded_cc") << " 1 xxxxxxxxxxxxxxx" << std::endl;
 
             impl->dump ("impl sp: ");
 
-            LOGSTR (INFO, "task_adaptor_0 threaded_cc") << " 2 xxxxxxxxxxxxxxx" << std::endl;
+            LOGSTR (INFO, "async_adaptor_0 threaded_cc") << " 2 xxxxxxxxxxxxxxx" << std::endl;
 
             saga::util::shared_ptr <saga::impl::engine> engine = impl->get_engine ();
 
             // engine.dump  ();
             // engine->dump ();
 
-            LOGSTR (INFO, "task_adaptor_0 threaded_cc") << " 3 xxxxxxxxxxxxxxx" << std::endl;
+            LOGSTR (INFO, "async_adaptor_0 threaded_cc") << " 3 xxxxxxxxxxxxxxx" << std::endl;
 
             int i = 0;
             while ( i < 10 )
             {
-              LOGSTR (INFO, "task_adaptor_0 threaded_cc") << "thread is running " << i << std::endl;
+              LOGSTR (INFO, "async_adaptor_0 threaded_cc") << "thread is running " << i << std::endl;
               ::sleep (1);
               i++;
             }
 
-            LOGSTR (INFO, "task_adaptor_0 threaded_cc") << " 4 xxxxxxxxxxxxxxx" << std::endl;
+            LOGSTR (INFO, "async_adaptor_0 threaded_cc") << " 4 xxxxxxxxxxxxxxx" << std::endl;
 
             // FIXME: now, we need to actually split
             // the call_context into call_context, op_context, and
@@ -90,16 +90,16 @@ namespace saga
             cc->set_call_state         (saga::impl::New);
             cc->dump ();
 
-            LOGSTR (INFO, "task_adaptor_0 threaded_cc") << " 5 xxxxxxxxxxxxxxx" << std::endl;
+            LOGSTR (INFO, "async_adaptor_0 threaded_cc") << " 5 xxxxxxxxxxxxxxx" << std::endl;
 
             engine->call <api_t, cpi_t> (cc); // this will set task and call state
 
-            LOGSTR (INFO, "task_adaptor_0 threaded_cc") << " 6 xxxxxxxxxxxxxxx" << std::endl;
+            LOGSTR (INFO, "async_adaptor_0 threaded_cc") << " 6 xxxxxxxxxxxxxxx" << std::endl;
 
             // the sync call is now Done, and its result is stored
           }
 
-          LOGSTR (INFO, "task_adaptor_0 threaded_cc") << "thread done " << pthread_self () << std::endl;
+          LOGSTR (INFO, "async_adaptor_0 threaded_cc") << "thread done " << pthread_self () << std::endl;
         }
         catch ( const std::exception & e )
         {
@@ -114,32 +114,32 @@ namespace saga
       }
 
 
-      task_adaptor_0::task_adaptor_0 (void) 
+      async_adaptor_0::async_adaptor_0 (void) 
       { 
         SAGA_UTIL_STACKTRACE ();
       } 
 
-      task_adaptor_0::~task_adaptor_0 (void) 
+      async_adaptor_0::~async_adaptor_0 (void) 
       {
         SAGA_UTIL_STACKTRACE ();
       } 
 
-      void task_adaptor_0::constructor (saga::util::shared_ptr <saga::impl::call_context> cc)
+      void async_adaptor_0::constructor (saga::util::shared_ptr <saga::impl::call_context> cc)
       {
         // TODO: ensure idata->t_cc->task_state is New or Unknown
 
         SAGA_UTIL_STACKTRACE ();
         saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
 
-        LOGSTR (INFO, "task_adaptor_0 ctor") 
-          << "task adaptor 0 : constructor ()" << std::endl;
+        LOGSTR (INFO, "async_adaptor_0 ctor") 
+          << "async adaptor 0 : constructor ()" << std::endl;
 
         saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
 
-        LOGSTR (INFO, "task_adaptor_0 ctor") 
+        LOGSTR (INFO, "async_adaptor_0 ctor") 
           << " ==idata cc =====================================================" << std::endl;
         idata->t_cc->dump ();
-        LOGSTR (INFO, "task_adaptor_0 ctor") 
+        LOGSTR (INFO, "async_adaptor_0 ctor") 
           << " ================================================================" << std::endl;
 
         // our new task exists, and idata->cc is the call it is operating
@@ -170,7 +170,7 @@ namespace saga
         // endlessly
 
         // FIXME: to_key can throw
-        LOGSTR (INFO, "task_adaptor_0 ctor") 
+        LOGSTR (INFO, "async_adaptor_0 ctor") 
           << "cpi_mode  : " << saga::util::saga_enum_to_key <saga::impl::call_mode>  (idata->t_cc->get_mode ())       << std::endl
           << "task_state: " << saga::util::saga_enum_to_key <saga::impl::call_state> (idata->t_cc->get_task_state ()) << std::endl;
 
@@ -178,7 +178,7 @@ namespace saga
         if ( idata->t_cc->get_mode       () == saga::impl::Sync &&
              idata->t_cc->get_task_state () == saga::impl::New  )
         {
-          LOGSTR (INFO, "task_adaptor_0 ctor") 
+          LOGSTR (INFO, "async_adaptor_0 ctor") 
             << " == sync task =====================================================" << std::endl;
 
           // idata->t_cc->task_state is Done, cc->call_state is set by call()
@@ -188,22 +188,22 @@ namespace saga
         else if ( idata->t_cc->get_mode       () == saga::impl::Async &&
                   idata->t_cc->get_task_state () == saga::impl::New   )
         {
-          LOGSTR (INFO, "task_adaptor_0 ctor") 
+          LOGSTR (INFO, "async_adaptor_0 ctor") 
             << " == async task =====================================================" << std::endl;
           pthread_t      thread;
           pthread_attr_t att;
 
-          LOGSTR (INFO, "task_adaptor_0 ctor") 
-            << " task adaptor 0 : create new thread " << std::endl;
+          LOGSTR (INFO, "async_adaptor_0 ctor") 
+            << " async adaptor 0 : create new thread " << std::endl;
 
           saga::util::shared_ptr <saga::impl::call_context> * tmp = new saga::util::shared_ptr <saga::impl::call_context> (idata->t_cc);
 
           int err = pthread_create (&thread, NULL,
-                                    saga::adaptor::test::task_adaptor_0::threaded_cc, 
+                                    saga::adaptor::test::async_adaptor_0::threaded_cc, 
                                     (void*)&(idata->t_cc));
           if ( 0 != err )
           {
-            LOGSTR (INFO, "task_adaptor_0 ctor") 
+            LOGSTR (INFO, "async_adaptor_0 ctor") 
               << " @@@ could not create thread: " << ::strerror (err) <<
               std::endl;
             throw "oops";
@@ -218,23 +218,23 @@ namespace saga
         }
         else
         {
-          LOGSTR (INFO, "task_adaptor_0 ctor") 
+          LOGSTR (INFO, "async_adaptor_0 ctor") 
             << " == no   task =====================================================" << std::endl;
         }
 
         return;
       } 
 
-      void task_adaptor_0::get_state (saga::util::shared_ptr <saga::impl::call_context> cc)
+      void async_adaptor_0::get_state (saga::util::shared_ptr <saga::impl::call_context> cc)
       {
         SAGA_UTIL_STACKTRACE ();
 
         typedef saga::impl::call_state res_t;
 
-        saga::util::shared_ptr <saga::impl::task> impl (cc->get_impl ()); 
+        saga::util::shared_ptr <saga::impl::async::task> impl (cc->get_impl ()); 
 
-        LOGSTR (INFO, "task_adaptor_0 get_state") 
-          << "task adaptor 0 : get_state ()" << std::endl;
+        LOGSTR (INFO, "async_adaptor_0 get_state") 
+          << "async adaptor 0 : get_state ()" << std::endl;
 
         saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
 
@@ -244,7 +244,7 @@ namespace saga
         return;
       }
 
-      void task_adaptor_0::get_result (saga::util::shared_ptr <saga::impl::call_context> cc)
+      void async_adaptor_0::get_result (saga::util::shared_ptr <saga::impl::call_context> cc)
       {
         SAGA_UTIL_STACKTRACE ();
 
@@ -252,15 +252,15 @@ namespace saga
 
         saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
 
-        LOGSTR (INFO, "task_adaptor_0 get_result") 
-          << "task adaptor 0 : get_result ()" << std::endl;
+        LOGSTR (INFO, "async_adaptor_0 get_result") 
+          << "async adaptor 0 : get_result ()" << std::endl;
 
         saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
 
-        LOGSTR (INFO, "task_adaptor_0 get_result") 
+        LOGSTR (INFO, "async_adaptor_0 get_result") 
           << "=-----------------------------------------------" << std::endl;
         idata->t_cc->dump ();
-        LOGSTR (INFO, "task_adaptor_0 get_result") 
+        LOGSTR (INFO, "async_adaptor_0 get_result") 
           << "=-----------------------------------------------" << std::endl;
 
         cc->set_result <res_t> (idata->t_cc->get_result ());

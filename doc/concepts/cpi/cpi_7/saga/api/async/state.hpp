@@ -1,6 +1,8 @@
 
-#ifndef SAGA_API_TASK_TASK_HPP
-#define SAGA_API_TASK_TASK_HPP
+#ifndef SAGA_API_ASYNC_STATE_HPP
+#define SAGA_API_ASYNC_STATE_HPP
+
+#include <saga/util/enums.hpp>
 
 namespace saga
 {
@@ -39,5 +41,5 @@ namespace saga
 
 } // namespace saga
 
-#endif //  SAGA_API_TASK_TASK_HPP
+#endif //  SAGA_API_ASYNC_STATE_HPP
 

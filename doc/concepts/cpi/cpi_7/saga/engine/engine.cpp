@@ -3,7 +3,7 @@
 
 #include <saga/adaptor/test/filesystem_adaptor_0.hpp>
 #include <saga/adaptor/test/filesystem_adaptor_1.hpp>
-#include <saga/adaptor/test/task_adaptor_0.hpp>
+/// #include <saga/adaptor/test/async_adaptor_0.hpp>
 
 #include "engine.hpp"
 
@@ -86,8 +86,8 @@ namespace saga
         , impl_        (impl)
         , cpi_mode_    (Simple)
    ///  , mode_        (Sync)
-   ///  , call_state_  (New)
-        , task_state_  (New)
+        , call_state_  (saga::async::New)
+   ///  , task_state_  (New)
         , result_      ((new saga::impl::result_t_detail_ <saga::impl::void_t> ()))
     {
       SAGA_UTIL_STACKTRACE ();
@@ -96,8 +96,8 @@ namespace saga
     saga::util::shared_ptr <functor_base>           call_context::get_func (void)  { return func_;      } 
     saga::util::shared_ptr <saga::util::shareable>  call_context::get_impl (void)  { return impl_;      } 
 
-    /// void                   call_context::set_call_state (saga::impl::call_state s) { call_state_ = s;   }
-    /// saga::impl::call_state call_context::get_call_state (void                    ) { return call_state_;}
+    void                   call_context::set_call_state (saga::async::state     s) { call_state_ = s;   }
+    saga::async::state     call_context::get_call_state (void                    ) { return call_state_;}
 
     /// void                   call_context::set_task_state (saga::impl::call_state s) { task_state_ = s;   }
     /// saga::impl::call_state call_context::get_task_state (void)                     { return task_state_;}
@@ -117,7 +117,7 @@ namespace saga
         <<   "call_context (" << this << ") : " << msg << std::endl
         <<   "    cpi  mode   : " << saga::util::saga_enum_to_key <saga::impl::cpi_mode>   (cpi_mode_  ) << std::endl
    ///  <<   "    call mode   : " << saga::util::saga_enum_to_key <saga::impl::call_mode>  (mode_      ) << std::endl
-   ///  <<   "    call state  : " << saga::util::saga_enum_to_key <saga::impl::call_state> (call_state_) << std::endl
+        <<   "    call state  : " << saga::util::saga_enum_to_key <saga::async::state>     (call_state_) << std::endl
    ///  <<   "    task state  : " << saga::util::saga_enum_to_key <saga::impl::call_state> (task_state_) << std::endl
         <<   "    func name   : " << func_name_ << std::endl
         <<   "    func args   : " << func_args_ << std::endl;
@@ -200,7 +200,7 @@ namespace saga
       cpis_.push_back (open_adaptor <saga::adaptor::test::file_adaptor_1> ());
       cpis_.push_back (open_adaptor <saga::adaptor::test::dir_adaptor_0>  ());
       cpis_.push_back (open_adaptor <saga::adaptor::test::dir_adaptor_1>  ());
-      cpis_.push_back (open_adaptor <saga::adaptor::test::task_adaptor_0> ());
+      // cpis_.push_back (open_adaptor <saga::adaptor::test::async_adaptor_0> ());
     }
 
     void engine::dump (std::string msg)

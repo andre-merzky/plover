@@ -52,21 +52,21 @@ int main ()
 
       LOGSTR (INFO, "main out") << " 1 ############################################################"  << std::endl;
       
-      saga::task t = f.get_size <saga::impl::Async> ();
+      saga::async::task t = f.get_size <saga::async::Async> ();
       
       LOGSTR (INFO, "main out") << " 2 ############################################################"  << std::endl;
 
-      saga::impl::call_state s = t.get_state ();
+      saga::async::state s = t.get_state ();
 
-      while ( s == saga::impl::New     ||
-              s == saga::impl::Running )
+      while ( s == saga::async::New     ||
+              s == saga::async::Running )
       {
-        LOGSTR (INFO, "main out") << "state: " << saga::util::saga_enum_to_key <saga::impl::call_state> (t.get_state ()) << std::endl;
+        LOGSTR (INFO, "main out") << "state: " << saga::util::saga_enum_to_key <saga::async::state> (t.get_state ()) << std::endl;
         ::sleep (1);
         s = t.get_state ();
       }
 
-      LOGSTR (INFO, "main out") << "state: " << saga::util::saga_enum_to_key <saga::impl::call_state> (t.get_state ()) << std::endl;
+      LOGSTR (INFO, "main out") << "state: " << saga::util::saga_enum_to_key <saga::async::state> (t.get_state ()) << std::endl;
 
       LOGSTR (INFO, "main out") << " 3 ############################################################"  << std::endl;
 

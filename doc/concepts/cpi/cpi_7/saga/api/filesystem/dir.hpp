@@ -6,7 +6,7 @@
 
 #include <saga/util/shareable.hpp>
 
-#include <saga/api/task/task.hpp>
+#include <saga/api/async/task.hpp>
 #include <saga/api/filesystem/file.hpp>
 
 #include <saga/impl/filesystem/dir.hpp>

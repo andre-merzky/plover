@@ -9,15 +9,19 @@ namespace saga
 {
   namespace impl
   {
-    class task_cpi : public saga::impl::cpi_base
+    namespace async
     {
-      public:
-        virtual ~task_cpi (void);
+      class task_cpi : public saga::impl::cpi_base
+      {
+        public:
+          virtual ~task_cpi (void);
 
-        virtual void constructor (saga::util::shared_ptr <call_context> cc);
-        virtual void get_state   (saga::util::shared_ptr <call_context> cc);
-        virtual void get_result  (saga::util::shared_ptr <call_context> cc);
-    };
+          virtual void constructor (saga::util::shared_ptr <call_context> cc);
+          virtual void get_state   (saga::util::shared_ptr <call_context> cc);
+          virtual void get_result  (saga::util::shared_ptr <call_context> cc);
+      };
+
+    } // namespace async
 
   } // namespace impl
 

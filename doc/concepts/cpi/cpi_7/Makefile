@@ -6,3 +6,5 @@ SAGA_SUBDIRS += example
 
 include $(SAGA_ROOT)/make/saga.mk
 
+example: saga
+
