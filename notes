@@ -1,0 +1,13 @@
+
+saga-simple is not providing orthogonal functionality, like logging.  So, we are
+free to invent and use our own log system (for example), and don't expect others
+to use it (adaptor developers, SAGA users / application coders, etc.  They
+*can*, but are not expected to.
+
+  - locks
+  - shared_ptr
+  - log
+  - ini parser
+  - ...
+
+

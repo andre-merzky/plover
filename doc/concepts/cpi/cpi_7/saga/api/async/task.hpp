@@ -25,6 +25,7 @@ namespace saga
         task (saga::util::shared_ptr <saga::impl::async::task> impl);
 
         saga::async::state get_state (void);
+        void               run       (void);
 
         template <typename T>
           T get_result (void)

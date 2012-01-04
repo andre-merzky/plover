@@ -1,5 +1,8 @@
 
-SAGA_SUBDIRS = config make generator saga doc # examples
+# SAGA_SUBDIRS = config make generator saga doc # examples
+SAGA_SUBDIRS = saga doc # examples
+
+doc: saga
 
 SAGA_ROOT    = $(shell pwd)
 

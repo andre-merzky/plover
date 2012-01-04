@@ -1,13 +1,14 @@
 
 SAGA_ROOT     = $(shell pwd)/../../../
 
-SAGA_BIN     += cpi_1
-SAGA_BIN     += cpi_2
-SAGA_BIN     += cpi_3
-SAGA_BIN     += cpi_4
-SAGA_BIN     += cpi_5
-
-SAGA_SUBDIRS += cpi_6
+# SAGA_BIN     += cpi_1
+# SAGA_BIN     += cpi_2
+# SAGA_BIN     += cpi_3
+# SAGA_BIN     += cpi_4
+# SAGA_BIN     += cpi_5
+# 
+# SAGA_SUBDIRS += cpi_6
+SAGA_SUBDIRS += cpi_7
 
 include $(SAGA_ROOT)/make/saga.mk
 

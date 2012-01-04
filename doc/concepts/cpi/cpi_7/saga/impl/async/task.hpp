@@ -27,15 +27,25 @@ namespace saga
           // saga::session s_;
 
         public:
-          saga::util::shared_ptr <saga::impl::call_context> t_cc;
+          saga::util::shared_ptr <saga::impl::call_context> t_cc; // this context is what the task operates on
+
+          saga::async::state  state;
+          saga::async::mode   mode;
+
+          task_instance_data (void)
+            : mode  (saga::async::Sync)
+            , state (saga::async::New)
+          {
+          }
+
 
           void dump (std::string msg = "")
           {
             LOGSTR (DEBUG, "task_instance_data dump") 
               << "(" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl
-                                          << "    t_cc        : " << std::endl;
+              << "    t_cc         : " << std::endl;
             t_cc.dump ();
-            t_cc->dump ();  // should give infinite recursion!
+            t_cc->dump ();
           }
       };
 
@@ -47,11 +57,12 @@ namespace saga
 
         public:
           task (void);
-          task (saga::util::shared_ptr <saga::impl::call_context> cc);
+          task (saga::util::shared_ptr <saga::impl::call_context> t_cc);
 
           void_t                            constructor (void);
           saga::async::state                get_state   (void);
           saga::util::shared_ptr <result_t> get_result  (void);
+          void_t                            run         (void);
 
           // allow adaptor to obtain instance data (unlocked)
           saga::util::shared_ptr <task_instance_data> get_instance_data (void)

@@ -36,6 +36,7 @@ namespace saga
           void constructor (saga::util::shared_ptr <saga::impl::call_context> cc);
           void get_state   (saga::util::shared_ptr <saga::impl::call_context> cc);
           void get_result  (saga::util::shared_ptr <saga::impl::call_context> cc);
+          void run         (saga::util::shared_ptr <saga::impl::call_context> cc);
       };
 
     } // namespace test

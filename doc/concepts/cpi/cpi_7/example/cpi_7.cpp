@@ -14,7 +14,7 @@ int main ()
   try
   {
     // file open, sync
-    if ( 1 )
+    if ( 0 )
     {
       LOGSTR (INFO, "main out") << " -sync dir ops #########"  << std::endl;
     
@@ -29,7 +29,7 @@ int main ()
 
 
     // file copy and get size, sync
-    if ( 1 )
+    if ( 0 )
     {
       LOGSTR (INFO, "main out") << " -sync file ops ########"  << std::endl;
     
@@ -44,15 +44,15 @@ int main ()
 
 
     // file get_size, async
-    if ( 1 )
+    if ( 0 )
     {
-      LOGSTR (INFO, "main out") << " 0 # async get_size ###########################################"  << std::endl;
+      LOGSTR (INFO, "main out") << " 0 # (a)sync get_size ###########################################"  << std::endl;
       
       saga::filesystem::file f ("/etc/passwd");
 
       LOGSTR (INFO, "main out") << " 1 ############################################################"  << std::endl;
       
-      saga::async::task t = f.get_size <saga::async::Async> ();
+      saga::async::task t = f.get_size <saga::async::Sync> ();
       
       LOGSTR (INFO, "main out") << " 2 ############################################################"  << std::endl;
 
@@ -67,14 +67,39 @@ int main ()
       }
 
       LOGSTR (INFO, "main out") << "state: " << saga::util::saga_enum_to_key <saga::async::state> (t.get_state ()) << std::endl;
-
       LOGSTR (INFO, "main out") << " 3 ############################################################"  << std::endl;
-
       LOGSTR (INFO, "main out") << "value: " << t.get_result <int> () << std::endl;
-
       LOGSTR (INFO, "main out") << " 4 ############################################################"  << std::endl;
 
-      ::sleep (2);
+    }
+
+    // file get_size, async
+    if ( 1 )
+    {
+      LOGSTR (INFO, "main out") << " 5 # async get_size ###########################################"  << std::endl;
+      
+      saga::filesystem::file f ("/etc/passwd");
+
+      LOGSTR (INFO, "main out") << " 6 ############################################################"  << std::endl;
+      
+      saga::async::task t = f.get_size <saga::async::Async> ();
+      
+      LOGSTR (INFO, "main out") << " 7 ############################################################"  << std::endl;
+
+      saga::async::state s = t.get_state ();
+
+      while ( s == saga::async::New     ||
+              s == saga::async::Running )
+      {
+        LOGSTR (INFO, "main out") << "state: " << saga::util::saga_enum_to_key <saga::async::state> (t.get_state ()) << std::endl;
+        ::sleep (1);
+        s = t.get_state ();
+      }
+
+      LOGSTR (INFO, "main out") << "state: " << saga::util::saga_enum_to_key <saga::async::state> (t.get_state ()) << std::endl;
+      LOGSTR (INFO, "main out") << " 8 ############################################################"  << std::endl;
+      LOGSTR (INFO, "main out") << "value: " << t.get_result <int> () << std::endl;
+      LOGSTR (INFO, "main out") << " 9 ############################################################"  << std::endl;
     }
 
   }

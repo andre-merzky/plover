@@ -3,7 +3,7 @@
 
 #include <saga/adaptor/test/filesystem_adaptor_0.hpp>
 #include <saga/adaptor/test/filesystem_adaptor_1.hpp>
-/// #include <saga/adaptor/test/async_adaptor_0.hpp>
+#include <saga/adaptor/test/async_adaptor_0.hpp>
 
 #include "engine.hpp"
 
@@ -80,14 +80,18 @@ namespace saga
     //
     // container for things to pass around on any method call
     //
+    SAGA_UTIL_REGISTER_ENUM_S (call_context::state  , saga__impl__call_context__state, New    , 0);
+    SAGA_UTIL_REGISTER_ENUM_S (call_context::state  , saga__impl__call_context__state, Running, 1);
+    SAGA_UTIL_REGISTER_ENUM_S (call_context::state  , saga__impl__call_context__state, Done   , 2);
+    SAGA_UTIL_REGISTER_ENUM_S (call_context::state  , saga__impl__call_context__state, Failed , 3);
+
+
     call_context::call_context (saga::util::shared_ptr <functor_base>          func, 
                                 saga::util::shared_ptr <saga::util::shareable> impl)
       : func_        (func)
         , impl_        (impl)
         , cpi_mode_    (Simple)
-   ///  , mode_        (Sync)
-        , call_state_  (saga::async::New)
-   ///  , task_state_  (New)
+        , call_state_  (New)
         , result_      ((new saga::impl::result_t_detail_ <saga::impl::void_t> ()))
     {
       SAGA_UTIL_STACKTRACE ();
@@ -96,14 +100,8 @@ namespace saga
     saga::util::shared_ptr <functor_base>           call_context::get_func (void)  { return func_;      } 
     saga::util::shared_ptr <saga::util::shareable>  call_context::get_impl (void)  { return impl_;      } 
 
-    void                   call_context::set_call_state (saga::async::state     s) { call_state_ = s;   }
-    saga::async::state     call_context::get_call_state (void                    ) { return call_state_;}
-
-    /// void                   call_context::set_task_state (saga::impl::call_state s) { task_state_ = s;   }
-    /// saga::impl::call_state call_context::get_task_state (void)                     { return task_state_;}
-
-    /// void                   call_context::set_mode       (saga::impl::call_mode  m) { mode_  = m;        }
-    /// saga::impl::call_mode  call_context::get_mode       (void                    ) { return mode_;      }
+    void                   call_context::set_state (call_context::state s)         { call_state_ = s;   }
+    call_context::state    call_context::get_state (void)                          { return call_state_;}
 
     saga::util::shared_ptr <saga::impl::result_t> call_context::get_result (void)
     {
@@ -115,10 +113,8 @@ namespace saga
       // FIXME: to_key can throw
       LOGSTR (DEBUG, "call_context dump")
         <<   "call_context (" << this << ") : " << msg << std::endl
-        <<   "    cpi  mode   : " << saga::util::saga_enum_to_key <saga::impl::cpi_mode>   (cpi_mode_  ) << std::endl
-   ///  <<   "    call mode   : " << saga::util::saga_enum_to_key <saga::impl::call_mode>  (mode_      ) << std::endl
-        <<   "    call state  : " << saga::util::saga_enum_to_key <saga::async::state>     (call_state_) << std::endl
-   ///  <<   "    task state  : " << saga::util::saga_enum_to_key <saga::impl::call_state> (task_state_) << std::endl
+        <<   "    cpi  mode   : " << saga::util::saga_enum_to_key <saga::impl::cpi_mode>            (cpi_mode_  ) << std::endl
+        <<   "    call state  : " << saga::util::saga_enum_to_key <saga::impl::call_context::state> (call_state_) << std::endl
         <<   "    func name   : " << func_name_ << std::endl
         <<   "    func args   : " << func_args_ << std::endl;
       impl_.dump         ("    IMPL_       : ");
@@ -196,12 +192,60 @@ namespace saga
       LOGSTR (INFO, "engine") << "engine: register all adaptors";
 
       // create and register adaptor instances
-      cpis_.push_back (open_adaptor <saga::adaptor::test::file_adaptor_0> ());
-      cpis_.push_back (open_adaptor <saga::adaptor::test::file_adaptor_1> ());
-      cpis_.push_back (open_adaptor <saga::adaptor::test::dir_adaptor_0>  ());
-      cpis_.push_back (open_adaptor <saga::adaptor::test::dir_adaptor_1>  ());
-      // cpis_.push_back (open_adaptor <saga::adaptor::test::async_adaptor_0> ());
+      cpis_.push_back (open_adaptor <saga::adaptor::test::file_adaptor_0>  ());
+      cpis_.push_back (open_adaptor <saga::adaptor::test::file_adaptor_1>  ());
+      cpis_.push_back (open_adaptor <saga::adaptor::test::dir_adaptor_0>   ());
+      cpis_.push_back (open_adaptor <saga::adaptor::test::dir_adaptor_1>   ());
+      cpis_.push_back (open_adaptor <saga::adaptor::test::async_adaptor_0> ());
     }
+
+
+    // void engine::call (saga::util::shared_ptr <saga::impl::call_context> cc)
+    // {
+    //   SAGA_UTIL_STACKTRACE ();
+    //
+    //   typedef saga::impl::functor_base             func_base_t;
+    //
+    //   // try one adaptor after the other, until one succeeds.
+    //   LOGSTR (INFO, "engine call") << "calling cpis " << cpis_.size () << std::endl;
+    //   cc->dump ();
+    //
+    //   for ( unsigned int i = 0; i < cpis_.size (); i++ )
+    //   {
+    //     LOGSTR (INFO, "engine call") << "calling cpi " << i << " / " << cpis_.size () << " - " << typeid (cpis_[i]).name () << std::endl;
+    //     try
+    //     {
+    //       LOGSTR (INFO, "engine call") << "adaptor " << i << " : calling " << cc->get_func()->get_name () << std::endl;
+    //       cpis_[i]->dump ();
+    //
+    //       saga::util::shared_ptr <func_base_t> func   = cc->get_func ();
+    //       // saga::util::shared_ptr <func_cast_t> casted = func.get_shared_ptr <func_cast_t> ();
+    //
+    //       func->call_cpi (cpis_[i], cc);
+    //       cc->set_state (saga::impl::call_context::Done);
+    //       LOGSTR (INFO, "engine call") << "adaptor " << i << " : succeeded for " << cc->get_func()->get_name () << std::endl;
+    //
+    //       return;
+    //     }
+    //     catch ( const char * m )
+    //     {
+    //       LOGSTR (INFO, "engine call") << "adaptor " << i << " : failed for " << cc->get_func()->get_name () << " : " << m << std::endl;
+    //     }
+    //     catch ( ... )
+    //     {
+    //       LOGSTR (INFO, "engine call") << "adaptor " << i << " : failed for " << cc->get_func()->get_name () << " : ???" << std::endl;
+    //     }
+    //     LOGSTR (INFO, "engine call") << "calling cpi done " << i << " / " << cpis_.size () << std::endl;
+    //   }
+
+    //   // no adaptor suceeded.  We don't have anything sensible to return, so
+    //   // we flag the failure, and throw.  That is redundant, but hey...
+    //   cc->set_state (saga::impl::call_context::Failed);
+
+    //   LOGSTR (INFO, "engine call") << "all adaptors failed for " << cc->get_func()->get_name () << std::endl;
+    //   throw "no adaptor suceeded";
+    // }
+
 
     void engine::dump (std::string msg)
     {

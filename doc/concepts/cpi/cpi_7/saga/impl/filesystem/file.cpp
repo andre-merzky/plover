@@ -43,7 +43,7 @@ namespace saga
 
         engine_->call <api_t, cpi_t> (cc);
 
-        if ( cc->get_call_state () == saga::async::Failed )
+        if ( cc->get_state () == saga::impl::call_context::Failed )
         {
           throw " file::constructor indicates failed";
         }
@@ -62,18 +62,27 @@ namespace saga
         typedef saga::impl::functor_0 <api_t, cpi_t, int> func_t;
 
         // create a functor which hold the cpi class' get_size() function
-        // pointer.  The second templ parameter is the functions return type
+        // pointer.
         saga::util::shared_ptr <func_t> func (new func_t ("get_size", &cpi_t::get_size));
 
         // create a call context wich holds functor and implementation
         saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
+        cc->set_mode    (saga::impl::call_context::Sync);
+
+        // FIXME: move result from cc to func, removing this templated call
         cc->init_result <res_t> ();
+
+        LOGSTR (DEBUG, "cc dump") << " ---------------------------" << std::endl; 
+        func->dump ();
+        LOGSTR (DEBUG, "cc dump") << " ---------------------------" << std::endl; 
+        cc->dump ();
+        LOGSTR (DEBUG, "cc dump") << " ---------------------------" << std::endl; 
 
         // the cc is given to the engine, so it can use the functor to call that
         // function on some cpi
         engine_->call <api_t, cpi_t> (cc);
 
-        if ( cc->get_call_state () == saga::async::Failed )
+        if ( cc->get_state () == saga::impl::call_context::Failed )
         {
           throw " file::get_size indicates failed";
         }
@@ -103,16 +112,16 @@ namespace saga
         // function on some cpi
         engine_->call <api_t, cpi_t> (cc);
 
-        if ( cc->get_call_state () == saga::async::Failed )
+        if ( cc->get_state () == saga::impl::call_context::Failed )
         {
           throw " file::get_size <> () indicates failed";
         }
 
         res_t ret = cc->get_result <res_t> ();
 
-        ret.dump ();
-        cc.dump ();
-        cc->dump ();
+        // ret.dump ();
+        // cc.dump ();
+        // cc->dump ();
 
         return ret;
       }
@@ -134,7 +143,7 @@ namespace saga
 
         engine_->call <api_t, cpi_t> (cc);
 
-        if ( cc->get_call_state () == saga::async::Failed )
+        if ( cc->get_state () == saga::impl::call_context::Failed )
         {
           throw " file::copy () indicates failed";
         }

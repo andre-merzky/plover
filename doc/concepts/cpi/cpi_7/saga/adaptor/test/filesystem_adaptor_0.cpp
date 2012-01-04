@@ -18,7 +18,7 @@ namespace saga
         saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
         idata->url = url;
 
-        cc->set_call_state (saga::async::Done);
+        cc->set_state (saga::impl::call_context::Done);
 
         return;
       } 
@@ -28,8 +28,6 @@ namespace saga
         SAGA_UTIL_STACKTRACE ();
         saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
 
-        cc->set_call_state (saga::async::Failed);
-
         LOGSTR (INFO, "file_adaptor_0 get_size") << "file adaptor 0 : get_size" << std::endl;
         throw "oops";
       }
@@ -38,8 +36,6 @@ namespace saga
                                      saga::async::mode                                  m)
       { 
         SAGA_UTIL_STACKTRACE ();
-
-        cc->set_call_state (saga::async::Failed);
 
         LOGSTR (INFO, "file_adaptor_0 get_size async") << "file adaptor 0 : get_size <async>" << std::endl;
         throw "oops";
@@ -51,8 +47,6 @@ namespace saga
       {
         SAGA_UTIL_STACKTRACE ();
         saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
-
-        cc->set_call_state (saga::async::Failed);
 
         LOGSTR (INFO, "file_adaptor_0 copy") << "file adaptor 0 : copy " << tgt << std::endl;
         throw "oops";
@@ -80,7 +74,7 @@ namespace saga
         saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
         idata->url = url;
 
-        cc->set_call_state (saga::async::Done);
+        cc->set_state (saga::impl::call_context::Done);
 
         return;
       } 

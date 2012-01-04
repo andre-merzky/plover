@@ -31,7 +31,12 @@ namespace saga
         saga::async::task get_size (void)
         {
           SAGA_UTIL_STACKTRACE ();
-          return saga::async::task (impl_->get_size (M));
+          LOGSTR (NOISE, "filesystem::file get_size<> 1") << " #######################" << std::endl;
+          saga::util::shared_ptr <saga::impl::async::task> timpl = impl_->get_size (M);
+          LOGSTR (NOISE, "filesystem::file get_size<> 2") << " #######################" << std::endl;
+          saga::async::task t (timpl);
+          LOGSTR (NOISE, "filesystem::file get_size<> 3") << " #######################" << std::endl;
+          return t;
         }
 
     };

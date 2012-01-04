@@ -1,7 +1,7 @@
 
 SAGA_ROOT     = $(shell pwd)/../../../../../
 
-SAGA_BIN     += cpi_6
+SAGA_BIN     += cpi_7
 
 include $(SAGA_ROOT)/make/saga.mk
 
@@ -25,15 +25,15 @@ SAGA_LDFLAGS  += -L$(SAGA_ROOT)/saga/util/              -lsaga_util -lpthread
 
 check:: all
 	@echo ""
-	valgrind --tool=memcheck --track-origins=yes --leak-check=full ./cpi_6 2>&1 | tee valgrind.log
+	valgrind --tool=memcheck --track-origins=yes --leak-check=full ./cpi_7 2>&1 | tee valgrind.log
 	@echo ""
 
-run:: cpi_6
+run:: cpi_7
 	@echo ""
-	./cpi_6
+	./cpi_7
 	@echo ""
 
 runall: all
-	./cpi_6
+	./cpi_7
 	@echo ""
 

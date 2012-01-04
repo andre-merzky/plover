@@ -10,8 +10,6 @@
 #include <saga/util/logging.hpp>
 #include <saga/util/stack_tracer.hpp>
 
-#include <saga/api/async/state.hpp>
-
 namespace saga
 {
   namespace impl
@@ -22,7 +20,8 @@ namespace saga
     class engine;
 
 
-    enum cpi_mode {
+    enum cpi_mode 
+    {
       Any        = 0, 
       Bound      = 1, 
       Simple     = 2, 
@@ -30,7 +29,6 @@ namespace saga
       Filter     = 4,
       All        = 5
     };
-
 
     // make handling void call signatures in templates easier
     class void_t 
@@ -163,12 +161,30 @@ namespace saga
     //
     class call_context : public saga::util::shareable
     {
+      public:
+        enum mode 
+        {
+          Sync       = 0, 
+          Async      = 1, 
+          Task       = 2, 
+        };
+
+
+        enum state 
+        {
+          New        = 0, 
+          Running    = 1, 
+          Done       = 2, 
+          Failed     = 3, 
+        };
+
+
       // FIXME: don't use async::state
       private:
         saga::util::shared_ptr <shareable>    impl_;            // calling object (has session)
         saga::impl::cpi_mode                  cpi_mode_;        // collect, simple, ...
    ///  saga::impl::call_mode                 mode_;            // sync, async, task
-        saga::async::state                    call_state_;      // new, running, done, failed ...
+        state                                 call_state_;      // new, running, done, failed ...
    ///  saga::impl::call_state                task_state_;      // new, running, done, failed ...
     //  saga::exception                       exception_;       // exception stack collected from adaptors_used_/failed
     //  saga::util::timestamp                 created_;         // created time stamp
@@ -192,8 +208,8 @@ namespace saga
         saga::util::shared_ptr <functor_base> get_func (void);
         saga::util::shared_ptr <shareable>    get_impl (void);
 
-        void                   set_call_state (saga::async::state s);
-        saga::async::state     get_call_state (void);
+        void                   set_state (state s);
+        state                  get_state (void);
 
     /// void                   set_task_state (saga::impl::call_state s);
     /// saga::impl::call_state get_task_state (void);
@@ -344,7 +360,15 @@ namespace saga
           SAGA_UTIL_STACKTRACE ();
           
           // cast cpi_base to CPI
+          if ( ! cpi.is_a <CPI> () )
+          {
+            throw "Cannot handle CPI type in call_cpi";
+          }
+
           saga::util::shared_ptr <CPI> casted = cpi.get_shared_ptr <CPI> ();
+
+          // ::assert (NULL != call_);
+          // ::assert (NULL != casted);
 
           ((*casted).*(call_)) (cc, arg_1_); 
         }
@@ -412,12 +436,24 @@ namespace saga
           {
             if ( cpis_[i].is_a <CPI> () )
             {
+              LOGSTR (DEBUG, "get_cpi") << " =============================================" << std::endl;
               ret.push_back (cpis_[i].get_shared_ptr <CPI> ());
+              cpis_[i].get_shared_ptr <CPI> ()->dump ();
+              LOGSTR (DEBUG, "get_cpi") << " =============================================" << std::endl;
             }
           }
 
+          LOGSTR (DEBUG, "get_cpi") << " cpis: " << ret.size () << std::endl;
+          
           return ret;
         }
+
+        // //////////////////////////////////////////////////////////////////
+        // //
+        // // 
+        // //
+        // void call (saga::util::shared_ptr <saga::impl::call_context> cc);
+
 
         //////////////////////////////////////////////////////////////////
         //
@@ -436,30 +472,32 @@ namespace saga
 
           // try one adaptor after the other, until one succeeds.
           LOGSTR (INFO, "engine call") << "calling cpis " << cpis.size () << std::endl;
+          LOGSTR (INFO, "engine call") << "calling cpis " << saga::util::demangle (typeid (CPI).name ()) << std::endl;
+          cc->dump ();
+          
           for ( unsigned int i = 0; i < cpis.size (); i++ )
           {
             LOGSTR (INFO, "engine call") << "calling cpi " << i << " / " << cpis.size () << std::endl;
             try
             {
               LOGSTR (INFO, "engine call") << "adaptor " << i << " : calling " << cc->get_func()->get_name () << std::endl;
+              cpis[i]->dump ();
 
-              saga::util::shared_ptr <func_base_t> base   = cc->get_func ();
-              // saga::util::shared_ptr <func_cast_t> casted = base.get_shared_ptr <func_cast_t> ();
+              saga::util::shared_ptr <func_base_t> func   = cc->get_func ();
+              // saga::util::shared_ptr <func_cast_t> casted = func.get_shared_ptr <func_cast_t> ();
 
-              base->call_cpi (cpis[i], cc);
-              cc->set_call_state (saga::async::Done);
+              func->call_cpi (cpis[i], cc);
+              cc->set_state (saga::impl::call_context::Done);
               LOGSTR (INFO, "engine call") << "adaptor " << i << " : succeeded for " << cc->get_func()->get_name () << std::endl;
 
               return;
             }
             catch ( const char * m )
             {
-              // something went wrong...
               LOGSTR (INFO, "engine call") << "adaptor " << i << " : failed for " << cc->get_func()->get_name () << " : " << m << std::endl;
             }
             catch ( ... )
             {
-              // something went wrong...
               LOGSTR (INFO, "engine call") << "adaptor " << i << " : failed for " << cc->get_func()->get_name () << " : ???" << std::endl;
             }
             LOGSTR (INFO, "engine call") << "calling cpi done " << i << " / " << cpis.size () << std::endl;
@@ -467,7 +505,7 @@ namespace saga
 
           // no adaptor suceeded.  We don't have anything sensible to return, so
           // we flag the failure, and throw.  That is redundant, but hey...
-          cc->set_call_state (saga::async::Failed);
+          cc->set_state (saga::impl::call_context::Failed);
 
           LOGSTR (INFO, "engine call") << "all adaptors failed for " << cc->get_func()->get_name () << std::endl;
           throw "no adaptor suceeded";

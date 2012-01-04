@@ -28,11 +28,17 @@ namespace saga
         throw "get_state : NotImplemented"; 
       }
 
-      // FIXME: cont here (any needed)
       void task_cpi::get_result (saga::util::shared_ptr <call_context> cc)
       { 
         SAGA_UTIL_STACKTRACE ();
         throw "get_result : NotImplemented"; 
+      } 
+
+      // FIXME: cont here (any needed)
+      void task_cpi::run (saga::util::shared_ptr <call_context> cc)
+      { 
+        SAGA_UTIL_STACKTRACE ();
+        throw "void : NotImplemented"; 
       } 
 
     } // namespace async
