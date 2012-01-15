@@ -7,8 +7,6 @@
 
 #include "engine.hpp"
 
-static saga::util::shared_ptr <saga::impl::engine> the_engine_ (new saga::impl::engine);
-
 namespace saga
 {
   namespace impl
@@ -26,12 +24,6 @@ namespace saga
       cpis_.push_back (open_adaptor <saga::adaptor::test::dir_adaptor_1>   ());
       cpis_.push_back (open_adaptor <saga::adaptor::test::async_adaptor_0> ());
     }
-
-    saga::util::shared_ptr <engine> the_engine (void)
-    {
-      return the_engine_;
-    }
-
 
     void engine::dump (std::string msg)
     {

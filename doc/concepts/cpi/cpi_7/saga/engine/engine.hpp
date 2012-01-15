@@ -49,8 +49,6 @@ namespace saga
       public:
         engine (void);
 
-        saga::util::shared_ptr <engine> get_instance (void);
-
         template <typename ADP>
         saga::util::shared_ptr <saga::impl::cpi_base> open_adaptor (void)
         {
@@ -137,6 +135,11 @@ namespace saga
         }
 
         void dump (std::string msg = "");
+    };
+
+    ///////////////////////////////////////////////////////////////////
+    class the_engine : public saga::util::singleton <engine>
+    {
     };
 
   } // namespace impl
