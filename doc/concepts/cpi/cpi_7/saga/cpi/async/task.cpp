@@ -46,3 +46,4 @@ namespace saga
   } // namespace impl
 
 } // namespace saga
+

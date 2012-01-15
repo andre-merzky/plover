@@ -138,7 +138,7 @@ namespace saga
 
       void async_adaptor_0::constructor (saga::util::shared_ptr <saga::impl::call_context> cc)
       {
-        // TODO: ensure idata->t_cc->task_state is New or Unknown
+        // TODO: ensure idata->t_cc->task_state is New
 
         SAGA_UTIL_STACKTRACE ();
         return;
@@ -152,12 +152,11 @@ namespace saga
 
         saga::util::shared_ptr <saga::impl::async::task> impl (cc->get_impl ()); 
 
-        LOGSTR (INFO, "async_adaptor_0 get_state") 
-          << "async adaptor 0 : get_state ()" << std::endl;
-
         saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
 
-        cc->set_result <res_t> (idata->state);
+        // confirm result type
+        cc->get_func ()->set_result <res_t> (idata->state);
+
         cc->set_state (saga::impl::call_context::Done);
 
         return;
@@ -171,18 +170,10 @@ namespace saga
 
         saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
 
-        LOGSTR (INFO, "async_adaptor_0 get_result") 
-          << "async adaptor 0 : get_result ()" << std::endl;
-
         saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
 
-        LOGSTR (INFO, "async_adaptor_0 get_result") 
-          << "=-----------------------------------------------" << std::endl;
-        idata->t_cc->dump ();
-        LOGSTR (INFO, "async_adaptor_0 get_result") 
-          << "=-----------------------------------------------" << std::endl;
+        cc->get_func ()->set_result <res_t> (idata->t_cc->get_func ()->get_result ());
 
-        cc->set_result <res_t> (idata->t_cc->get_result ());
         cc->set_state (saga::impl::call_context::Done);
 
         return;
@@ -193,9 +184,6 @@ namespace saga
         SAGA_UTIL_STACKTRACE ();
 
         saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
-
-        LOGSTR (INFO, "async_adaptor_0 run") 
-          << "async adaptor 0 : run ()" << std::endl;
 
         saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
 
@@ -290,3 +278,4 @@ namespace saga
   } // namespace adaptor
 
 } // namespace saga
+

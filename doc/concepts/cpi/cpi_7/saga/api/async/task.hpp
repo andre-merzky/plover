@@ -28,23 +28,13 @@ namespace saga
         void               run       (void);
 
         template <typename T>
-          T get_result (void)
-          {
-            SAGA_UTIL_STACKTRACE ();
-            saga::util::shared_ptr <saga::impl::result_t> result = impl_->get_result (); 
-            saga::util::shared_ptr <saga::impl::result_t_detail_ <T> > casted = result.get_shared_ptr <saga::impl::result_t_detail_ <T> > ();
-            // FIXME: error check
-            LOGSTR (DEBUG, "task get_result") << " 1 ##############################################################" << std::endl;
-            LOGSTR (DEBUG, "task get_result") << " ------------------------------------ " << saga::util::demangle (typeid (T).name ()) << std::endl;
-            impl_.dump ();
-            LOGSTR (DEBUG, "task get_result") << " ------------------------------------ " << std::endl;
-            impl_->dump ();
-            LOGSTR (DEBUG, "task get_result") << " 2 ##############################################################" << std::endl;
+        T get_result (void)
+        {
+          SAGA_UTIL_STACKTRACE ();
 
-            T t = casted->get ();
-            LOGSTR (DEBUG, "task get_result") << " 3 ##############################################################" << std::endl;
-            return t;
-          }
+          // FIXME: error check: is cast valid?
+          return impl_->get_result ()->get <T> (); 
+        }
     };
 
   } // namespace async

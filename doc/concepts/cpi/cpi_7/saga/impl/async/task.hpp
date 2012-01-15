@@ -29,8 +29,8 @@ namespace saga
         public:
           saga::util::shared_ptr <saga::impl::call_context> t_cc; // this context is what the task operates on
 
-          saga::async::state  state;
           saga::async::mode   mode;
+          saga::async::state  state;
 
           task_instance_data (void)
             : mode  (saga::async::Sync)

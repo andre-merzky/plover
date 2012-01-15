@@ -51,7 +51,7 @@ namespace saga
         (void) stat (idata->url.c_str (), &buf);
         LOGSTR (INFO, "file_adaptor_1 get_size") << "2" << std::endl;
 
-        cc->set_result <int> (buf.st_size);
+        cc->get_func ()->set_result <int> (buf.st_size);
         LOGSTR (INFO, "file_adaptor_1 get_size") << "3" << std::endl;
         LOGSTR (INFO, "file_adaptor_1 get_size") << "3" << std::endl;
       }
@@ -86,14 +86,14 @@ namespace saga
 
           // create a call context wich holds functor and implementation
           saga::util::shared_ptr <saga::impl::call_context> t_cc (new saga::impl::call_context (t_func, impl)); 
-          t_cc->init_result <t_res_t> ();
 
           LOGSTR (DEBUG, "t_cc dump") << " ---------------------------" << std::endl; 
           t_cc->dump ();
           LOGSTR (DEBUG, "t_cc dump") << " ---------------------------" << std::endl; 
         
           saga::util::shared_ptr <saga::impl::async::task> ret (new saga::impl::async::task (t_cc));
-          cc->set_result <saga::util::shared_ptr <saga::impl::async::task> > (ret);
+
+          cc->get_func ()->set_result <saga::util::shared_ptr <saga::impl::async::task> > (ret);
 
 
           // call the normal sync call, 
@@ -121,7 +121,7 @@ namespace saga
           // adaptor deal with the async invocation of the sync call
 
           saga::util::shared_ptr <saga::impl::async::task> ret (new saga::impl::async::task (cc));
-          cc->set_result <saga::util::shared_ptr <saga::impl::async::task> > (ret);
+          cc->get_func ()->set_result <saga::util::shared_ptr <saga::impl::async::task> > (ret);
 
           ret->run ();
 
@@ -193,7 +193,7 @@ namespace saga
 
         LOGSTR (INFO, "dir_adaptor_1 get_url") << "dir adaptor 1 : get_url: " << idata->url << std::endl;
 
-        cc->set_result <std::string> (idata->url);
+        cc->get_func ()->set_result <std::string> (idata->url);
         cc->set_state (saga::impl::call_context::Done);
 
         return;
@@ -224,7 +224,7 @@ namespace saga
         // here as well...
         ret->constructor (new_url);
 
-        cc->set_result <res_t> (ret);
+        cc->get_func ()->set_result <res_t> (ret);
         cc->set_state (saga::impl::call_context::Done);
 
         return;

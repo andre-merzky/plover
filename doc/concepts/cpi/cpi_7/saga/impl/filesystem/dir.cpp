@@ -39,7 +39,6 @@ namespace saga
         saga::util::shared_ptr <func_t> func (new func_t ("constructor",&cpi_t::constructor, url));
 
         saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
-        cc->init_result <res_t> ();
 
         engine_->call <api_t, cpi_t> (cc);
         
@@ -48,7 +47,7 @@ namespace saga
           throw " dir::constructor () indicates failed";
         }
 
-        return cc->get_result <res_t> ();
+        return (cc->get_func ()->get_result <res_t> ());
       }
 
       //////////////////////////////////////////////////////////////////
@@ -64,7 +63,6 @@ namespace saga
         saga::util::shared_ptr <func_t> func (new func_t ("get_url", &cpi_t::get_url));
 
         saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
-        cc->init_result <res_t> ();
 
         engine_->call <api_t, cpi_t> (cc);
 
@@ -73,7 +71,7 @@ namespace saga
           throw " dir::get_url () indicates failed";
         }
 
-        return cc->get_result <res_t> ();
+        return cc->get_func ()->get_result <res_t> ();
       }
 
       //////////////////////////////////////////////////////////////////
@@ -90,7 +88,6 @@ namespace saga
         saga::util::shared_ptr <func_t> func (new func_t ("open", &cpi_t::open, url));
 
         saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
-        cc->init_result <res_t> ();
 
         engine_->call <api_t, cpi_t> (cc);
 
@@ -99,7 +96,7 @@ namespace saga
           throw " dir::open () indicates failed";
         }
 
-        return cc->get_result <res_t> ();
+        return cc->get_func ()->get_result <res_t> ();
       }
 
     } // namespace filesystem

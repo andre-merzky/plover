@@ -39,7 +39,6 @@ namespace saga
         saga::util::shared_ptr <func_t> func (new func_t ("constructor", &cpi_t::constructor, url));
 
         saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
-        cc->init_result <res_t> ();
 
         engine_->call <api_t, cpi_t> (cc);
 
@@ -48,7 +47,7 @@ namespace saga
           throw " file::constructor indicates failed";
         }
 
-        return cc->get_result <res_t> ();
+        return cc->get_func ()->get_result <res_t> ();
       }
 
       //////////////////////////////////////////////////////////////////
@@ -67,16 +66,12 @@ namespace saga
 
         // create a call context wich holds functor and implementation
         saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
-        cc->set_mode    (saga::impl::call_context::Sync);
 
-        // FIXME: move result from cc to func, removing this templated call
-        cc->init_result <res_t> ();
 
-        LOGSTR (DEBUG, "cc dump") << " ---------------------------" << std::endl; 
+        // cc->set_mode    (saga::impl::call_context::Sync);
+
         func->dump ();
-        LOGSTR (DEBUG, "cc dump") << " ---------------------------" << std::endl; 
         cc->dump ();
-        LOGSTR (DEBUG, "cc dump") << " ---------------------------" << std::endl; 
 
         // the cc is given to the engine, so it can use the functor to call that
         // function on some cpi
@@ -87,7 +82,7 @@ namespace saga
           throw " file::get_size indicates failed";
         }
 
-        return cc->get_result <res_t> ();
+        return cc->get_func ()->get_result <res_t> ();
       }
 
       //////////////////////////////////////////////////////////////////
@@ -106,7 +101,6 @@ namespace saga
 
         // create a call context wich holds functor and implementation
         saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
-        cc->init_result <res_t> ();
 
         // the cc is given to the engine, so it can use the functor to call that
         // function on some cpi
@@ -117,7 +111,7 @@ namespace saga
           throw " file::get_size <> () indicates failed";
         }
 
-        res_t ret = cc->get_result <res_t> ();
+        res_t ret = cc->get_func ()->get_result <res_t> ();
 
         // ret.dump ();
         // cc.dump ();
@@ -139,7 +133,6 @@ namespace saga
         saga::util::shared_ptr <func_t> func (new func_t ("copy", &cpi_t::copy, tgt));
 
         saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
-        cc->init_result <res_t> ();
 
         engine_->call <api_t, cpi_t> (cc);
 
@@ -148,7 +141,7 @@ namespace saga
           throw " file::copy () indicates failed";
         }
 
-        return cc->get_result <res_t> ();
+        return cc->get_func ()->get_result <res_t> ();
       }
 
     } // namespace filesystem

@@ -22,7 +22,6 @@ namespace saga
       class async_adaptor_0 : public saga::impl::async::task_cpi
       {
         private:
-          typedef saga::impl::void_t                    void_t;
           typedef saga::impl::async::task               api_t;
           typedef saga::impl::async::task_cpi           cpi_t;
           typedef saga::impl::async::task_instance_data idata_t;
