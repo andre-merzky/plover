@@ -49,17 +49,33 @@ namespace saga
           result_.get_shared_ptr <saga::impl::result_t_detail_ <T> > ()->set (res);
         }
 
+        template <typename T>
+        bool has_result_type  (void) 
+        {
+          SAGA_UTIL_STACKTRACE ();
+
+          // FIXME: confirm correct type
+          return result_.is_a <saga::impl::result_t_detail_ <T> > ();
+        }
+
 
         template <typename T>
         T get_result  (void) 
         {
           SAGA_UTIL_STACKTRACE ();
           // FIXME: confirm correct type
+          if ( ! has_result_type <T> () )
+          {
+            throw "Incorrect result type requested";
+          }
+
           return result_.get_shared_ptr <saga::impl::result_t_detail_ <T> > ()->get ();
         }
 
         saga::util::shared_ptr <saga::impl::result_t> get_result  (void);
         std::string                                   get_name (void);
+
+        virtual int  nargs (void) { return -1; }
 
         virtual void call_cpi (saga::util::shared_ptr <saga::impl::cpi_base>      cpi, 
                                saga::util::shared_ptr <saga::impl::call_context>  cc) = 0;
@@ -133,6 +149,8 @@ namespace saga
           ((*casted).*(call_)) (cc); 
         }
 
+        virtual int  nargs (void) { return 0; }
+
         void dump (std::string msg = "")
         {
           LOGSTR (DEBUG, "functor_0 dump") 
@@ -175,6 +193,22 @@ namespace saga
           arg_1_ = a1;
         }
 
+        template <typename T>
+        bool has_arg_1_type (void)
+        {
+          return ( typeid (ARG_1) == typeid (T) );
+        }
+
+        ARG_1 get_arg_1 (void)
+        {
+          if ( ! has_arg_1_type <T> )
+          {
+            throw "requested incorrect arg_1 type";
+          }
+
+          return arg_1_;
+        }
+
         void call_cpi (saga::util::shared_ptr <cpi_base>                 cpi, 
                        saga::util::shared_ptr <saga::impl::call_context> cc)
         { 
@@ -193,6 +227,8 @@ namespace saga
 
           ((*casted).*(call_)) (cc, arg_1_); 
         }
+
+        virtual int  nargs (void) { return 1; }
 
         void dump (std::string msg = "")
         {

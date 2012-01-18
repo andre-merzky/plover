@@ -15,7 +15,7 @@
 // the user, nor by the facade.  Instead, static create() methods call the
 // c'tors, and immediately wrap the new pointer into a shared pointer.  There
 // exists no direct accessor for the pointer in the shared pointer class, so
-// there is not way that the pointer can be used outside this reference counting
+// there is no way that the pointer can be used outside this reference counting
 // scheme.
 //
 
@@ -301,15 +301,16 @@ class pimpl
 
 ////////////////////////////////////////////////////////////////////////////////
 //
-// the object class is an intermediate class in out facade hierarchy, and as
-// such passed the impl pointer down from any derived class to the pimpl base
+// the object class is an intermediate class in our facade hierarchy, and as
+// such passes the impl pointer down from any derived class to the pimpl base
 // class.  But another c'tor allows to explicitely create an object instance
-// - that c'tor then also creates its own impl pointer and passes it on.
+// - that c'tor then also creates its own impl pointer and passes it down.
 //
 class object : public virtual pimpl 
 {
   protected:
     // the first c'tor does simply forward the noimpl flag.
+    // this c'tor is only accessible by derived classes
     object (noimpl_enum noimpl) 
       : pimpl (noimpl)                
     { 
@@ -319,7 +320,8 @@ class object : public virtual pimpl
     
     
   public:
-    // the second (public) c'tor allows for explicit object creation.
+    // the second (public) c'tor allows for explicit object creation, 
+    // to, for example, satisfy STL container classes of saga::object's.
     object (void) 
       : pimpl (impl::object::create ().get_shared_ptr <impl::pimpl> ())    
     {
@@ -352,7 +354,7 @@ class attribs : public virtual pimpl
   protected:
     // the c'tor does simply forward the noimpl flag.
     attribs (noimpl_enum noimpl) 
-      : pimpl (noimpl)                
+      : pimpl (noimpl)
     { 
       std::cout << " facade  attribs c'tor (no impl)" << std::endl; 
       impl_test ();
@@ -414,61 +416,61 @@ class context : public object, public attribs
 //
 int main (int argc, char** argv)
 { 
-  try
-  {
-    //////////////////////////////////////////////////////////////////////////////
-    // facade tests for object
-    {
-      std::cout << " 1 --------------------------------" << std::endl;
-
-      object* p1 = new object ();
-      pimpl*  p2 = p1;
-
-      p1->object_test ();
-
-      p1->impl_test ();
-      p2->impl_test ();
-
-      delete (p1);
-
-      std::cout << " 2 --------------------------------" << std::endl;
-    }
-    //////////////////////////////////////////////////////////////////////////////
-    
-  
-    //////////////////////////////////////////////////////////////////////////////
-    // facade tests for context
-    {
-      std::cout << " 3 --------------------------------" << std::endl;
-
-      context* p1 = new context ();
-      object*  p2 = p1;
-      attribs* p3 = p1;
-      pimpl*   p4 = p1;
-
-      p1->context_test ();
-
-      p1->object_test  ();
-      p2->object_test  ();
-
-      p1->attribs_test ();
-      p3->attribs_test ();
-
-      p1->impl_test    ();
-      p2->impl_test    ();
-      p3->impl_test    ();
-      p4->impl_test    ();
-
-      delete (p1);
-
-      std::cout << " 4 --------------------------------" << std::endl;
-    }
-    //////////////////////////////////////////////////////////////////////////////
-  } 
-  catch ( const std::string & e )
-  {
-    std::cout << " exception: " << e << std::endl;
-  }
+//  try
+//  {
+//    //////////////////////////////////////////////////////////////////////////////
+//    // facade tests for object
+//    {
+//      std::cout << " 1 --------------------------------" << std::endl;
+//
+//      object* p1 = new object ();
+//      pimpl*  p2 = p1;
+//
+//      p1->object_test ();
+//
+//      p1->impl_test ();
+//      p2->impl_test ();
+//
+//      delete (p1);
+//
+//      std::cout << " 2 --------------------------------" << std::endl;
+//    }
+//    //////////////////////////////////////////////////////////////////////////////
+//    
+//  
+//    //////////////////////////////////////////////////////////////////////////////
+//    // facade tests for context
+//    {
+//      std::cout << " 3 --------------------------------" << std::endl;
+//
+//      context* p1 = new context ();
+//      object*  p2 = p1;
+//      attribs* p3 = p1;
+//      pimpl*   p4 = p1;
+//
+//      p1->context_test ();
+//
+//      p1->object_test  ();
+//      p2->object_test  ();
+//
+//      p1->attribs_test ();
+//      p3->attribs_test ();
+//
+//      p1->impl_test    ();
+//      p2->impl_test    ();
+//      p3->impl_test    ();
+//      p4->impl_test    ();
+//
+//      delete (p1);
+//
+//      std::cout << " 4 --------------------------------" << std::endl;
+//    }
+//    //////////////////////////////////////////////////////////////////////////////
+//  } 
+//  catch ( const std::string & e )
+//  {
+//    std::cout << " exception: " << e << std::endl;
+//  }
 
   return 0;
 } 

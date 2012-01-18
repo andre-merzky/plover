@@ -44,13 +44,13 @@ namespace saga
         {
         }
 
-        ~enums (void)
+        virtual ~enums (void)
         {
         }
 
 
         template <typename T>
-        void add (std::string const & key, T val)
+        void add (std::string key, T val)
         {
           std::string t (type_ <T> ());
           std::string k (key);
@@ -82,8 +82,8 @@ namespace saga
 
 
         template <typename T>
-        T to_val (const char * key, 
-                  bool         icase = false)  // ignore case
+        T to_val (std::string key, 
+                  bool        icase = false)  // ignore case
         {
           std::string type = type_ <T> ();
 
@@ -139,8 +139,8 @@ namespace saga
 
     // singleton call shortcuts
     template <typename T>
-    T saga_enum_to_val (const char * key, 
-                        bool         icase = false)
+    T saga_enum_to_val (std::string key, 
+                        bool        icase = false)
     {
        return saga::util::saga_enums::get_singleton ()->to_val <T> (key, icase);
     }
@@ -158,7 +158,7 @@ namespace saga
     class enum_register
     {
       public:
-        enum_register (const char * key, T val)
+        enum_register (std::string key, T val)
         {
           saga_enums::get_singleton ()->add <T> (key, val);
         }

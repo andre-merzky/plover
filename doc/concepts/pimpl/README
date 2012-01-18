@@ -1,4 +1,19 @@
 
+The README test below is somewhat outdated.  Please read the intro comments to
+all three source files 
+
+  doc_pimple_multiple_inheritance.cpp
+  doc_pimple_shared_pointer.cpp  
+  doc_pimple_shared_pointer_created.cpp
+
+(in that order), and all comments to the last source - that should explain the
+final scheme.
+
+
+-------------------------------------------------------------------------
+TODO: clean up README text below
+-------------------------------------------------------------------------
+
 This SAGA implementation makes heavy use of the PIMPL mechanism, to
 
   - allow for easy shallow copies of high level API objects

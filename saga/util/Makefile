@@ -12,6 +12,7 @@ SAGA_LIB_OBJ    += enums.o
 SAGA_LIB_OBJ    += logging.o
 SAGA_LIB_OBJ    += scoped_lock.o  
 SAGA_LIB_OBJ    += shareable.o
+SAGA_LIB_OBJ    += singleton.o
 SAGA_LIB_OBJ    += stack_tracer.o
 SAGA_LIB_OBJ    += utils.o
 

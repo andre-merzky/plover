@@ -13,6 +13,6 @@ include $(SAGA_ROOT)/make/saga.application.mk
 
 SAGA_LDFLAGS  += -L../../../saga/util -l saga_util
 
-check:: all
-	valgrind --tool=memcheck --leak-check=full ./doc_pimple_shared_pointer
+check:: doc_pimple_shared_pointer_created
+	valgrind --tool=memcheck --leak-check=full ./doc_pimple_shared_pointer_created
 

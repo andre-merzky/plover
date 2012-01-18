@@ -2,6 +2,9 @@
 #include <string.h>
 #include <errno.h>
 
+#include <saga/api/async/task.hpp>
+#include <saga/api/async/state.hpp>
+
 #include "async_adaptor_0.hpp"
 
 namespace saga
@@ -238,32 +241,55 @@ namespace saga
                   idata->state == saga::async::New   )
         {
           LOGSTR (INFO, "async_adaptor_0 ctor") << " == async task =====================================================" << std::endl;
-          pthread_t      thread;
-          pthread_attr_t att;
 
-          LOGSTR (INFO, "async_adaptor_0 ctor") 
-            << " async adaptor 0 : create new thread " << std::endl;
+          // do a sanity check if we can in fact handle this call.
+          // check if
+          //   - t_cc return val is of type saga::async::task
+          //   - t_cc has a functor with at least one arg
+          //   - the first arg of the t_cc functor is set to saga::async::ASync
+          //     or saga::async::Task
+          //
+          //   If that all holds, we switch the args to saga::async::Sync, and
+          //   run that t_cc (which is now synchronous) in a thread
 
-          saga::util::shared_ptr <saga::impl::call_context> * tmp = new saga::util::shared_ptr <saga::impl::call_context> (idata->t_cc);
-
-          int err = pthread_create (&thread, NULL,
-                                    saga::adaptor::test::async_adaptor_0::threaded_cc, 
-                                    (void*)&(idata->t_cc));
-          if ( 0 != err )
+          if ( idata->t_cc->get_func ()->has_result_type <saga::async::task> () &&
+               idata->t_cc->get_func ()->nargs () >= 1                          &&
+               idata->t_cc->get_func ()->has_arg_1_type <saga::async::mode> ()  &&
+              (idata->t_cc->get_func ()->get_arg_1 () == saga::async::Task  ||
+               idata->t_cc->get_func ()->get_arg_1 () == saga::async::Async )   )
           {
+            pthread_t      thread;
+            pthread_attr_t att;
+
             LOGSTR (INFO, "async_adaptor_0 ctor") 
-              << " @@@ could not create thread: " << ::strerror (err) <<
-              std::endl;
-            throw "oops";
+              << " async adaptor 0 : create new thread " << std::endl;
+
+            saga::util::shared_ptr <saga::impl::call_context> * tmp = new saga::util::shared_ptr <saga::impl::call_context> (idata->t_cc);
+
+            int err = pthread_create (&thread, NULL,
+                                      saga::adaptor::test::async_adaptor_0::threaded_cc, 
+                                      (void*)&(idata->t_cc));
+            if ( 0 != err )
+            {
+              LOGSTR (INFO, "async_adaptor_0 ctor") 
+                << " @@@ could not create thread: " << ::strerror (err) <<
+                std::endl;
+              throw "oops";
+            }
+
+            // async call is done, thread state is set to Running, and then
+            // maintained by the thread itself.
+            // FIXME: sync with thread, so that any state setting there is done
+            //        after the one below
+            cc->set_state (saga::impl::call_context::Done); 
+
+            idata->state = saga::async::Running;
           }
-
-          // async call is done, thread state is set to Running, and then
-          // maintained by the thread itself.
-          // FIXME: sync with thread, so that any state setting there is done
-          //        after the one below
-          cc->set_state (saga::impl::call_context::Done); 
-
-          idata->state = saga::async::Running;
+          else
+          {
+            idata->t_cc->dump ();
+            throw "Cannot make functor asynchronous";
+          }
         }
         else
         {
