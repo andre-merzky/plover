@@ -1,0 +1,112 @@
+
+This repository contains code snippets and concepts which may (or may not) be
+relevant to a SAGA C++ implementation.  This work is motivated by 
+
+  - shortcomings of the SAGA-C++ code base
+
+    The SAGA-C++ code base is overly convoluted and complex.  The code is thus
+    very hard to maintain -- that problem is intensified by the inactivity of
+    the original main author of that code base.  Also, the code base contains
+    significant amounts of dead code, which seem to be very hard to clean out
+    (unused compiler support [Windows], bulk ops remenants, unfinished callback
+    support, etc).
+
+
+  - shortcomings of the SAGA-C++ design
+
+    While extensibility has been an explicit design objective of SAGA-C++.
+    reality is that it is relatively hard to change/add API packages (messages,
+    resources, fixes to task container), to extend the SAGA engine properties
+    (bulks, collective results, parameter checks), and to write adaptors which
+    can work in a coordinated manner (aws over ssh over fork; pbs over ssh).
+    Adaptor development is not well documented, nor easy.
+
+
+
+  - unwieldy external dependencies of SAGA-C++
+    
+    SAGA-C++ is heavily depending on the boost libraries.  For boost-1.42,
+    SAGA-C++ (engine alone) pulls about 75% of *all* boost header files.
+    Additionally, saga-c++/external/boost contains 11 more boost subsystems
+    (~50.000 LoC), which are either not officially part of boost, or fix
+    official parts of boost - and which are all poorly maintained.
+
+    Boost initially enabled efficient coding of the SAGA engine, but ultimately
+    increased code complexity, and comes with extremely heavy deployment
+    penalties -- most deployment problems, by *far*, are caused by this.
+
+
+  - adaptor code is too intricately interwoven / dependent on the SAGA-C++
+    engine
+
+    It is relatively difficult to change engine code, as that is likely to break
+    adaptors.  Significant state is shared between adaptors and engine, or
+    between package implementations and adaptors, etc.  It should be possible to
+    keep adaptors more simple, more isolated, and more modular, without loss of
+    semantics.  Simple adaptors are crucial for external adaptor developers!
+
+
+In order to address those points, and to help to investigate the options for
+a fresh C++ implementation of SAGA, this work intents to demonstrate that
+
+  - SAGA-C++ can sensibly be implemented w/o external dependencies, with ANSI
+    C++ (gcc -std=c++98), with limited templatization.
+
+  - the engine code can be kept small, debuggable, and modular, w/o template
+    abuse and/or preprocessor macros.  In that respect, the engine should
+    enforce little PAI semantics - and the semantics it does enforce should be
+    easy to expand or change.
+
+  - the engine should be fully orthogonal to API packages, so that adding
+    and changing packages is easy and isolated.
+
+  - adaptors should be combinable, without increasing their complexity.
+    A PBS+SSH adaptor should be rendered like this
+
+      - a PBS adaptor accepts any URL pbs+???://host.net/ and, for job.create(),
+        creats a pbs script, and changes the job description in a way that it
+        runs qsub on that script.  It then adjusts the URL to ???://host.net/,
+        and passes the call on -- effectively acting as a filter.  An ssh
+        adaptor then picks the request up, and creates the job.  The ssh adaptor
+        could just as well pick up what a condor adaptor created, or the pbs
+        commands could get picked up by an gsissh adaptor.
+
+    That mechanism has some dangers: it may make code and runtime behavior more
+    fragile, and it may introduce implicit code dependencies (instead of
+    explicit ones).  Those problems (and risks) have to be evaluated - but, with
+    the right mechanism in place, those can be addressed on adaptor level, w/o
+    making the engine more complex.
+
+    But it would make it trivial to write a generic parameter and state checking
+    adaptor, a generic async adaptor, a semi-generic bulk ops adaptor, pbs+ssh,
+    pbs+fork, pbs+gsissh, condor+ssh, etc.
+
+  - The old SAGA-C++ code base has many redundancies (which again makes
+    maintenance tedious; also, that is one of the reasons why Macros are
+    heavily used).  It is, however, possible to generate almost all code and
+    documentation (package API, package IMPL, package CPI, adaptor skeleton, API
+    documentation, CPI documentation, build system, engine integration, test
+    suite skeleton, python bindings) from the SAGA IDL and specification files.
+
+    While code generation comes with its own challenges, and requires very
+    strict modularity of package code, it can, and in fact SHOULD, be used
+    wherever possible.
+
+  - it would be absolutely thrilling to be able to develop adaptors in Python,
+    or other languages.  Having more cleanely separated and more modular
+    adaptors is a first necessary step  towards that.
+
+
+
+Some final thoughts: we have been publishing a paper where we argue that a SAGA
+implementation has the chance to be very clean and simple, as it does never need
+to care about local latencies, or call stack depths etc - remote latencies will
+always dominate, by orders of magnitude.  However, our implementation does not
+respect that.  We should not be afraid to invoke multiple modules for each call,
+or to use *trivial* code, or to use decomposition on a relatively fine grained
+level, if that improves code quality, simplicity, stability, modularity and
+maintainability.  KISS!
+
+Also, KISS.
+
+
