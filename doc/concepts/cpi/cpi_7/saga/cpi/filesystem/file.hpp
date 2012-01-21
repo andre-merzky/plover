@@ -23,19 +23,14 @@ namespace saga
 
           virtual void constructor (saga::util::shared_ptr <call_context> cc, 
                                     std::string                           url); 
-          virtual void get_size    (saga::util::shared_ptr <call_context> cc);
           virtual void copy        (saga::util::shared_ptr <call_context> cc, 
                                     std::string                           tgt);
 
-          //  we have a second get_size method for the async versions.  The
-          //  call_mode parameter is somewhat redundant, as the cm is also
-          //  stored in the cc, but it allows to use overloading in the adaptor
-          //  for the various sync/async calls.  The adaptor needs to switch
-          //  over the enum to see what async flavor is wanted / needed, 
-          //  but the returned task's state can easily be adjusted by the
-          //  calling functor or by the engine.
-          virtual void get_size    (saga::util::shared_ptr <call_context> cc, 
-                                    saga::async::mode                     m);
+          //  the get_size method for the async versions.  The adaptor needs to
+          //  switch over the cc's mode enum to see what async flavor is wanted
+          //  / needed, but the returned task's state can also be adjusted by
+          //  the calling functor or by the engine. (run()/wait())
+          virtual void get_size    (saga::util::shared_ptr <call_context> cc);
       };
 
     } // namespace filesystem

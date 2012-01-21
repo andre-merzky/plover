@@ -106,8 +106,8 @@ namespace saga
 
             LOGSTR (INFO, "async_adaptor_0 threaded_cc") << " 5 xxxxxxxxxxxxxxx" << std::endl;
 
-            // FIXME: wrong api/cpi type
-            engine->call <api_t, cpi_t> (cc); // this will set task and call state
+            // FIXME: wrong api/cpi type, need functor here
+            // engine->call <api_t, cpi_t> (func, cc); // this will set task and call state
 
             LOGSTR (INFO, "async_adaptor_0 threaded_cc") << " 6 xxxxxxxxxxxxxxx" << std::endl;
 
@@ -158,7 +158,7 @@ namespace saga
         saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
 
         // confirm result type
-        cc->get_func ()->set_result <res_t> (idata->state);
+        cc->set_result <res_t> (idata->state);
 
         cc->set_state (saga::impl::call_context::Done);
 
@@ -175,7 +175,7 @@ namespace saga
 
         saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
 
-        cc->get_func ()->set_result <res_t> (idata->t_cc->get_func ()->get_result ());
+        cc->set_result <res_t> (idata->t_cc->get_result <res_t> ());
 
         cc->set_state (saga::impl::call_context::Done);
 
@@ -233,7 +233,9 @@ namespace saga
           LOGSTR (INFO, "async_adaptor_0 ctor") << " == sync task =====================================================" << std::endl;
 
           // idata->t_cc->task_state is Done, cc->call_state is set by call()
-          impl->get_engine ()->call <api_t, cpi_t> (idata->t_cc); 
+          // 
+          // FIXME: need the func here...
+          // impl->get_engine ()->call <api_t, cpi_t> (idata->t_cc); 
 
           idata->state = saga::async::Done;
         }
@@ -244,19 +246,14 @@ namespace saga
 
           // do a sanity check if we can in fact handle this call.
           // check if
-          //   - t_cc return val is of type saga::async::task
-          //   - t_cc has a functor with at least one arg
-          //   - the first arg of the t_cc functor is set to saga::async::ASync
+          //   - the t_cc mode the t_cc functor is set to saga::async::ASync
           //     or saga::async::Task
           //
           //   If that all holds, we switch the args to saga::async::Sync, and
           //   run that t_cc (which is now synchronous) in a thread
 
-          if ( idata->t_cc->get_func ()->has_result_type <saga::async::task> () &&
-               idata->t_cc->get_func ()->nargs () >= 1                          &&
-               idata->t_cc->get_func ()->has_arg_1_type <saga::async::mode> ()  &&
-              (idata->t_cc->get_func ()->get_arg_1 () == saga::async::Task  ||
-               idata->t_cc->get_func ()->get_arg_1 () == saga::async::Async )   )
+          if ( idata->t_cc->get_mode () == saga::async::Task  ||
+               idata->t_cc->get_mode () == saga::async::Async )
           {
             pthread_t      thread;
             pthread_attr_t att;

@@ -24,12 +24,6 @@ namespace saga
       // impl_->constructor (url);
     }
 
-    int file::get_size (void)
-    {
-      SAGA_UTIL_STACKTRACE ();
-      return impl_->get_size ();
-    }
-
     void file::copy (std::string tgt)
     {
       SAGA_UTIL_STACKTRACE ();

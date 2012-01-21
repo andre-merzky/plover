@@ -37,11 +37,9 @@ namespace saga
 
           void constructor (saga::util::shared_ptr <saga::impl::call_context> cc,
                             std::string                                       url);
-          void get_size    (saga::util::shared_ptr <saga::impl::call_context> cc);
-          void get_size    (saga::util::shared_ptr <saga::impl::call_context> cc, 
-                            saga::async::mode                                 m);
           void copy        (saga::util::shared_ptr <saga::impl::call_context> cc,
                             std::string                                       tgt);
+          void get_size    (saga::util::shared_ptr <saga::impl::call_context> cc);
       };
 
       class dir_adaptor_1 : public saga::impl::filesystem::dir_cpi

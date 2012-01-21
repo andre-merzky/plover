@@ -51,16 +51,16 @@ namespace saga
 
         saga::util::shared_ptr <func_t> func (new func_t ("get_state", &cpi_t::get_state));
 
-        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
+        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (shared_this <api_t> ())); 
 
-        engine_->call <api_t, cpi_t> (cc);
+        engine_->call <api_t, cpi_t> (func, cc);
 
         if ( cc->get_state () == saga::impl::call_context::Failed )
         {
           throw " task::get_state failed - can't get state";
         }
 
-        return cc->get_func ()->get_result <res_t> ();
+        return cc->get_result <res_t> ();
       }
 
       saga::util::shared_ptr <result_t> task::get_result (void)
@@ -69,6 +69,10 @@ namespace saga
 
         saga::util::scoped_lock sl (idata_->get_mutex ());
 
+        // FIXME: idata_->t_cc->wait ();
+
+        return (idata_->t_cc->get_result ());
+
         typedef saga::util::shared_ptr <result_t>            res_t;
         typedef saga::impl::async::task                      api_t;
         typedef saga::impl::async::task_cpi                  cpi_t;
@@ -76,16 +80,16 @@ namespace saga
 
         saga::util::shared_ptr <func_t> func (new func_t ("get_result", &cpi_t::get_result));
 
-        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
+        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (shared_this <api_t> ())); 
 
-        engine_->call <api_t, cpi_t> (cc);
+        engine_->call <api_t, cpi_t> (func, cc);
 
         if ( cc->get_state () == saga::impl::call_context::Failed )
         {
           throw " task::get_state indicates failed";
         }
 
-        return cc->get_func ()->get_result <res_t> ();
+        return cc->get_result <res_t> ();
       }
 
 
@@ -100,9 +104,9 @@ namespace saga
 
         saga::util::shared_ptr <func_t> func (new func_t ("run", &cpi_t::run));
 
-        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
+        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (shared_this <api_t> ())); 
 
-        engine_->call <api_t, cpi_t> (cc);
+        engine_->call <api_t, cpi_t> (func, cc);
 
         if ( cc->get_state () == saga::impl::call_context::Failed )
         {

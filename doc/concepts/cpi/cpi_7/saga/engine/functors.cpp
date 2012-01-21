@@ -17,11 +17,6 @@ namespace saga
       SAGA_UTIL_STACKTRACE ();
     }
 
-    saga::util::shared_ptr <saga::impl::result_t> functor_base::get_result  (void) 
-    {
-      return result_;
-    }
-
     std::string functor_base::get_name (void) 
     {
       return name_;  

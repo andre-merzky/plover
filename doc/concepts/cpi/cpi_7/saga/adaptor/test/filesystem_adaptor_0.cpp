@@ -23,25 +23,6 @@ namespace saga
         return;
       } 
 
-      void file_adaptor_0::get_size    (saga::util::shared_ptr <saga::impl::call_context> cc)
-      {
-        SAGA_UTIL_STACKTRACE ();
-        saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
-
-        LOGSTR (INFO, "file_adaptor_0 get_size") << "file adaptor 0 : get_size" << std::endl;
-        throw "oops";
-      }
-
-      void file_adaptor_0::get_size (saga::util::shared_ptr <saga::impl::call_context> cc, 
-                                     saga::async::mode                                  m)
-      { 
-        SAGA_UTIL_STACKTRACE ();
-
-        LOGSTR (INFO, "file_adaptor_0 get_size async") << "file adaptor 0 : get_size <async>" << std::endl;
-        throw "oops";
-
-      } 
-
       void file_adaptor_0::copy (saga::util::shared_ptr <saga::impl::call_context> cc,
                                  std::string                                       tgt)
       {
@@ -50,8 +31,19 @@ namespace saga
 
         LOGSTR (INFO, "file_adaptor_0 copy") << "file adaptor 0 : copy " << tgt << std::endl;
         throw "oops";
-        return;
       }
+
+      void file_adaptor_0::get_size (saga::util::shared_ptr <saga::impl::call_context> cc)
+      { 
+        SAGA_UTIL_STACKTRACE ();
+
+        LOGSTR (INFO, "file_adaptor_0 get_size async") << "file adaptor 0 : get_size <async>" << std::endl;
+        throw "oops";
+
+      } 
+
+
+      //////////////////////////////////////////////////////////////////
 
       dir_adaptor_0::dir_adaptor_0    (void) 
       { 

@@ -8,7 +8,8 @@
 #include <saga/util/logging.hpp>
 #include <saga/util/stack_tracer.hpp>
 
-#include <saga/engine/result_types.hpp>
+// FIXME: we do not actiually need RET, but is kind of keeps the whole function
+// signature together in one place.  Kind of...
 
 namespace saga
 {
@@ -25,54 +26,12 @@ namespace saga
     class functor_base : public saga::util::shareable
     {
       private:
-        std::string name_;                                     // name of function call 
-        saga::util::shared_ptr <saga::impl::result_t> result_; // container for function call result
+        std::string name_;    // name of function call 
 
       public: 
         functor_base (std::string name);
         virtual ~functor_base (void);
 
-        template <typename RET> 
-        void init_functor_base (void)
-        {
-          SAGA_UTIL_STACKTRACE ();
-          result_ = saga::util::shared_ptr <saga::impl::result_t_detail_ <RET> > (new saga::impl::result_t_detail_ <RET> ());
-        }
-
-
-        template <typename T>
-        void set_result (T res)
-        {
-          SAGA_UTIL_STACKTRACE ();
-
-          // FIXME: confirm correct type
-          result_.get_shared_ptr <saga::impl::result_t_detail_ <T> > ()->set (res);
-        }
-
-        template <typename T>
-        bool has_result_type  (void) 
-        {
-          SAGA_UTIL_STACKTRACE ();
-
-          // FIXME: confirm correct type
-          return result_.is_a <saga::impl::result_t_detail_ <T> > ();
-        }
-
-
-        template <typename T>
-        T get_result  (void) 
-        {
-          SAGA_UTIL_STACKTRACE ();
-          // FIXME: confirm correct type
-          if ( ! has_result_type <T> () )
-          {
-            throw "Incorrect result type requested";
-          }
-
-          return result_.get_shared_ptr <saga::impl::result_t_detail_ <T> > ()->get ();
-        }
-
-        saga::util::shared_ptr <saga::impl::result_t> get_result  (void);
         std::string                                   get_name (void);
 
         virtual int  nargs (void) { return -1; }
@@ -92,7 +51,6 @@ namespace saga
           : functor_base (name)
         {
           SAGA_UTIL_STACKTRACE ();
-          this->init_functor_base <RET> ();
         }
 
         virtual ~functor (void) 
@@ -107,8 +65,6 @@ namespace saga
             << "    IMPL        : " << saga::util::demangle (typeid (IMPL ).name ()) << std::endl
             << "    CPI         : " << saga::util::demangle (typeid (CPI  ).name ()) << std::endl
             << "    RET         : " << saga::util::demangle (typeid (RET  ).name ()) << std::endl;
-          get_result ().dump ("    result_     : ");
-          get_result ()->dump();
         }
     };
 
@@ -159,8 +115,6 @@ namespace saga
             << "    IMPL        : " << saga::util::demangle (typeid (IMPL ).name ()) << std::endl
             << "    CPI         : " << saga::util::demangle (typeid (CPI  ).name ()) << std::endl
             << "    RET         : " << saga::util::demangle (typeid (RET  ).name ()) << std::endl;
-          this->get_result ().dump ("    result_     : ");
-          this->get_result ()->dump();
         }
     };
 
@@ -201,7 +155,7 @@ namespace saga
 
         ARG_1 get_arg_1 (void)
         {
-          if ( ! has_arg_1_type <T> )
+          if ( ! has_arg_1_type <ARG_1> )
           {
             throw "requested incorrect arg_1 type";
           }
@@ -239,8 +193,6 @@ namespace saga
             << "    IMPL        : " << saga::util::demangle (typeid (IMPL ).name ()) << std::endl
             << "    CPI         : " << saga::util::demangle (typeid (CPI  ).name ()) << std::endl
             << "    RET         : " << saga::util::demangle (typeid (RET  ).name ()) << std::endl;
-          this->get_result ().dump ("    result_     : ");
-          this->get_result ()->dump();
         }
     };
 

@@ -10,17 +10,6 @@ namespace saga
 {
   namespace impl
   {
-    // mode per cpi call
-    enum cpi_mode 
-    {
-      Any        = 0, 
-      Bound      = 1, 
-      Simple     = 2, 
-      Collective = 3, 
-      Filter     = 4,
-      All        = 5
-    };
-
     //////////////////////////////////////////////////////////////////
     //
     // father and grandfather of all CPIs

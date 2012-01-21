@@ -11,3 +11,11 @@ to use it (adaptor developers, SAGA users / application coders, etc.  They
   - ...
 
 
+filesystem::file::impl::constructor should call the namespace constructor, and
+this in turn the object: constructor, which then can invoke the object adaptor
+-- otherwise, an object adaptor would be useless.  This is yet another way to do
+adaptor chaining, and allows to overload simple saga::object properties etc.
+Note that the upper constructors should be called *before* invoking the CPI, so
+that the upstream objects are initialized properly...
+
+

@@ -38,32 +38,18 @@ namespace saga
         throw "constructor: NotImplemented"; 
       } 
 
-      void file_cpi::get_size (saga::util::shared_ptr <call_context> cc)
-      { 
-        SAGA_UTIL_STACKTRACE ();
-        throw "get_size : NotImplemented"; 
-      } 
-
-      //  we have a second get_size method for the async versions.  The
-      //  call_mode parameter is somewhat redundant, as the cm is also
-      //  stored in the cc, but it allows to use overloading in the adaptor
-      //  for the various sync/async calls.  The adaptor needs to switch
-      //  over the enum to see what async flavor is wanted / needed, 
-      //  but the returned task's state can easily be adjusted by the
-      //  calling functor or by the engine.
-      void file_cpi::get_size (saga::util::shared_ptr <call_context> cc, 
-                              saga::async::mode                      m)
-      { 
-        SAGA_UTIL_STACKTRACE ();
-        throw "get_size <...> : NotImplemented"; 
-      } 
-
       void file_cpi::copy (saga::util::shared_ptr <call_context> cc, 
                                    std::string                           tgt)
       {
         SAGA_UTIL_STACKTRACE ();
         throw "copy : NotImplemented"; 
       }
+
+      void file_cpi::get_size (saga::util::shared_ptr <call_context> cc)
+      { 
+        SAGA_UTIL_STACKTRACE ();
+        throw "async get_size : NotImplemented"; 
+      } 
     } // namespace filesystem
 
   } // namespace impl

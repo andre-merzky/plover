@@ -25,18 +25,24 @@ namespace saga
         file (saga::util::shared_ptr <saga::impl::filesystem::file> impl);
 
         void copy    (std::string tgt);
-        int get_size (void);
+
+        int get_size (void)
+        {
+          // NOTE: the two lines below MUST be semantically equivalent to the
+          // sync call.
+          saga::async::task t = get_size <saga::async::Sync> ();
+          return (t.get_result <int> ());
+
+        }
 
         template <enum saga::async::mode M>
         saga::async::task get_size (void)
         {
           SAGA_UTIL_STACKTRACE ();
 
-          saga::util::shared_ptr <saga::impl::async::task> timpl = impl_->get_size (M);
+          saga::util::shared_ptr <saga::impl::async::task> t_impl = impl_->get_size (M);
 
-          saga::async::task t (timpl);
-
-          return t;
+          return saga::async::task (t_impl);
         }
 
     };

@@ -25,10 +25,14 @@ namespace saga
       {
         SAGA_UTIL_STACKTRACE ();
 
-        saga::util::scoped_lock sl (idata_->get_mutex ());
-        idata_->url   = url;
-        idata_->pos   = 0;
-        idata_->valid = true;
+        // lock scope
+        {
+          saga::util::scoped_lock sl (idata_->get_mutex ());
+          idata_->url   = url;
+          idata_->pos   = 0;
+          idata_->valid = true;
+        } 
+        // lock scope
 
         typedef saga::impl::void_t                          res_t;
         typedef saga::impl::filesystem::dir                 api_t;
@@ -38,16 +42,28 @@ namespace saga
 
         saga::util::shared_ptr <func_t> func (new func_t ("constructor",&cpi_t::constructor, url));
 
-        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
+        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (shared_this <api_t> ())); 
 
-        engine_->call <api_t, cpi_t> (cc);
+        cc->set_mode   (saga::async::Sync);              // this is a sync call
+        cc->set_state  (saga::impl::call_context::New);  // we just created the cc
+        cc->set_policy (saga::impl::call_context::Any);  // any successfull adaptor can do the job
+
+        engine_->call <api_t, cpi_t> (func, cc);
+
+        // check if the call was completed
+        while ( cc->get_state () == saga::impl::call_context::Running )
+        {
+          // this is a sync call, so we just wait it out
+          ::sleep (1);
+        }
         
+        // check if the call was completed all right
         if ( cc->get_state () == saga::impl::call_context::Failed )
         {
           throw " dir::constructor () indicates failed";
         }
 
-        return (cc->get_func ()->get_result <res_t> ());
+        // here we are Done, and have a result
       }
 
       //////////////////////////////////////////////////////////////////
@@ -62,16 +78,16 @@ namespace saga
 
         saga::util::shared_ptr <func_t> func (new func_t ("get_url", &cpi_t::get_url));
 
-        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
+        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (shared_this <api_t> ())); 
 
-        engine_->call <api_t, cpi_t> (cc);
+        engine_->call <api_t, cpi_t> (func, cc);
 
         if ( cc->get_state () == saga::impl::call_context::Failed )
         {
           throw " dir::get_url () indicates failed";
         }
 
-        return cc->get_func ()->get_result <res_t> ();
+        return cc->get_result <res_t> ();
       }
 
       //////////////////////////////////////////////////////////////////
@@ -87,16 +103,16 @@ namespace saga
 
         saga::util::shared_ptr <func_t> func (new func_t ("open", &cpi_t::open, url));
 
-        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
+        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (shared_this <api_t> ())); 
 
-        engine_->call <api_t, cpi_t> (cc);
+        engine_->call <api_t, cpi_t> (func, cc);
 
         if ( cc->get_state () == saga::impl::call_context::Failed )
         {
           throw " dir::open () indicates failed";
         }
 
-        return cc->get_func ()->get_result <res_t> ();
+        return cc->get_result <res_t> ();
       }
 
     } // namespace filesystem

@@ -38,7 +38,17 @@ namespace saga
         template <typename T>
         T get (void)
         {
+          // FIXME: ensure the call below succeeds (i.e., we are actually
+          // a result_t_detail_ <T>
           return shared_this <result_t_detail_ <T> > ()->get ();
+        }
+
+        template <typename T>
+        void set (T t)
+        {
+          // FIXME: ensure the call below succeeds (i.e., we are actually
+          // a result_t_detail_ <T>
+          shared_this <result_t_detail_ <T> > ()->set (t);
         }
 
         virtual void dump (std::string msg = "");

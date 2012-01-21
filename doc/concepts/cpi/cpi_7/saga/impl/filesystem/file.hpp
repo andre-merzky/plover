@@ -65,9 +65,7 @@ namespace saga
 
           // instead of get_size calling each cpi individually, the call invocation
           // is passed off to the engine
-          int get_size (void);
-
-          // async version of same call
+          // We have *only* async versions of the API call.
           saga::util::shared_ptr <saga::impl::async::task> get_size (saga::async::mode);
 
           // other calls for copy

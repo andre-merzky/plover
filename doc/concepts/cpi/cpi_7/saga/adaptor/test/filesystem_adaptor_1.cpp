@@ -38,99 +38,54 @@ namespace saga
         return;
       } 
 
+
+      //
+      // in this model, we force all async adaptor calls to implement 
+      // The BIG Switch.  That is not terrible, but one could also consider to
+      // overload three different function calls, like
+      //
+      //   void get_size (saga::impl::sync_tag_t  tag , saga::impl::call_context cc);
+      //   void get_size (saga::impl::async_tag_t tag , saga::impl::call_context cc);
+      //   void get_size (saga::impl::task_tag_t  tag , saga::impl::call_context cc);
+      //
+      // and do the switch on impl level.  
+      //
       void file_adaptor_1::get_size (saga::util::shared_ptr <saga::impl::call_context> cc)
-      {
-        SAGA_UTIL_STACKTRACE ();
-        saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
-
-        LOGSTR (INFO, "file_adaptor_1 get_size") << "file adaptor 1 : get_size ()" << std::endl;
-        saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
-        LOGSTR (INFO, "file_adaptor_1 get_size") << "1" << std::endl;
-
-        struct stat buf;
-        (void) stat (idata->url.c_str (), &buf);
-        LOGSTR (INFO, "file_adaptor_1 get_size") << "2" << std::endl;
-
-        cc->get_func ()->set_result <int> (buf.st_size);
-        LOGSTR (INFO, "file_adaptor_1 get_size") << "3" << std::endl;
-        LOGSTR (INFO, "file_adaptor_1 get_size") << "3" << std::endl;
-      }
-
-      void file_adaptor_1::get_size (saga::util::shared_ptr <saga::impl::call_context> cc, 
-                                     saga::async::mode                                 m)
       { 
         SAGA_UTIL_STACKTRACE ();
-        LOGSTR (INFO, "file_adaptor_1 get_size") << " ===== file adaptor 1 : get_size <> ()" << std::endl;
 
-        cc->dump ();
-
-        saga::util::shared_ptr <api_t>   impl (cc->get_impl ()); 
-        saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
-
-
-        if ( m == saga::async::Sync )
+        switch ( cc->get_mode () )
         {
-          LOGSTR (INFO, "file_adaptor_1 get_size") << " ===== file adaptor 1 : get_size <Sync> ()" << std::endl;
+          case saga::async::Async :
+          case saga::async::Task :
+            {
+              LOGSTR (INFO, "file_adaptor_1 get_size") << " ===== file adaptor 1 : get_size <Async> ()" << std::endl;
 
-          // the sync call we want to wrap is represented by just the same call
-          // context as was created in the impl layer, for the default 'int get_size()'
-          // We re-create it here, and pass it on the the get_size invocation
-          typedef int                                           t_res_t;
-          typedef saga::impl::filesystem::file                  t_api_t;
-          typedef saga::impl::filesystem::file_cpi              t_cpi_t;
-          typedef saga::impl::functor_0 <t_api_t, t_cpi_t, int> t_func_t;
+              // async version: we let the task adaptor deal with the async invocation of the sync call
+              throw "NotImplemented";
+              break;
+            }
 
-          // create a functor which hold the cpi class' get_size() function
-          // pointer.
-          saga::util::shared_ptr <t_func_t> t_func (new t_func_t ("get_size", &t_cpi_t::get_size));
+          case saga::async::Sync :
+            {
+              LOGSTR (INFO, "file_adaptor_1 get_size") << "file adaptor 1 : get_size ()" << std::endl;
 
-          // create a call context wich holds functor and implementation
-          saga::util::shared_ptr <saga::impl::call_context> t_cc (new saga::impl::call_context (t_func, impl)); 
+              saga::util::shared_ptr <api_t>   impl  = cc->get_impl (); 
+              saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
 
-          LOGSTR (DEBUG, "t_cc dump") << " ---------------------------" << std::endl; 
-          t_cc->dump ();
-          LOGSTR (DEBUG, "t_cc dump") << " ---------------------------" << std::endl; 
-        
-          saga::util::shared_ptr <saga::impl::async::task> ret (new saga::impl::async::task (t_cc));
+              struct stat buf;
+              (void) ::stat (idata->url.c_str (), &buf);
 
-          cc->get_func ()->set_result <saga::util::shared_ptr <saga::impl::async::task> > (ret);
+              {
+                // FIXME: scoped lock for cc
+                cc->set_result <int> (buf.st_size);
+                cc->set_state        (saga::impl::call_context::Done);
+              }
 
-
-          // call the normal sync call, 
-          // this is setting result and state
-          try
-          {
-            ret->get_instance_data ()->state = saga::async::Running;
-            file_adaptor_1::get_size (t_cc); 
-            ret->get_instance_data ()->state = saga::async::Done;
-          }
-          catch ( ... )
-          {
-            ret->get_instance_data ()->state = saga::async::Failed;
-          }
-
-          LOGSTR (INFO, "file_adaptor_1 get_size") << " ===== get_size <Sync> () done ===== " << std::endl;
-          return;
+              LOGSTR (INFO, "file_adaptor_1 get_size") << " ===== get_size <Sync> () done ===== " << std::endl;
+              break;
+            }
         }
-        else if ( m == saga::async::Async ||
-                  m == saga::async::Task  )
-        {
-          LOGSTR (INFO, "file_adaptor_1 get_size") << " ===== file adaptor 1 : get_size <Async> ()" << std::endl;
-
-          // async version: create a task straight away, and let the task 
-          // adaptor deal with the async invocation of the sync call
-
-          saga::util::shared_ptr <saga::impl::async::task> ret (new saga::impl::async::task (cc));
-          cc->get_func ()->set_result <saga::util::shared_ptr <saga::impl::async::task> > (ret);
-
-          ret->run ();
-
-          LOGSTR (INFO, "file_adaptor_1 get_size") << " ===== get_size <Async> () done ===== " << std::endl;
-
-          return;
-        }
-
-        throw "incorrect call mode!? - that should never happen!";
       } 
 
       void file_adaptor_1::copy (saga::util::shared_ptr <saga::impl::call_context> cc,
@@ -193,7 +148,7 @@ namespace saga
 
         LOGSTR (INFO, "dir_adaptor_1 get_url") << "dir adaptor 1 : get_url: " << idata->url << std::endl;
 
-        cc->get_func ()->set_result <std::string> (idata->url);
+        cc->set_result <std::string> (idata->url);
         cc->set_state (saga::impl::call_context::Done);
 
         return;
@@ -224,7 +179,7 @@ namespace saga
         // here as well...
         ret->constructor (new_url);
 
-        cc->get_func ()->set_result <res_t> (ret);
+        cc->set_result <res_t> (ret);
         cc->set_state (saga::impl::call_context::Done);
 
         return;

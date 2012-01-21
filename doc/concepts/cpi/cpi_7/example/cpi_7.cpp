@@ -14,17 +14,17 @@ int main ()
   try
   {
     // file open, sync
-    if ( 0 )
+    if ( 1 )
     {
       LOGSTR (INFO, "main out") << " -sync dir ops #########"  << std::endl;
     
       saga::filesystem::dir d ("/etc/");
-      LOGSTR (INFO, "main out") << "dir url: " << d.get_url () << std::endl;
+      // LOGSTR (INFO, "main out") << "dir url: " << d.get_url () << std::endl;
     
-      saga::filesystem::file f = d.open ("passwd");
-      LOGSTR (INFO, "main out") << "file size: " << f.get_size () << std::endl;
+      // saga::filesystem::file f = d.open ("passwd");
+      // LOGSTR (INFO, "main out") << "file size: " << f.get_size () << std::endl;
     
-      LOGSTR (INFO, "main out") << " #######################"  << std::endl;
+      // LOGSTR (INFO, "main out") << " #######################"  << std::endl;
     }
 
 
@@ -74,7 +74,7 @@ int main ()
     }
 
     // file get_size, async
-    if ( 1 )
+    if ( 0 )
     {
       LOGSTR (INFO, "main out") << " 5 # async get_size ###########################################"  << std::endl;
       

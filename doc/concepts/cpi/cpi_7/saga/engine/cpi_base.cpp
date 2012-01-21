@@ -8,13 +8,6 @@ namespace saga
 {
   namespace impl
   {
-    SAGA_UTIL_REGISTER_ENUM (cpi_mode  , Any       , 0);
-    SAGA_UTIL_REGISTER_ENUM (cpi_mode  , Bounde    , 1);
-    SAGA_UTIL_REGISTER_ENUM (cpi_mode  , Simple    , 2);
-    SAGA_UTIL_REGISTER_ENUM (cpi_mode  , Collective, 3);
-    SAGA_UTIL_REGISTER_ENUM (cpi_mode  , Filter    , 4);
-    SAGA_UTIL_REGISTER_ENUM (cpi_mode  , All       , 5);
-
     //////////////////////////////////////////////////////////////////
     //
     // father and grandfather of all CPIs

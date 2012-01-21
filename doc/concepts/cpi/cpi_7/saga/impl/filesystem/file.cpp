@@ -38,51 +38,16 @@ namespace saga
 
         saga::util::shared_ptr <func_t> func (new func_t ("constructor", &cpi_t::constructor, url));
 
-        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
+        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (shared_this <api_t> ())); 
 
-        engine_->call <api_t, cpi_t> (cc);
+        engine_->call <api_t, cpi_t> (func, cc);
 
         if ( cc->get_state () == saga::impl::call_context::Failed )
         {
           throw " file::constructor indicates failed";
         }
 
-        return cc->get_func ()->get_result <res_t> ();
-      }
-
-      //////////////////////////////////////////////////////////////////
-      int file::get_size (void)
-      {
-        SAGA_UTIL_STACKTRACE ();
-
-        typedef int                                       res_t;
-        typedef saga::impl::filesystem::file              api_t;
-        typedef saga::impl::filesystem::file_cpi          cpi_t;
-        typedef saga::impl::functor_0 <api_t, cpi_t, int> func_t;
-
-        // create a functor which hold the cpi class' get_size() function
-        // pointer.
-        saga::util::shared_ptr <func_t> func (new func_t ("get_size", &cpi_t::get_size));
-
-        // create a call context wich holds functor and implementation
-        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
-
-
-        // cc->set_mode    (saga::impl::call_context::Sync);
-
-        func->dump ();
-        cc->dump ();
-
-        // the cc is given to the engine, so it can use the functor to call that
-        // function on some cpi
-        engine_->call <api_t, cpi_t> (cc);
-
-        if ( cc->get_state () == saga::impl::call_context::Failed )
-        {
-          throw " file::get_size indicates failed";
-        }
-
-        return cc->get_func ()->get_result <res_t> ();
+        return cc->get_result <res_t> ();
       }
 
       //////////////////////////////////////////////////////////////////
@@ -90,32 +55,44 @@ namespace saga
       {
         SAGA_UTIL_STACKTRACE ();
 
-        typedef saga::util::shared_ptr <saga::impl::async::task>                                                          res_t;
-        typedef saga::impl::filesystem::file                                                                              api_t;
-        typedef saga::impl::filesystem::file_cpi                                                                          cpi_t;
-        typedef saga::impl::functor_1 <api_t, cpi_t, saga::util::shared_ptr <saga::impl::async::task>, saga::async::mode> func_t;
+        typedef saga::util::shared_ptr <saga::impl::async::task>                                        res_t;
+        typedef saga::impl::filesystem::file                                                            api_t;
+        typedef saga::impl::filesystem::file_cpi                                                        cpi_t;
+        typedef saga::impl::functor_0 <api_t, cpi_t, saga::util::shared_ptr <saga::impl::async::task> > func_t;
 
         // create a functor which hold the cpi class' get_size() function
         // pointer.  The second templ parameter is the functions return type
-        saga::util::shared_ptr <func_t> func (new func_t ("get_size", &cpi_t::get_size, m));
+        saga::util::shared_ptr <func_t> func (new func_t ("get_size", &cpi_t::get_size));
 
-        // create a call context wich holds functor and implementation
-        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
+        // create a call context wich holds the impl
+        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (shared_this <api_t> ())); 
 
-        // the cc is given to the engine, so it can use the functor to call that
+        // TODO: those should go into the cc c'tor
+        cc->set_mode   (m);
+        cc->set_policy (saga::impl::call_context::Any);  // any successfull adaptor can do the job
+
+        // func and cc are given to the engine, so it can use the functor to call that
         // function on some cpi
-        engine_->call <api_t, cpi_t> (cc);
+        engine_->call <api_t, cpi_t> (func, cc);
 
         if ( cc->get_state () == saga::impl::call_context::Failed )
         {
           throw " file::get_size <> () indicates failed";
         }
 
-        res_t ret = cc->get_func ()->get_result <res_t> ();
+        res_t ret = cc->get_result <res_t> ();
 
-        // ret.dump ();
-        // cc.dump ();
-        // cc->dump ();
+        // ensure that the returned task's state matches the mode m.
+        switch ( m )
+        {
+          case saga::async::Sync  : ret->run  (); /* FIXME: ret->wait ();*/ break; 
+          case saga::async::Async : ret->run  ();               break; 
+          case saga::async::Task  :                             break; 
+        }
+
+        // TODO: if a async/task call returns with NotImplemented, then try to
+        // invoke a task.run adaptor with the Sync version no the cc as arg
+
 
         return ret;
       }
@@ -132,16 +109,16 @@ namespace saga
 
         saga::util::shared_ptr <func_t> func (new func_t ("copy", &cpi_t::copy, tgt));
 
-        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (func, shared_this <api_t> ())); 
+        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (shared_this <api_t> ())); 
 
-        engine_->call <api_t, cpi_t> (cc);
+        engine_->call <api_t, cpi_t> (func, cc);
 
         if ( cc->get_state () == saga::impl::call_context::Failed )
         {
           throw " file::copy () indicates failed";
         }
 
-        return cc->get_func ()->get_result <res_t> ();
+        return cc->get_result <res_t> ();
       }
 
     } // namespace filesystem
