@@ -30,15 +30,13 @@ namespace saga
         public:
           bool        valid;
           std::string url;
-          size_t      pos;
 
           void dump (std::string msg = "")
           {
             LOGSTR (DEBUG, "dir_instance_data dump") 
               << "dir_instance_data (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl
               << "    valid       : " << valid << std::endl
-              << "    url         : " << url   << std::endl
-              << "    pos         : " << pos   << std::endl;
+              << "    url         : " << url   << std::endl;
           }
       };
 

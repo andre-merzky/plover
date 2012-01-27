@@ -46,24 +46,27 @@ namespace saga
 
       // FIXME: don't use async::state
       private:
-        saga::util::shared_ptr <shareable>    impl_;            // calling object (has session)
-        saga::async::mode                     mode_;            // sync, async, task
-        state                                 state_;           // new, running, done, failed ...
-        policy                                policy_;          // any, bound, collect, ...
-   ///  saga::impl::call_state                task_state_;      // new, running, done, failed ...
-    //  saga::exception                       exception_;       // exception stack collected from adaptors_used_/failed
-    //  saga::util::timestamp                 created_;         // created time stamp
-    //  saga::util::timestamp                 start_;           // start time stamp
-    //  saga::util::timestamp                 stop_;            // stop time stamp
-    //  saga::util::timestamp                 duration_;        // time needed for completion
-    //  std::vector <saga::util::log::entry>  log_;             // some audit log
-    //  std::vector <std::string>             adaptors_used_;   // adaptors which have been used (audit trail)
-    //  std::vector <std::string>             adaptors_;        // adaptors to use
-    //  std::vector <std::string>             adaptors_skip_;   // adaptors not to use
+        saga::util::shared_ptr <shareable>    impl_;              // calling object (has session)
+        saga::async::mode                     mode_;              // sync, async, task
+        state                                 state_;             // new, running, done, failed ...
+        policy                                policy_;            // any, bound, collect, ...
+   ///  saga::impl::call_state                task_state_;        // new, running, done, failed ...
+    //  saga::exception                       exception_;         // exception stack collected from adaptors_used_/failed
+    //  saga::util::timestamp                 created_;           // created time stamp
+    //  saga::util::timestamp                 start_;             // start time stamp
+    //  saga::util::timestamp                 stop_;              // stop time stamp
+    //  saga::util::timestamp                 duration_;          // time needed for completion
+    //  std::vector <saga::util::log::entry>  log_;               // some audit log
+    //  std::vector <std::string>             adaptors_used_;     // adaptors which have been used (audit trail)
+    //  std::vector <std::string>             adaptors_;          // adaptors to use
+    //  std::vector <std::string>             adaptors_skip_;     // adaptors not to use
 
-        saga::util::shared_ptr <saga::impl::result_t> result_;  // container for function call result
+        saga::util::shared_ptr <saga::impl::result_t> result_;    // container for function call result
+        bool                                          result_ok_; // is result allocated/set?
 
       public:
+        // TODO: reconsider to make call_context a template <res_t> after all,
+        // to avoid the fragility with valid_result_.
         call_context (saga::util::shared_ptr <shareable>    impl);
 
         saga::util::shared_ptr <shareable>    get_impl (void);
@@ -85,17 +88,29 @@ namespace saga
         {
           // FIXME: make sure this is called only once, or, at least, always
           // called with the same type.  We might want to do that on
-          // result_t_detail level though...
+          // result_t_detail level though.  Also, this ambiguity would be
+          // avoided by class level templatization
 
           SAGA_UTIL_STACKTRACE ();
+
+          LOGSTR (DEBUG, "call_context set_result") << "typeset   " << saga::util::demangle (typeid (T).name ()) << std::endl;
+
           result_ = saga::util::shared_ptr <saga::impl::result_t_detail_ <T> > (new saga::impl::result_t_detail_ <T> ());
           result_->set <T> (res);
+          result_ok_ = true;
         }
 
         template <typename T>
         bool has_result_type  (void) 
         {
           SAGA_UTIL_STACKTRACE ();
+
+          if ( ! result_ok_ )
+          {
+            // no type set, yet
+            SAGA_UTIL_STACKDUMP ();
+            throw "result type is not yet defined";
+          }
 
           return result_.is_a <saga::impl::result_t_detail_ <T> > ();
         }
@@ -106,8 +121,19 @@ namespace saga
         {
           SAGA_UTIL_STACKTRACE ();
 
+          if ( ! result_ok_ )
+          {
+            // no type set, yet
+            SAGA_UTIL_STACKDUMP ();
+            throw "result type is not yet set";
+          }
+
           if ( ! has_result_type <T> () )
           {
+            LOGSTR (DEBUG, "call_context get_result") << "requested " << saga::util::demangle (typeid (T).name ()) << std::endl;
+            LOGSTR (DEBUG, "call_context get_result") << "available " << result_->get_type () << std::endl;
+
+            SAGA_UTIL_STACKDUMP ();
             throw "Incorrect result type requested";
           }
 

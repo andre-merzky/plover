@@ -26,11 +26,12 @@ namespace saga
                                         std::string                                       url) 
       { 
         SAGA_UTIL_STACKTRACE ();
-        saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
 
         LOGSTR (INFO, "file_adaptor_1 ctor") << "file adaptor 1 : constructor (" << url << ")" << std::endl;
 
+        saga::util::shared_ptr <api_t>   impl  = cc->get_impl (); 
         saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
+
         idata->url = url;
 
         cc->set_state (saga::impl::call_context::Done);
@@ -59,7 +60,7 @@ namespace saga
           case saga::async::Async :
           case saga::async::Task :
             {
-              LOGSTR (INFO, "file_adaptor_1 get_size") << " ===== file adaptor 1 : get_size <Async> ()" << std::endl;
+              LOGSTR (INFO, "file_adaptor_1 get_size") << "===== file adaptor 1 : get_size <Async> ()" << std::endl;
 
               // async version: we let the task adaptor deal with the async invocation of the sync call
               throw "NotImplemented";
@@ -77,12 +78,12 @@ namespace saga
               (void) ::stat (idata->url.c_str (), &buf);
 
               {
-                // FIXME: scoped lock for cc
+                // FIXME: scoped lock for cc.  always.
                 cc->set_result <int> (buf.st_size);
                 cc->set_state        (saga::impl::call_context::Done);
               }
 
-              LOGSTR (INFO, "file_adaptor_1 get_size") << " ===== get_size <Sync> () done ===== " << std::endl;
+              LOGSTR (INFO, "file_adaptor_1 get_size") << "===== get_size <Sync> () done ===== " << std::endl;
               break;
             }
         }
@@ -92,16 +93,17 @@ namespace saga
                                  std::string                                       tgt)
       {
         SAGA_UTIL_STACKTRACE ();
-        saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
 
         LOGSTR (INFO, "file_adaptor_1 copy") << "file adaptor 1 : copy " << tgt << std::endl;
 
+        saga::util::shared_ptr <api_t>   impl  = cc->get_impl (); 
         saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
 
         int res = ::system ((std::string ("cp ") + idata->url + " " + tgt).c_str ());
 
         if ( res != 0 )
         {
+          SAGA_UTIL_STACKDUMP ();
           throw "system command error"; // TODO
         }
         else
@@ -127,11 +129,12 @@ namespace saga
                                        std::string                                       url) 
       { 
         SAGA_UTIL_STACKTRACE ();
-        saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
 
         LOGSTR (INFO, "dir_adaptor_1 ctor") << "dir adaptor 1 : constructor (" << url << ")" << std::endl;
 
+        saga::util::shared_ptr <api_t>   impl  = cc->get_impl (); 
         saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
+
         idata->url = url;
 
         cc->set_state (saga::impl::call_context::Done);
@@ -142,14 +145,13 @@ namespace saga
       void dir_adaptor_1::get_url (saga::util::shared_ptr <saga::impl::call_context> cc)
       {
         SAGA_UTIL_STACKTRACE ();
-        saga::util::shared_ptr <saga::impl::filesystem::dir> impl (cc->get_impl ());  
-
+        saga::util::shared_ptr <api_t>   impl  = cc->get_impl ();  
         saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
 
         LOGSTR (INFO, "dir_adaptor_1 get_url") << "dir adaptor 1 : get_url: " << idata->url << std::endl;
 
         cc->set_result <std::string> (idata->url);
-        cc->set_state (saga::impl::call_context::Done);
+        cc->set_state                (saga::impl::call_context::Done);
 
         return;
       }
@@ -160,18 +162,21 @@ namespace saga
       {
         SAGA_UTIL_STACKTRACE ();
 
+
         typedef saga::util::shared_ptr <saga::impl::filesystem::file> res_t;
 
-        saga::util::shared_ptr <saga::impl::filesystem::dir> impl (cc->get_impl ());  
-
+        saga::util::shared_ptr <api_t>   impl  = cc->get_impl ();  
         saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
 
         std::string new_url = idata->url + "/" + url;
 
+        LOGSTR (INFO, "dir_adaptor_1 open") << "1--------------------------------------------" << std::endl;
         LOGSTR (INFO, "dir_adaptor_1 open") << "dir adaptor 1 : open: " << new_url << std::endl;
 
         // FIXME: error checks
         res_t ret (new saga::impl::filesystem::file);
+
+        LOGSTR (INFO, "dir_adaptor_1 open") << "2--------------------------------------------" << std::endl;
 
         // FIXME: error checks
         // FIXME: should constructor be called by the impl::dir::open, or
@@ -179,8 +184,15 @@ namespace saga
         // here as well...
         ret->constructor (new_url);
 
+        LOGSTR (INFO, "dir_adaptor_1 open") << "3--------------------------------------------" << std::endl;
+        cc.dump ();
+        cc->dump ();
+        LOGSTR (INFO, "dir_adaptor_1 open") << "4--------------------------------------------" << std::endl;
+
         cc->set_result <res_t> (ret);
-        cc->set_state (saga::impl::call_context::Done);
+        cc->set_state          (saga::impl::call_context::Done);
+
+        LOGSTR (INFO, "dir_adaptor_1 open") << "5--------------------------------------------" << std::endl;
 
         return;
       }

@@ -24,7 +24,7 @@ namespace saga
           typedef saga::impl::async::task_cpi cpi_t;
           typedef saga::impl::async::task_cpi ret_t;
 
-          LOGSTR (INFO, "async_adaptor_0 threaded_cc") << " @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@" << std::endl;
+          LOGSTR (INFO, "async_adaptor_0 threaded_cc") << "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@" << std::endl;
 
           SAGA_UTIL_STACKTRACE ();
 
@@ -37,8 +37,6 @@ namespace saga
 
           LOGSTR (INFO, "async_adaptor_0 ctor") 
             << "async adaptor 0 : constructor ()" << std::endl;
-
-
 
           LOGSTR (INFO, "async_adaptor_0 threaded_cc") << "thread created " << pthread_self () << std::endl;
 
@@ -56,18 +54,18 @@ namespace saga
 
             saga::util::shared_ptr <saga::impl::impl_base> impl (cc->get_impl ()); 
 
-            LOGSTR (INFO, "async_adaptor_0 threaded_cc") << " 1 xxxxxxxxxxxxxxx" << std::endl;
+            LOGSTR (INFO, "async_adaptor_0 threaded_cc") << "1 xxxxxxxxxxxxxxx" << std::endl;
 
             impl->dump ("impl sp: ");
 
-            LOGSTR (INFO, "async_adaptor_0 threaded_cc") << " 2 xxxxxxxxxxxxxxx" << std::endl;
+            LOGSTR (INFO, "async_adaptor_0 threaded_cc") << "2 xxxxxxxxxxxxxxx" << std::endl;
 
             saga::util::shared_ptr <saga::impl::engine> engine = impl->get_engine ();
 
             // engine.dump  ();
             // engine->dump ();
 
-            LOGSTR (INFO, "async_adaptor_0 threaded_cc") << " 3 xxxxxxxxxxxxxxx" << std::endl;
+            LOGSTR (INFO, "async_adaptor_0 threaded_cc") << "3 xxxxxxxxxxxxxxx" << std::endl;
 
             int i = 0;
             while ( i < 10 )
@@ -77,7 +75,7 @@ namespace saga
               i++;
             }
 
-            LOGSTR (INFO, "async_adaptor_0 threaded_cc") << " 4 xxxxxxxxxxxxxxx" << std::endl;
+            LOGSTR (INFO, "async_adaptor_0 threaded_cc") << "4 xxxxxxxxxxxxxxx" << std::endl;
 
             // FIXME: now, we need to actually split
             // the call_context into call_context, op_context, and
@@ -104,12 +102,12 @@ namespace saga
             cc->set_state (saga::impl::call_context::New);
             cc->dump ();
 
-            LOGSTR (INFO, "async_adaptor_0 threaded_cc") << " 5 xxxxxxxxxxxxxxx" << std::endl;
+            LOGSTR (INFO, "async_adaptor_0 threaded_cc") << "5 xxxxxxxxxxxxxxx" << std::endl;
 
             // FIXME: wrong api/cpi type, need functor here
             // engine->call <api_t, cpi_t> (func, cc); // this will set task and call state
 
-            LOGSTR (INFO, "async_adaptor_0 threaded_cc") << " 6 xxxxxxxxxxxxxxx" << std::endl;
+            LOGSTR (INFO, "async_adaptor_0 threaded_cc") << "6 xxxxxxxxxxxxxxx" << std::endl;
 
             // the sync call is now Done, and its result is stored
           }
@@ -153,8 +151,7 @@ namespace saga
 
         typedef saga::async::state res_t;
 
-        saga::util::shared_ptr <saga::impl::async::task> impl (cc->get_impl ()); 
-
+        saga::util::shared_ptr <api_t>   impl  = cc->get_impl (); 
         saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
 
         // confirm result type
@@ -171,13 +168,11 @@ namespace saga
 
         typedef saga::util::shared_ptr <saga::impl::result_t> res_t;
 
-        saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
-
+        saga::util::shared_ptr <api_t>   impl  = cc->get_impl (); 
         saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
 
         cc->set_result <res_t> (idata->t_cc->get_result <res_t> ());
-
-        cc->set_state (saga::impl::call_context::Done);
+        cc->set_state          (saga::impl::call_context::Done);
 
         return;
       }
@@ -186,13 +181,12 @@ namespace saga
       {
         SAGA_UTIL_STACKTRACE ();
 
-        saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
-
+        saga::util::shared_ptr <api_t>   impl  = cc->get_impl (); 
         saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
 
-        LOGSTR (INFO, "async_adaptor_0 run") << " ==idata cc =====================================================" << std::endl;
+        LOGSTR (INFO, "async_adaptor_0 run") << "==idata cc =====================================================" << std::endl;
         idata->t_cc->dump ();
-        LOGSTR (INFO, "async_adaptor_0 run") << " ================================================================" << std::endl;
+        LOGSTR (INFO, "async_adaptor_0 run") << "================================================================" << std::endl;
 
         // our new task exists, and idata->cc is the call it is operating
         // on.  That call's state depends on the runmode and the previous
@@ -230,7 +224,7 @@ namespace saga
         if ( idata->mode  == saga::async::Sync &&
              idata->state == saga::async::New  )
         {
-          LOGSTR (INFO, "async_adaptor_0 ctor") << " == sync task =====================================================" << std::endl;
+          LOGSTR (INFO, "async_adaptor_0 ctor") << "== sync task =====================================================" << std::endl;
 
           // idata->t_cc->task_state is Done, cc->call_state is set by call()
           // 
@@ -242,7 +236,7 @@ namespace saga
         else if ( idata->mode  == saga::async::Async &&
                   idata->state == saga::async::New   )
         {
-          LOGSTR (INFO, "async_adaptor_0 ctor") << " == async task =====================================================" << std::endl;
+          LOGSTR (INFO, "async_adaptor_0 ctor") << "== async task =====================================================" << std::endl;
 
           // do a sanity check if we can in fact handle this call.
           // check if
@@ -271,6 +265,7 @@ namespace saga
               LOGSTR (INFO, "async_adaptor_0 ctor") 
                 << " @@@ could not create thread: " << ::strerror (err) <<
                 std::endl;
+              SAGA_UTIL_STACKDUMP ();
               throw "oops";
             }
 
@@ -285,6 +280,7 @@ namespace saga
           else
           {
             idata->t_cc->dump ();
+            SAGA_UTIL_STACKDUMP ();
             throw "Cannot make functor asynchronous";
           }
         }

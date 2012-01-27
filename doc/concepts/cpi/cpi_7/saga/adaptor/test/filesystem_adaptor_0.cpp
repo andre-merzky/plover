@@ -11,11 +11,12 @@ namespace saga
                                         std::string                                       url)
       {
         SAGA_UTIL_STACKTRACE ();
-        saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
 
         LOGSTR (INFO, "file_adaptor_0 ctor") << "file adaptor 0 : constructor (" << url << ")" << std::endl;
 
+        saga::util::shared_ptr <api_t>   impl  = cc->get_impl (); 
         saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
+
         idata->url = url;
 
         cc->set_state (saga::impl::call_context::Done);
@@ -59,11 +60,12 @@ namespace saga
                                        std::string                                       url) 
       { 
         SAGA_UTIL_STACKTRACE ();
-        saga::util::shared_ptr <api_t> impl (cc->get_impl ()); 
 
         LOGSTR (INFO, "dir_adaptor_0 ctor") << "dir adaptor 0 : constructor (" << url << ")" << std::endl;
 
+        saga::util::shared_ptr <api_t>   impl  = cc->get_impl (); 
         saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
+
         idata->url = url;
 
         cc->set_state (saga::impl::call_context::Done);

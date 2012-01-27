@@ -52,6 +52,8 @@ namespace saga
         }
 
         virtual void dump (std::string msg = "");
+
+        virtual std::string get_type (void);
     };
 
     template <typename T>
@@ -67,7 +69,7 @@ namespace saga
 
         // TODO: add assignment operator etc.
 
-        void set (T t ) 
+        void set (T t) 
         {
           SAGA_UTIL_STACKTRACE ();
           t_  =  t; 
@@ -86,6 +88,10 @@ namespace saga
             << " : " << t_ << std::endl;
         }
 
+        std::string get_type (void)
+        {
+          return saga::util::demangle (typeid (T).name ());
+        }
     };
 
   } // namespace impl

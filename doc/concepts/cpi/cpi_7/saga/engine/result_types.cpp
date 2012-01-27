@@ -27,6 +27,11 @@ namespace saga
       LOGSTR (DEBUG, "result_t, dump") << msg << " - (base result type)" << std::endl;
     }
 
+    std::string result_t::get_type (void)
+    { 
+      LOGSTR (DEBUG, "result_t, get_result") << "base result type" << std::endl;
+    }
+
   } // namespace impl
 
 } // namespace saga

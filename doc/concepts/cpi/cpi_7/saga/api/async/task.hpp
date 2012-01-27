@@ -33,6 +33,8 @@ namespace saga
           SAGA_UTIL_STACKTRACE ();
 
           // FIXME: error check: is cast valid?
+          LOGSTR (DEBUG, "saga::async::task get_result") << " getting task result" << std::endl;
+
           return impl_->get_result ()->get <T> (); 
         }
     };

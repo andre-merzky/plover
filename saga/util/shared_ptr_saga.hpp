@@ -86,6 +86,8 @@ namespace saga
             if ( 0 == get_count () )
             {
 
+              // dump ("dtor ================== ");
+
               if ( NULL != ptr_ )
               {
                 unshare (ptr_);

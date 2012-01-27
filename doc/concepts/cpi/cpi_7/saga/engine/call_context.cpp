@@ -23,10 +23,11 @@ namespace saga
 
 
     call_context::call_context (saga::util::shared_ptr <saga::util::shareable> impl)
-      : impl_    (impl)
-      , state_   (New)
-      , mode_    (saga::async::Sync)
-      , policy_  (Any)
+      : impl_      (impl)
+      , state_     (New)
+      , mode_      (saga::async::Sync)
+      , policy_    (Any)
+      , result_ok_ (false)
     {
       SAGA_UTIL_STACKTRACE ();
     }
@@ -44,6 +45,12 @@ namespace saga
 
     saga::util::shared_ptr <saga::impl::result_t> call_context::get_result  (void)
     {
+      if ( ! result_ok_ )
+      {
+        SAGA_UTIL_STACKDUMP ();
+        throw ("result is not defined, yet");
+      }
+
       return result_;
     }
 
@@ -58,7 +65,8 @@ namespace saga
       impl_.dump         ("    IMPL_       : ");
       impl_->dump        ();
       result_.dump       ("    result_     : ");
-      result_->dump      ();
+      if ( result_ok_ )
+        result_->dump    ();
     }
 
   } // namespace impl

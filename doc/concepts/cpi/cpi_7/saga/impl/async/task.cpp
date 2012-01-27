@@ -18,6 +18,7 @@ namespace saga
         // FIXME: OTOH, we would like to be able to have non-initialized tasks
         // on API level?
 
+        SAGA_UTIL_STACKDUMP ();
         throw "invalid impl::task construction - need call_context parameter";
       }
 
@@ -57,6 +58,7 @@ namespace saga
 
         if ( cc->get_state () == saga::impl::call_context::Failed )
         {
+          SAGA_UTIL_STACKDUMP ();
           throw " task::get_state failed - can't get state";
         }
 
@@ -73,23 +75,24 @@ namespace saga
 
         return (idata_->t_cc->get_result ());
 
-        typedef saga::util::shared_ptr <result_t>            res_t;
-        typedef saga::impl::async::task                      api_t;
-        typedef saga::impl::async::task_cpi                  cpi_t;
-        typedef saga::impl::functor_0 <api_t, cpi_t, res_t > func_t;
+        // typedef saga::util::shared_ptr <result_t>           res_t;
+        // typedef saga::impl::async::task                     api_t;
+        // typedef saga::impl::async::task_cpi                 cpi_t;
+        // typedef saga::impl::functor_0 <api_t, cpi_t, res_t> func_t;
 
-        saga::util::shared_ptr <func_t> func (new func_t ("get_result", &cpi_t::get_result));
+        // saga::util::shared_ptr <func_t> func (new func_t ("get_result", &cpi_t::get_result));
 
-        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (shared_this <api_t> ())); 
+        // saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (shared_this <api_t> ())); 
 
-        engine_->call <api_t, cpi_t> (func, cc);
+        // engine_->call <api_t, cpi_t> (func, cc);
 
-        if ( cc->get_state () == saga::impl::call_context::Failed )
-        {
-          throw " task::get_state indicates failed";
-        }
+        // if ( cc->get_state () == saga::impl::call_context::Failed )
+        // {
+        //   SAGA_UTIL_STACKDUMP ();
+        //   throw " task::get_state indicates failed";
+        // }
 
-        return cc->get_result <res_t> ();
+        // return cc->get_result <res_t> ();
       }
 
 
@@ -97,10 +100,10 @@ namespace saga
       {
         saga::util::scoped_lock sl (idata_->get_mutex ());
 
-        typedef saga::impl::void_t                           res_t;
-        typedef saga::impl::async::task                      api_t;
-        typedef saga::impl::async::task_cpi                  cpi_t;
-        typedef saga::impl::functor_0 <api_t, cpi_t, void_t> func_t;
+        typedef saga::impl::void_t                          res_t;
+        typedef saga::impl::async::task                     api_t;
+        typedef saga::impl::async::task_cpi                 cpi_t;
+        typedef saga::impl::functor_0 <api_t, cpi_t, res_t> func_t;
 
         saga::util::shared_ptr <func_t> func (new func_t ("run", &cpi_t::run));
 
@@ -110,6 +113,7 @@ namespace saga
 
         if ( cc->get_state () == saga::impl::call_context::Failed )
         {
+          SAGA_UTIL_STACKDUMP ();
           throw " task::run () failed";
         }
       }

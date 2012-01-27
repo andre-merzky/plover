@@ -17,7 +17,7 @@ namespace saga
     class cpi_base : public saga::util::shareable
     {
       private:
-        std::map <std::string, void*> adata_;  // FIXME: check and use
+        std::map <std::string, void*> adata_;  // FIXME: make extensible and use
 
       public:
         virtual ~cpi_base (void);

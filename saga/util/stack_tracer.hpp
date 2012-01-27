@@ -11,6 +11,7 @@ namespace saga
   {
     class stack_tracer
     {
+      // FIXME: we should maintain one stacktrace per thread, obviously
       private:
         static unsigned int indent_;
 
@@ -19,23 +20,32 @@ namespace saga
         int          line_;
         std::string  msg_;
 
-        std::string indent (void);
+        std::string indent   (void);
+        std::string unindent (void);
+
+        static std::vector <std::string> stack_;
 
 
       public:
         static bool enabled;
-
 
         stack_tracer (const char * sig, 
                       const char * file, 
                       int          line, 
                       const char * msg = "");
         ~stack_tracer (void);
+
+        static void dump (void);
     };
 
 // //-------------------------------------------------------------
 // #define SAGA_UTIL_TYPEID(x) saga::util::type_id::fn (x, #x)   \
 // //-------------------------------------------------------------
+
+//-------------------------------------------------------------
+#define SAGA_UTIL_STACKDUMP()                                 \
+  saga::util::stack_tracer::dump ()                           \
+//-------------------------------------------------------------
 
 //-------------------------------------------------------------
 #define SAGA_UTIL_STACKTRACE()                                \

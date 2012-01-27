@@ -17,7 +17,6 @@ namespace saga
 
         idata_->valid = false;
         idata_->url   = "";
-        idata_->pos   = 0;
       }
 
       //////////////////////////////////////////////////////////////////
@@ -29,16 +28,14 @@ namespace saga
         {
           saga::util::scoped_lock sl (idata_->get_mutex ());
           idata_->url   = url;
-          idata_->pos   = 0;
           idata_->valid = true;
         } 
         // lock scope
 
-        typedef saga::impl::void_t                          res_t;
-        typedef saga::impl::filesystem::dir                 api_t;
-        typedef saga::impl::filesystem::dir_cpi             cpi_t;
-        typedef saga::impl::functor_1 <api_t, cpi_t, 
-                                       void_t, std::string> func_t;
+        typedef saga::impl::void_t                                       res_t;
+        typedef saga::impl::filesystem::dir                              api_t;
+        typedef saga::impl::filesystem::dir_cpi                          cpi_t;
+        typedef saga::impl::functor_1 <api_t, cpi_t, res_t, std::string> func_t;
 
         saga::util::shared_ptr <func_t> func (new func_t ("constructor",&cpi_t::constructor, url));
 
@@ -60,6 +57,7 @@ namespace saga
         // check if the call was completed all right
         if ( cc->get_state () == saga::impl::call_context::Failed )
         {
+          SAGA_UTIL_STACKDUMP ();
           throw " dir::constructor () indicates failed";
         }
 
@@ -71,10 +69,10 @@ namespace saga
       {
         SAGA_UTIL_STACKTRACE ();
 
-        typedef std::string                                       res_t;
-        typedef saga::impl::filesystem::dir                       api_t;
-        typedef saga::impl::filesystem::dir_cpi                   cpi_t;
-        typedef saga::impl::functor_0 <api_t, cpi_t, std::string> func_t;
+        typedef std::string                                 res_t;
+        typedef saga::impl::filesystem::dir                 api_t;
+        typedef saga::impl::filesystem::dir_cpi             cpi_t;
+        typedef saga::impl::functor_0 <api_t, cpi_t, res_t> func_t;
 
         saga::util::shared_ptr <func_t> func (new func_t ("get_url", &cpi_t::get_url));
 
@@ -84,6 +82,7 @@ namespace saga
 
         if ( cc->get_state () == saga::impl::call_context::Failed )
         {
+          SAGA_UTIL_STACKDUMP ();
           throw " dir::get_url () indicates failed";
         }
 
@@ -95,11 +94,10 @@ namespace saga
       {
         SAGA_UTIL_STACKTRACE ();
 
-        typedef saga::util::shared_ptr <saga::impl::filesystem::file> res_t;
-        typedef saga::impl::filesystem::dir                           api_t;
-        typedef saga::impl::filesystem::dir_cpi                       cpi_t;
-        typedef saga::impl::functor_1 <api_t, cpi_t, 
-                                       saga::util::shared_ptr <saga::impl::filesystem::file>, std::string > func_t;
+        typedef saga::util::shared_ptr <saga::impl::filesystem::file>    res_t;
+        typedef saga::impl::filesystem::dir                              api_t;
+        typedef saga::impl::filesystem::dir_cpi                          cpi_t;
+        typedef saga::impl::functor_1 <api_t, cpi_t, res_t, std::string> func_t;
 
         saga::util::shared_ptr <func_t> func (new func_t ("open", &cpi_t::open, url));
 
@@ -109,6 +107,7 @@ namespace saga
 
         if ( cc->get_state () == saga::impl::call_context::Failed )
         {
+          SAGA_UTIL_STACKDUMP ();
           throw " dir::open () indicates failed";
         }
 

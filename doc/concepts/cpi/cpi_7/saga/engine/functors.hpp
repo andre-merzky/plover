@@ -157,6 +157,7 @@ namespace saga
         {
           if ( ! has_arg_1_type <ARG_1> )
           {
+            SAGA_UTIL_STACKDUMP ();
             throw "requested incorrect arg_1 type";
           }
 
@@ -171,6 +172,7 @@ namespace saga
           // cast cpi_base to CPI
           if ( ! cpi.is_a <CPI> () )
           {
+            SAGA_UTIL_STACKDUMP ();
             throw "Cannot handle CPI type in call_cpi";
           }
 

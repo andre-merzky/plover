@@ -129,16 +129,17 @@ namespace saga
           cc->set_state (saga::impl::call_context::Failed);
 
           LOGSTR (INFO, "engine call") << "all adaptors failed for " << func->get_name () << std::endl;
+          SAGA_UTIL_STACKDUMP ();
           throw "no adaptor suceeded";
         }
 
         void dump (std::string msg = "");
     };
 
-    ///////////////////////////////////////////////////////////////////
-    class the_engine : public saga::util::singleton <engine>
-    {
-    };
+    /// ///////////////////////////////////////////////////////////////////
+    /// class the_engine : public saga::util::singleton <engine>
+    /// {
+    /// };
 
   } // namespace impl
 

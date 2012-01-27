@@ -31,10 +31,10 @@ namespace saga
         idata_->pos   = 0;
         idata_->valid = true;
 
-        typedef saga::impl::void_t                                        res_t;
-        typedef saga::impl::filesystem::file                              api_t;
-        typedef saga::impl::filesystem::file_cpi                          cpi_t;
-        typedef saga::impl::functor_1 <api_t, cpi_t, void_t, std::string> func_t;
+        typedef saga::impl::void_t                                       res_t;
+        typedef saga::impl::filesystem::file                             api_t;
+        typedef saga::impl::filesystem::file_cpi                         cpi_t;
+        typedef saga::impl::functor_1 <api_t, cpi_t, res_t, std::string> func_t;
 
         saga::util::shared_ptr <func_t> func (new func_t ("constructor", &cpi_t::constructor, url));
 
@@ -44,10 +44,10 @@ namespace saga
 
         if ( cc->get_state () == saga::impl::call_context::Failed )
         {
+          SAGA_UTIL_STACKDUMP ();
           throw " file::constructor indicates failed";
         }
 
-        return cc->get_result <res_t> ();
       }
 
       //////////////////////////////////////////////////////////////////
@@ -55,10 +55,10 @@ namespace saga
       {
         SAGA_UTIL_STACKTRACE ();
 
-        typedef saga::util::shared_ptr <saga::impl::async::task>                                        res_t;
-        typedef saga::impl::filesystem::file                                                            api_t;
-        typedef saga::impl::filesystem::file_cpi                                                        cpi_t;
-        typedef saga::impl::functor_0 <api_t, cpi_t, saga::util::shared_ptr <saga::impl::async::task> > func_t;
+        typedef saga::util::shared_ptr <saga::impl::async::task>  res_t;
+        typedef saga::impl::filesystem::file                      api_t;
+        typedef saga::impl::filesystem::file_cpi                  cpi_t;
+        typedef saga::impl::functor_0 <api_t, cpi_t, res_t>       func_t;
 
         // create a functor which hold the cpi class' get_size() function
         // pointer.  The second templ parameter is the functions return type
@@ -77,10 +77,11 @@ namespace saga
 
         if ( cc->get_state () == saga::impl::call_context::Failed )
         {
+          SAGA_UTIL_STACKDUMP ();
           throw " file::get_size <> () indicates failed";
         }
 
-        res_t ret = cc->get_result <res_t> ();
+        res_t ret (new saga::impl::async::task (cc));
 
         // ensure that the returned task's state matches the mode m.
         switch ( m )
@@ -93,7 +94,6 @@ namespace saga
         // TODO: if a async/task call returns with NotImplemented, then try to
         // invoke a task.run adaptor with the Sync version no the cc as arg
 
-
         return ret;
       }
 
@@ -102,10 +102,10 @@ namespace saga
       {
         SAGA_UTIL_STACKTRACE ();
 
-        typedef saga::impl::void_t                        res_t;
-        typedef saga::impl::filesystem::file              api_t;
-        typedef saga::impl::filesystem::file_cpi          cpi_t;
-        typedef saga::impl::functor_1 <api_t, cpi_t, void_t, std::string>    func_t;
+        typedef saga::impl::void_t                                       res_t;
+        typedef saga::impl::filesystem::file                             api_t;
+        typedef saga::impl::filesystem::file_cpi                         cpi_t;
+        typedef saga::impl::functor_1 <api_t, cpi_t, res_t, std::string> func_t;
 
         saga::util::shared_ptr <func_t> func (new func_t ("copy", &cpi_t::copy, tgt));
 
@@ -115,10 +115,12 @@ namespace saga
 
         if ( cc->get_state () == saga::impl::call_context::Failed )
         {
+          SAGA_UTIL_STACKDUMP ();
           throw " file::copy () indicates failed";
         }
 
-        return cc->get_result <res_t> ();
+        // FIXME: nuclear when void_t result types get allocated
+        // return cc->get_result <res_t> ();
       }
 
     } // namespace filesystem

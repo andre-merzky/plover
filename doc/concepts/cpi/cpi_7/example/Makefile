@@ -28,6 +28,11 @@ check:: all
 	valgrind --tool=memcheck --track-origins=yes --leak-check=full ./cpi_7 2>&1 | tee valgrind.log
 	@echo ""
 
+fullcheck:: all
+	@echo ""
+	valgrind --tool=memcheck --track-origins=yes --leak-check=full --show-reachable=yes ./cpi_7 2>&1 | tee valgrind.log
+	@echo ""
+
 run:: cpi_7
 	@echo ""
 	./cpi_7
