@@ -10,7 +10,7 @@
 #include <saga/util/logging.hpp>
 #include <saga/util/stack_tracer.hpp>
 
-#include <saga/engine/funcs.hpp>
+#include <saga/engine/func.hpp>
 #include <saga/engine/call_context.hpp>
 #include <saga/engine/cpi_base.hpp>
 #include <saga/engine/impl_base.hpp>
@@ -81,18 +81,19 @@ namespace saga
         //
         // 
         //
-        template <typename IMPL, typename CPI>
+        /* template <typename CPI> */
         void call (saga::util::shared_ptr <saga::impl::call_context> cc)
         {
           SAGA_UTIL_STACKTRACE ();
 
           {
             // get the matching list of CPIs
-            std::vector <saga::util::shared_ptr <CPI> > cpis = get_cpis <CPI> ();
+         /* std::vector <saga::util::shared_ptr <CPI> > cpis = get_cpis <CPI> (); */
+            std::vector <saga::util::shared_ptr <saga::impl::cpi_base> > cpis = cpis_;
 
             // try one adaptor after the other, until one succeeds.
             LOGSTR (INFO, "engine call") << "calling cpis " << cpis.size () << std::endl;
-            LOGSTR (INFO, "engine call") << "calling cpis " << saga::util::demangle (typeid (CPI).name ()) << std::endl;
+         /* LOGSTR (INFO, "engine call") << "calling cpis " << saga::util::demangle (typeid (CPI).name ()) << std::endl; */
             // cc->dump ();
             
             for ( unsigned int i = 0; i < cpis.size (); i++ )
@@ -102,11 +103,6 @@ namespace saga
               {
                 LOGSTR (INFO, "engine call") << "adaptor " << i << " : calling " << cc->get_func ()->get_name () << std::endl;
                 cpis[i]->dump ();
-
-                // the cast below ensures that the func has the correct type, kind of
-                // typedef saga::impl::func <IMPL, CPI, RET> func_cast_t;
-                // saga::util::shared_ptr <func_cast_t> casted = func.get_shared_ptr <func_cast_t> ();
-                // casted->call_cpi (cpis[i], cc);
 
                 cc->get_func ()->call_cpi (cpis[i], cc);
                 cc->set_state (saga::async::Done);
@@ -151,7 +147,7 @@ namespace saga
 
             // try one adaptor after the other, until one succeeds.
             LOGSTR (INFO, "engine call") << "calling cpis " << cpis.size () << std::endl;
-            LOGSTR (INFO, "engine call") << "calling cpis " << saga::util::demangle (typeid (CPI).name ()) << std::endl;
+         /* LOGSTR (INFO, "engine call") << "calling cpis " << saga::util::demangle (typeid (CPI).name ()) << std::endl; */
             // cc->dump ();
             
             for ( unsigned int i = 0; i < cpis.size (); i++ )

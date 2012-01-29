@@ -22,10 +22,10 @@ namespace saga
 
 
 
-    call_context::call_context (saga::util::shared_ptr <impl_base>    impl,
-                                saga::util::shared_ptr <func_base> func);
+    call_context::call_context (saga::util::shared_ptr <impl_base> impl,
+                                saga::util::shared_ptr <func_base> func)
       : impl_      (impl)
-        func_      (func)
+      , func_      (func)
       , state_     (saga::async::New)
       , mode_      (saga::async::Sync)
       , policy_    (Any)

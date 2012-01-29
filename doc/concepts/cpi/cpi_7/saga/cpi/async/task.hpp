@@ -3,6 +3,7 @@
 #define SAGA_CPI_TASK_TASK_HPP
 
 #include <saga/util/shareable.hpp>
+#include <saga/engine/cpi_base.hpp>
 #include <saga/engine/call_context.hpp>
 
 namespace saga

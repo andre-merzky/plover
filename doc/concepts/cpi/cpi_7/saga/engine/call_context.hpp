@@ -10,10 +10,9 @@
 
 #include <saga/api/async/state.hpp>
 
-#include <saga/engine/cpi_base.hpp>
 #include <saga/engine/impl_base.hpp>
 #include <saga/engine/result_types.hpp>
-#include <saga/engine/funcs.hpp>
+#include <saga/engine/func.hpp>
 
 namespace saga
 {

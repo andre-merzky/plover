@@ -5,6 +5,9 @@
 #include <saga/api/async/task.hpp>
 #include <saga/api/async/state.hpp>
 
+// FIXME: away it goes!
+#include <saga/cpi/filesystem/file.hpp>
+
 #include "async_adaptor_0.hpp"
 
 namespace saga
@@ -28,7 +31,6 @@ namespace saga
             = static_cast <saga::util::shared_ptr <saga::impl::call_context> *> (t_cc_sp);
 
           t_cc  = t_cc_tmp->get_shared_ptr (); 
-          // impl  = t_cc->get_impl (); 
 
           LOGSTR (INFO, "async_adaptor_0 ctor") << "async adaptor 0 : constructor ()" << std::endl;
           LOGSTR (INFO, "async_adaptor_0 threaded_cc") << "thread created " << pthread_self () << std::endl;
@@ -41,6 +43,9 @@ namespace saga
           t_cc->set_state (saga::async::Running);
 
           // we want to wrap a sync call...
+          // FIXME: shouldn't we operate on a copy?  At least we need to make
+          // sure that we reset the mode on failure, or otherwise log the fact
+          // that the original mode was Async/Task...
           t_cc->set_mode (saga::async::Sync);
 
           LOGSTR (INFO, "async_adaptor_0 threaded_cc") << "2 xxxxxxxxxxxxxxx" << std::endl;
@@ -59,13 +64,18 @@ namespace saga
 
           LOGSTR (INFO, "async_adaptor_0 threaded_cc") << "4 xxxxxxxxxxxxxxx" << std::endl;
 
-          // FIXME: need func
-          // engine->call <api_t, cpi_t> (func, t_cc); // this will set task and call state
+          engine->call /* <saga::impl::filesystem::file_cpi> */ (t_cc); // this will set task and call state
+          // engine->call /* <cpi_t> */ (t_cc); // this will set task and call state
 
           LOGSTR (INFO, "async_adaptor_0 threaded_cc") << "6 xxxxxxxxxxxxxxx" << std::endl;
 
           // the sync call is now in Done state (or Failed etc), and its result is stored
-          
+
+          // t_cc->dump ();
+          // t_cc->set_state (saga::async::Done);
+          // t_cc->set_result <int> (42);
+          t_cc->dump ();
+
           LOGSTR (INFO, "async_adaptor_0 threaded_cc") << "thread done " << pthread_self () << std::endl;
         }
         catch ( const std::exception & e )
@@ -180,8 +190,10 @@ namespace saga
           case saga::async::Sync:
             {
               // FIXME: this adaptor should actually not handle Sync calls...
-              impl->get_engine ()->call <api_t, cpi_t> (impl->t_func_, impl->t_cc_); 
-              impl->t_cc_->set_state (saga::async::Done);
+              // impl->get_engine ()->call /* <cpi_t> */ (impl->t_cc_); 
+              // impl->t_cc_->set_state (saga::async::Done);
+              // break;
+              throw "Cannot make sync calls async";
               break;
             }
 
@@ -189,10 +201,6 @@ namespace saga
           case saga::async::Async:
             {
               LOGSTR (INFO, "async_adaptor_0 ctor") << "== async task =====================================" << std::endl;
-
-              // FIXME: shouldn't we operate on a copy?  At least we need to make
-              // sure that we reset the mode on failure, or otherwise log the fact
-              // that the original mode was Async/Task...
 
               pthread_t      thread;
               pthread_attr_t att;
@@ -202,6 +210,12 @@ namespace saga
               int err = pthread_create (&thread, NULL,
                                         saga::adaptor::test::async_adaptor_0::threaded_cc, 
                                         (void*)&(impl->t_cc_));
+
+              // FIXME: we need to sync with the thread startup, and only
+              // continue here after it successfully got it's t_cc_ shared
+              // pointer back...
+              ::sleep (1);
+
               if ( 0 != err )
               {
                 LOGSTR (INFO, "async_adaptor_0 ctor") 

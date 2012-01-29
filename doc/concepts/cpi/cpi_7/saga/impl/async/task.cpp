@@ -53,9 +53,9 @@ namespace saga
 
         saga::util::shared_ptr <func_t> func (new func_t ("get_state", &cpi_t::get_state));
 
-        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (shared_this <api_t> ())); 
+        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (shared_this <api_t> (), func)); 
 
-        engine_->call <api_t, cpi_t> (func, cc);
+        engine_->call /* <cpi_t> */ (cc);
 
         if ( cc->get_state () == saga::async::Failed )
         {
@@ -71,6 +71,8 @@ namespace saga
         SAGA_UTIL_STACKTRACE ();
 
         // FIXME: t_cc_->wait ();
+        ::sleep (3);
+        t_cc_->dump ();
 
         return (t_cc_->get_result ());
 
@@ -81,9 +83,9 @@ namespace saga
 
         // saga::util::shared_ptr <func_t> func (new func_t ("get_result", &cpi_t::get_result));
 
-        // saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (shared_this <api_t> ())); 
+        // saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (shared_this <api_t> (), func)); 
 
-        // engine_->call <api_t, cpi_t> (func, cc);
+        // engine_->call /* <cpi_t> */ (cc);
 
         // if ( cc->get_state () == saga::async::Failed )
         // {
@@ -104,9 +106,9 @@ namespace saga
 
         saga::util::shared_ptr <func_t> func (new func_t ("run", &cpi_t::run));
 
-        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (shared_this <api_t> ())); 
+        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (shared_this <api_t> (), func)); 
 
-        engine_->call <api_t, cpi_t> (func, cc);
+        engine_->call /* <cpi_t> */ (cc);
 
         if ( cc->get_state () == saga::async::Failed )
         {

@@ -26,7 +26,6 @@ namespace saga
         public:
           // instance data
           // FIXME: make private
-          saga::util::shared_ptr <func_base>             t_func_;   // func the task operates
           saga::util::shared_ptr <saga::impl::call_context> t_cc_;     // context the task operates on
           saga::util::shared_ptr <saga::impl::engine>       t_engine_; // engine  the task operates with
 
@@ -45,8 +44,6 @@ namespace saga
             LOGSTR (DEBUG, "task dump") 
               << "impl::task (" << this << ") : " 
               << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl;
-            t_func_.dump  ();
-            t_func_->dump ();
             t_cc_.dump  ();
             t_cc_->dump ();
           }

@@ -36,13 +36,13 @@ namespace saga
 
         saga::util::shared_ptr <func_t> func (new func_t ("constructor",&cpi_t::constructor, url));
 
-        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (shared_this <api_t> ())); 
+        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (shared_this <api_t> (), func)); 
 
         cc->set_mode   (saga::async::Sync); // this is a sync call
         cc->set_state  (saga::async::New);  // we just created the cc
         cc->set_policy (saga::impl::call_context::Any);  // any successfull adaptor can do the job
 
-        engine_->call <api_t, cpi_t> (func, cc);
+        engine_->call /* <cpi_t> */ (cc);
 
         // check if the call was completed
         while ( cc->get_state () == saga::async::Running )
@@ -73,9 +73,9 @@ namespace saga
 
         saga::util::shared_ptr <func_t> func (new func_t ("get_url", &cpi_t::get_url));
 
-        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (shared_this <api_t> ())); 
+        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (shared_this <api_t> (), func)); 
 
-        engine_->call <api_t, cpi_t> (func, cc);
+        engine_->call /* <cpi_t> */ (cc);
 
         if ( cc->get_state () == saga::async::Failed )
         {
@@ -98,9 +98,9 @@ namespace saga
 
         saga::util::shared_ptr <func_t> func (new func_t ("open", &cpi_t::open, url));
 
-        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (shared_this <api_t> ())); 
+        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (shared_this <api_t> (), func)); 
 
-        engine_->call <api_t, cpi_t> (func, cc);
+        engine_->call /* <cpi_t> */ (cc);
 
         if ( cc->get_state () == saga::async::Failed )
         {

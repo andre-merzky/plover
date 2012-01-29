@@ -35,9 +35,9 @@ namespace saga
 
         saga::util::shared_ptr <func_t> func (new func_t ("constructor", &cpi_t::constructor, url));
 
-        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (shared_this <api_t> ())); 
+        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (shared_this <api_t> (), func)); 
 
-        engine_->call <api_t, cpi_t> (func, cc);
+        engine_->call /* <cpi_t> */ (cc);
 
         if ( cc->get_state () == saga::async::Failed )
         {
@@ -52,25 +52,26 @@ namespace saga
       {
         SAGA_UTIL_STACKTRACE ();
 
-        typedef saga::util::shared_ptr <saga::impl::async::task>  res_t;
+        typedef saga::util::shared_ptr <saga::impl::async::task>  ret_t;
+        typedef int                                               res_t;
         typedef saga::impl::filesystem::file                      api_t;
         typedef saga::impl::filesystem::file_cpi                  cpi_t;
-        typedef saga::impl::func_0 <api_t, cpi_t, res_t>       func_t;
+        typedef saga::impl::func_0 <api_t, cpi_t, res_t>          func_t;
 
         // create a func which hold the cpi class' get_size() function
         // pointer.  The second templ parameter is the functions return type
         saga::util::shared_ptr <func_t> func (new func_t ("get_size", &cpi_t::get_size));
 
         // create a call context wich holds the impl
-        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (shared_this <api_t> ())); 
+        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (shared_this <api_t> (), func)); 
 
         // TODO: those should go into the cc c'tor
         cc->set_mode   (m);
         cc->set_policy (saga::impl::call_context::Any);  // any successfull adaptor can do the job
 
-        // func and cc are given to the engine, so it can use the func to call that
+        // cc (and thus func) are given to the engine, so it can use the func to call that
         // function on some cpi
-        engine_->call <api_t, cpi_t> (func, cc);
+        engine_->call /* <cpi_t> */ (cc);
 
         if ( cc->get_state () == saga::async::Failed )
         {
@@ -78,7 +79,7 @@ namespace saga
           throw " file::get_size <> () indicates failed";
         }
 
-        res_t ret (new saga::impl::async::task (cc, engine_));
+        ret_t ret (new saga::impl::async::task (cc, engine_));
 
         // ensure that the returned task's state matches the mode m.
         switch ( m )
@@ -106,9 +107,9 @@ namespace saga
 
         saga::util::shared_ptr <func_t> func (new func_t ("copy", &cpi_t::copy, tgt));
 
-        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (shared_this <api_t> ())); 
+        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (shared_this <api_t> (), func)); 
 
-        engine_->call <api_t, cpi_t> (func, cc);
+        engine_->call /* <cpi_t> */ (cc);
 
         if ( cc->get_state () == saga::async::Failed )
         {

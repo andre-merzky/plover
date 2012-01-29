@@ -1,5 +1,5 @@
 
-#include <saga/engine/funcs.hpp>
+#include <saga/engine/func.hpp>
 
 namespace saga
 {

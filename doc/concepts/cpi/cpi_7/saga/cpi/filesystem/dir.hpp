@@ -7,6 +7,7 @@
 #include <saga/util/shareable.hpp>
 #include <saga/util/stack_tracer.hpp>
 
+#include <saga/engine/cpi_base.hpp>
 #include <saga/engine/call_context.hpp>
 
 namespace saga

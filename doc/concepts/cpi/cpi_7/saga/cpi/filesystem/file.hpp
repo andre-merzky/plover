@@ -8,6 +8,7 @@
 #include <saga/util/stack_tracer.hpp>
 
 #include <saga/api/async/state.hpp>
+#include <saga/engine/cpi_base.hpp>
 #include <saga/engine/call_context.hpp>
 
 namespace saga
