@@ -8,7 +8,7 @@
 #include <saga/util/stack_tracer.hpp>
 
 #include <saga/api/async/state.hpp>
-#include <saga/engine/engine.hpp>
+#include <saga/engine/call_context.hpp>
 
 namespace saga
 {
@@ -29,7 +29,7 @@ namespace saga
           //  the get_size method for the async versions.  The adaptor needs to
           //  switch over the cc's mode enum to see what async flavor is wanted
           //  / needed, but the returned task's state can also be adjusted by
-          //  the calling functor or by the engine. (run()/wait())
+          //  the calling func or by the engine. (run()/wait())
           virtual void get_size    (saga::util::shared_ptr <call_context> cc);
       };
 

@@ -1,30 +1,30 @@
 
-#include <saga/engine/functors.hpp>
+#include <saga/engine/funcs.hpp>
 
 namespace saga
 {
   namespace impl
   {
     //////////////////////////////////////////////////////////////////
-    functor_base::functor_base (std::string name)
+    func_base::func_base (std::string name)
       : name_ (name)
     {
       SAGA_UTIL_STACKTRACE ();
     }
 
-    functor_base::~functor_base (void) 
+    func_base::~func_base (void) 
     {
       SAGA_UTIL_STACKTRACE ();
     }
 
-    std::string functor_base::get_name (void) 
+    std::string func_base::get_name (void) 
     {
       return name_;  
     }
 
-    void functor_base::dump (std::string msg)
+    void func_base::dump (std::string msg)
     {
-      LOGSTR (DEBUG, "functor_base dump")
+      LOGSTR (DEBUG, "func_base dump")
         << " (" << this << ") : " 
         << saga::util::demangle (typeid (*this).name ()) 
         << std::endl;

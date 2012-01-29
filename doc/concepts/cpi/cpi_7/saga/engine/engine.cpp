@@ -11,6 +11,12 @@ namespace saga
 {
   namespace impl
   {
+    saga::util::shared_ptr <engine> & engine::the_engine (void)
+    {
+      static saga::util::shared_ptr <engine> the_engine_ (new engine ());
+      return the_engine_;
+    }
+
     engine::engine (void)
     {
       SAGA_UTIL_STACKTRACE ();

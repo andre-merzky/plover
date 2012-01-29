@@ -17,40 +17,19 @@ namespace saga
   {
     namespace filesystem
     {
-      // saga::impl::dir_instance_data manages the state information for one
-      // specific saga::dir instance.  Note that this state is shared by all
-      // dir adaptors: they can obtained a scoped-locked copy of it via
-      // get_instance_data()
-      class dir_instance_data : public saga::util::shareable
-      {
-        private:
-          saga::util::mutex mtx_;
-          // saga::session s_;
-
-        public:
-          bool        valid;
-          std::string url;
-
-          void dump (std::string msg = "")
-          {
-            LOGSTR (DEBUG, "dir_instance_data dump") 
-              << "dir_instance_data (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl
-              << "    valid       : " << valid << std::endl
-              << "    url         : " << url   << std::endl;
-          }
-      };
-
-
       class dir : public saga::impl::impl_base
       {
         //////////////////////////////////////////////////////////////////////
         //
         // our dir adaptor base class
         //
-        private:
-          saga::util::shared_ptr <dir_instance_data>  idata_;
-
         public:
+          // instance data
+          // FIXME: make private
+          bool        valid_;
+          std::string url_;
+
+
           dir (void);
 
           // as the constructor is also a cpi method, and we thus want to call the
@@ -65,18 +44,12 @@ namespace saga
 
           saga::util::shared_ptr <saga::impl::filesystem::file> open (std::string url);
 
-          // allow adaptor to obtain instance data (unlocked)
-          saga::util::shared_ptr <dir_instance_data> get_instance_data (void)
-          {
-            return idata_;
-          }
-
           void dump (std::string msg = "")
           {
             LOGSTR (DEBUG, "impl::dir dump") 
-              << "impl::dir (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl;
-            idata_.dump ("    idata_      : ");
-            idata_->dump();
+              << "impl::dir (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl
+              << "    valid       : " << valid_ << std::endl
+              << "    url         : " << url_   << std::endl;
           }
       }; // class dir
 

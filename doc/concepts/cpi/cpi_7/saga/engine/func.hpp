@@ -1,6 +1,6 @@
 
-#ifndef SAGA_ENGINE_FUNCTORS_HPP
-#define SAGA_ENGINE_FUNCTORS_HPP
+#ifndef SAGA_ENGINE_FUNC_HPP
+#define SAGA_ENGINE_FUNC_HPP
 
 #include <string>
 
@@ -21,16 +21,16 @@ namespace saga
 
     //////////////////////////////////////////////////////////////////
     //
-    // father and grandfather of all functors
+    // father and grandfather of all funcs
     //
-    class functor_base : public saga::util::shareable
+    class func_base : public saga::util::shareable
     {
       private:
         std::string name_;    // name of function call 
 
       public: 
-        functor_base (std::string name);
-        virtual ~functor_base (void);
+        func_base (std::string name);
+        virtual ~func_base (void);
 
         std::string                                   get_name (void);
 
@@ -44,24 +44,24 @@ namespace saga
     };
 
     template <typename IMPL, typename CPI, typename RET>
-    class functor : public functor_base
+    class func : public func_base
     {
       public:
-        functor (std::string name)
-          : functor_base (name)
+        func (std::string name)
+          : func_base (name)
         {
           SAGA_UTIL_STACKTRACE ();
         }
 
-        virtual ~functor (void) 
+        virtual ~func (void) 
         {
           SAGA_UTIL_STACKTRACE ();
         }
 
         virtual void dump (std::string msg = "")
         {
-          LOGSTR (DEBUG, "functor dump")
-            << "functor         : " << this << " : " << saga::util::demangle (typeid (*this).name ()) << std::endl
+          LOGSTR (DEBUG, "func dump")
+            << "func         : " << this << " : " << saga::util::demangle (typeid (*this).name ()) << std::endl
             << "    IMPL        : " << saga::util::demangle (typeid (IMPL ).name ()) << std::endl
             << "    CPI         : " << saga::util::demangle (typeid (CPI  ).name ()) << std::endl
             << "    RET         : " << saga::util::demangle (typeid (RET  ).name ()) << std::endl;
@@ -71,23 +71,23 @@ namespace saga
 
     /////////////////////////////////////////////////////////////////
     //
-    // functor: stores a cpi function pointer and call arguments, and 
+    // func: stores a cpi function pointer and call arguments, and 
     // calls it on a given cpi
     //
     //////////////////////////////////////////////////////////////////
-    // functor with 0 args
+    // func with 0 args
     template <typename IMPL, 
               typename CPI, 
               typename RET>
-    class functor_0 : public functor <IMPL, CPI, RET>
+    class func_0 : public func <IMPL, CPI, RET>
     {
       private:           
         void (CPI::* call_)(saga::util::shared_ptr <call_context>);
 
       public: 
-        functor_0 (std::string name, 
+        func_0 (std::string name, 
                    void (CPI::*call )(saga::util::shared_ptr <call_context>))
-          : functor <IMPL, CPI, RET> (name)
+          : func <IMPL, CPI, RET> (name)
           , call_   (call) 
         { 
           SAGA_UTIL_STACKTRACE ();
@@ -109,8 +109,8 @@ namespace saga
 
         void dump (std::string msg = "")
         {
-          LOGSTR (DEBUG, "functor_0 dump") 
-            << "functor (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl
+          LOGSTR (DEBUG, "func_0 dump") 
+            << "func (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl
             << "    call        : " << saga::util::demangle (typeid (call_).name ()) << " : " << this->get_name () << std::endl
             << "    IMPL        : " << saga::util::demangle (typeid (IMPL ).name ()) << std::endl
             << "    CPI         : " << saga::util::demangle (typeid (CPI  ).name ()) << std::endl
@@ -119,12 +119,12 @@ namespace saga
     };
 
     //////////////////////////////////////////////////////////////////
-    // functor with 1 arg
+    // func with 1 arg
     template <typename IMPL, 
               typename CPI, 
               typename RET, 
               typename ARG_1> 
-    class functor_1 : public functor <IMPL, CPI, RET>
+    class func_1 : public func <IMPL, CPI, RET>
     {
       private:           
         void (CPI::* call_)(saga::util::shared_ptr <call_context>, ARG_1); 
@@ -132,10 +132,10 @@ namespace saga
 
 
       public: 
-        functor_1 (std::string name, 
+        func_1 (std::string name, 
                    void (CPI::*call )(saga::util::shared_ptr <call_context>, ARG_1), 
                    ARG_1 arg_1) 
-          : functor <IMPL, CPI, RET> (name)
+          : func <IMPL, CPI, RET> (name)
           , call_   (call) 
           , arg_1_  (arg_1) 
         { 
@@ -188,8 +188,8 @@ namespace saga
 
         void dump (std::string msg = "")
         {
-          LOGSTR (DEBUG, "functor_1 dump") 
-            << "functor (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl
+          LOGSTR (DEBUG, "func_1 dump") 
+            << "func (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl
             << "    call        : " << saga::util::demangle (typeid (call_).name ()) << " : " << this->get_name () << std::endl
             << "    ARG 1       : " << saga::util::demangle (typeid (ARG_1).name ()) << " : " << arg_1_      << std::endl
             << "    IMPL        : " << saga::util::demangle (typeid (IMPL ).name ()) << std::endl
@@ -200,7 +200,7 @@ namespace saga
 
     //////////////////////////////////////////////////////////////////
     //
-    // FIXME: functor versions for more args follow here....
+    // FIXME: func versions for more args follow here....
     //
 
 
@@ -208,5 +208,5 @@ namespace saga
 
 } // namespace saga
 
-#endif //  SAGA_ENGINE_FUNCTORS_HPP
+#endif //  SAGA_ENGINE_FUNC_HPP
 

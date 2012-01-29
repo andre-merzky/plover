@@ -29,7 +29,6 @@ namespace saga
           typedef saga::impl::void_t                         void_t;
           typedef saga::impl::filesystem::file               api_t;
           typedef saga::impl::filesystem::file_cpi           cpi_t;
-          typedef saga::impl::filesystem::file_instance_data idata_t;
 
         public:
           file_adaptor_1    (void);
@@ -48,7 +47,6 @@ namespace saga
           typedef saga::impl::void_t                        void_t;
           typedef saga::impl::filesystem::dir               api_t;
           typedef saga::impl::filesystem::dir_cpi           cpi_t;
-          typedef saga::impl::filesystem::dir_instance_data idata_t;
 
         public:
           dir_adaptor_1    (void);

@@ -11,7 +11,6 @@ namespace saga
   {
     class stack_tracer
     {
-      // FIXME: we should maintain one stacktrace per thread, obviously
       private:
         static unsigned int indent_;
 
@@ -22,8 +21,6 @@ namespace saga
 
         std::string indent   (void);
         std::string unindent (void);
-
-        static std::vector <std::string> stack_;
 
 
       public:

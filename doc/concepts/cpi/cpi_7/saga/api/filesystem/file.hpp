@@ -31,8 +31,11 @@ namespace saga
           // NOTE: the two lines below MUST be semantically equivalent to the
           // sync call.
           saga::async::task t = get_size <saga::async::Sync> ();
-          return (t.get_result <int> ());
+          int ret = t.get_result <int> ();
 
+          LOGSTR (DEBUG, "file api get_size") << "size: " << ret << std::endl;
+
+          return ret;
         }
 
         template <enum saga::async::mode M>

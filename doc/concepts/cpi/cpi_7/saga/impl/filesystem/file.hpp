@@ -17,45 +17,21 @@ namespace saga
   {
     namespace filesystem
     {
-      // saga::impl::file_instance_data manages the state information for one
-      // specific saga::file instance.  Note that this state is shared by all
-      // file adaptors: they can obtained a scoped-locked copy of it via
-      // get_instance_data()
-      class file_instance_data : public saga::util::shareable
-      {
-        private:
-          // saga::session s_;
-
-        public:
-          std::string url;
-          size_t      pos;
-          bool        valid;
-
-          void dump (std::string msg = "")
-          {
-            LOGSTR (DEBUG, "file_instance_data dump") 
-              << "file_instance_data (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl
-              << "    valid       : " << valid << std::endl
-              << "    url         : " << url   << std::endl
-              << "    pos         : " << pos   << std::endl;
-          }
-      };
-
-
       // saga impl class
       class file : public saga::impl::impl_base
       {
-        private:
-          saga::util::shared_ptr <file_instance_data> idata_;
-
         public:
-          file (void);
+          // FIXME: valid_ could go into impl_base, as most/all impl's will have to
+          // step construction/destruction
+          bool        valid_;
 
-          // allow adaptor to obtain instance data (unlocked)
-          saga::util::shared_ptr <file_instance_data> get_instance_data (void)
-          {
-            return idata_;
-          }
+          // instance data
+          // FIXME: make private
+          std::string url_;
+          size_t      pos_;
+
+
+          file (void);
 
           // as the constructor is also a cpi method, and we thus want to call the
           // cpi, we want to be finished with the actual object construction,
@@ -74,10 +50,11 @@ namespace saga
           void dump (std::string msg = "")
           {
             LOGSTR (DEBUG, "impl::file dump") 
-              << "impl::file (" << this << ") : " << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl;
-            idata_.dump  ("    idata_      : ");
-            idata_->dump ();
-            impl_base::dump ();
+              << "impl::file (" << this << ") : " 
+              << saga::util::demangle (typeid (*this).name ()) << " : " << msg << std::endl
+              << "    valid       : " << valid_ << std::endl
+              << "    url         : " << url_   << std::endl
+              << "    pos         : " << pos_   << std::endl;
           }
 
       }; // class file

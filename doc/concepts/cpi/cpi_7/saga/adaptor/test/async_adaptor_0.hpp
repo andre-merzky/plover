@@ -24,7 +24,6 @@ namespace saga
         private:
           typedef saga::impl::async::task               api_t;
           typedef saga::impl::async::task_cpi           cpi_t;
-          typedef saga::impl::async::task_instance_data idata_t;
 
           static void * threaded_cc (void * cc_sp);
 
@@ -36,7 +35,6 @@ namespace saga
           void get_state   (saga::util::shared_ptr <saga::impl::call_context> cc);
           void get_result  (saga::util::shared_ptr <saga::impl::call_context> cc);
           void run         (saga::util::shared_ptr <saga::impl::call_context> cc);
-          // FIXME: need second arg, functor (or functor goes into instance_data)
       };
 
     } // namespace test

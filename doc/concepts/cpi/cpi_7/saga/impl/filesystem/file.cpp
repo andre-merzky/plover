@@ -11,13 +11,12 @@ namespace saga
     {
       //////////////////////////////////////////////////////////////////
       file::file (void)                    // FIXME: the file impl and pimpl object hierarchies are ignored
-        : idata_ (new file_instance_data)
       {
         SAGA_UTIL_STACKTRACE ();
 
-        idata_->valid = false;
-        idata_->url   = "";
-        idata_->pos   = 0;
+        valid_ = false;
+        url_   = "";
+        pos_   = 0;
       }
 
       //////////////////////////////////////////////////////////////////
@@ -25,16 +24,14 @@ namespace saga
       {
         SAGA_UTIL_STACKTRACE ();
 
-        saga::util::scoped_lock sl (idata_->get_mutex ());
-
-        idata_->url   = url;
-        idata_->pos   = 0;
-        idata_->valid = true;
+        url_   = url;
+        pos_   = 0;
+        valid_ = true;
 
         typedef saga::impl::void_t                                       res_t;
         typedef saga::impl::filesystem::file                             api_t;
         typedef saga::impl::filesystem::file_cpi                         cpi_t;
-        typedef saga::impl::functor_1 <api_t, cpi_t, res_t, std::string> func_t;
+        typedef saga::impl::func_1 <api_t, cpi_t, res_t, std::string> func_t;
 
         saga::util::shared_ptr <func_t> func (new func_t ("constructor", &cpi_t::constructor, url));
 
@@ -42,7 +39,7 @@ namespace saga
 
         engine_->call <api_t, cpi_t> (func, cc);
 
-        if ( cc->get_state () == saga::impl::call_context::Failed )
+        if ( cc->get_state () == saga::async::Failed )
         {
           SAGA_UTIL_STACKDUMP ();
           throw " file::constructor indicates failed";
@@ -58,9 +55,9 @@ namespace saga
         typedef saga::util::shared_ptr <saga::impl::async::task>  res_t;
         typedef saga::impl::filesystem::file                      api_t;
         typedef saga::impl::filesystem::file_cpi                  cpi_t;
-        typedef saga::impl::functor_0 <api_t, cpi_t, res_t>       func_t;
+        typedef saga::impl::func_0 <api_t, cpi_t, res_t>       func_t;
 
-        // create a functor which hold the cpi class' get_size() function
+        // create a func which hold the cpi class' get_size() function
         // pointer.  The second templ parameter is the functions return type
         saga::util::shared_ptr <func_t> func (new func_t ("get_size", &cpi_t::get_size));
 
@@ -71,17 +68,17 @@ namespace saga
         cc->set_mode   (m);
         cc->set_policy (saga::impl::call_context::Any);  // any successfull adaptor can do the job
 
-        // func and cc are given to the engine, so it can use the functor to call that
+        // func and cc are given to the engine, so it can use the func to call that
         // function on some cpi
         engine_->call <api_t, cpi_t> (func, cc);
 
-        if ( cc->get_state () == saga::impl::call_context::Failed )
+        if ( cc->get_state () == saga::async::Failed )
         {
           SAGA_UTIL_STACKDUMP ();
           throw " file::get_size <> () indicates failed";
         }
 
-        res_t ret (new saga::impl::async::task (cc));
+        res_t ret (new saga::impl::async::task (cc, engine_));
 
         // ensure that the returned task's state matches the mode m.
         switch ( m )
@@ -105,7 +102,7 @@ namespace saga
         typedef saga::impl::void_t                                       res_t;
         typedef saga::impl::filesystem::file                             api_t;
         typedef saga::impl::filesystem::file_cpi                         cpi_t;
-        typedef saga::impl::functor_1 <api_t, cpi_t, res_t, std::string> func_t;
+        typedef saga::impl::func_1 <api_t, cpi_t, res_t, std::string> func_t;
 
         saga::util::shared_ptr <func_t> func (new func_t ("copy", &cpi_t::copy, tgt));
 
@@ -113,7 +110,7 @@ namespace saga
 
         engine_->call <api_t, cpi_t> (func, cc);
 
-        if ( cc->get_state () == saga::impl::call_context::Failed )
+        if ( cc->get_state () == saga::async::Failed )
         {
           SAGA_UTIL_STACKDUMP ();
           throw " file::copy () indicates failed";

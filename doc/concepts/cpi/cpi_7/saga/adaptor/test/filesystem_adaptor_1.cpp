@@ -30,11 +30,10 @@ namespace saga
         LOGSTR (INFO, "file_adaptor_1 ctor") << "file adaptor 1 : constructor (" << url << ")" << std::endl;
 
         saga::util::shared_ptr <api_t>   impl  = cc->get_impl (); 
-        saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
 
-        idata->url = url;
+        impl->url_ = url;
 
-        cc->set_state (saga::impl::call_context::Done);
+        cc->set_state (saga::async::Done);
 
         return;
       } 
@@ -72,15 +71,14 @@ namespace saga
               LOGSTR (INFO, "file_adaptor_1 get_size") << "file adaptor 1 : get_size ()" << std::endl;
 
               saga::util::shared_ptr <api_t>   impl  = cc->get_impl (); 
-              saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
 
               struct stat buf;
-              (void) ::stat (idata->url.c_str (), &buf);
+              (void) ::stat (impl->url_.c_str (), &buf);
 
               {
                 // FIXME: scoped lock for cc.  always.
                 cc->set_result <int> (buf.st_size);
-                cc->set_state        (saga::impl::call_context::Done);
+                cc->set_state        (saga::async::Done);
               }
 
               LOGSTR (INFO, "file_adaptor_1 get_size") << "===== get_size <Sync> () done ===== " << std::endl;
@@ -97,9 +95,8 @@ namespace saga
         LOGSTR (INFO, "file_adaptor_1 copy") << "file adaptor 1 : copy " << tgt << std::endl;
 
         saga::util::shared_ptr <api_t>   impl  = cc->get_impl (); 
-        saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
 
-        int res = ::system ((std::string ("cp ") + idata->url + " " + tgt).c_str ());
+        int res = ::system ((std::string ("cp ") + impl->url_ + " " + tgt).c_str ());
 
         if ( res != 0 )
         {
@@ -108,7 +105,7 @@ namespace saga
         }
         else
         {
-          // cc->set_state (saga::impl::call_context::Done);
+          // cc->set_state (saga::async::Done);
         }
 
         return;
@@ -133,11 +130,10 @@ namespace saga
         LOGSTR (INFO, "dir_adaptor_1 ctor") << "dir adaptor 1 : constructor (" << url << ")" << std::endl;
 
         saga::util::shared_ptr <api_t>   impl  = cc->get_impl (); 
-        saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
 
-        idata->url = url;
+        impl->url_ = url;
 
-        cc->set_state (saga::impl::call_context::Done);
+        cc->set_state (saga::async::Done);
 
         return;
       } 
@@ -146,19 +142,18 @@ namespace saga
       {
         SAGA_UTIL_STACKTRACE ();
         saga::util::shared_ptr <api_t>   impl  = cc->get_impl ();  
-        saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
 
-        LOGSTR (INFO, "dir_adaptor_1 get_url") << "dir adaptor 1 : get_url: " << idata->url << std::endl;
+        LOGSTR (INFO, "dir_adaptor_1 get_url") << "dir adaptor 1 : get_url: " << impl->url_ << std::endl;
 
-        cc->set_result <std::string> (idata->url);
-        cc->set_state                (saga::impl::call_context::Done);
+        cc->set_result <std::string> (impl->url_);
+        cc->set_state                (saga::async::Done);
 
         return;
       }
 
 
       void dir_adaptor_1::open (saga::util::shared_ptr <saga::impl::call_context> cc, 
-                                std::string                                       url)
+                                std::string                                       url_)
       {
         SAGA_UTIL_STACKTRACE ();
 
@@ -166,9 +161,8 @@ namespace saga
         typedef saga::util::shared_ptr <saga::impl::filesystem::file> res_t;
 
         saga::util::shared_ptr <api_t>   impl  = cc->get_impl ();  
-        saga::util::shared_ptr <idata_t> idata = impl->get_instance_data ();
 
-        std::string new_url = idata->url + "/" + url;
+        std::string new_url = impl->url_ + "/" + url_;
 
         LOGSTR (INFO, "dir_adaptor_1 open") << "1--------------------------------------------" << std::endl;
         LOGSTR (INFO, "dir_adaptor_1 open") << "dir adaptor 1 : open: " << new_url << std::endl;
@@ -190,7 +184,7 @@ namespace saga
         LOGSTR (INFO, "dir_adaptor_1 open") << "4--------------------------------------------" << std::endl;
 
         cc->set_result <res_t> (ret);
-        cc->set_state          (saga::impl::call_context::Done);
+        cc->set_state          (saga::async::Done);
 
         LOGSTR (INFO, "dir_adaptor_1 open") << "5--------------------------------------------" << std::endl;
 

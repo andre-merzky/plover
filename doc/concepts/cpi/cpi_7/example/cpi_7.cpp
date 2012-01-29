@@ -14,7 +14,7 @@ int main ()
   try
   {
     // file open, sync
-    if ( 1 )
+    if ( 0 )
     {
       LOGSTR (INFO, "main out") << "-sync dir ops #########"  << std::endl;
     
@@ -34,7 +34,7 @@ int main ()
 
 
     // file copy and get size, sync
-    if ( 1 )
+    if ( 0 )
     {
       LOGSTR (INFO, "main out") << "-sync file ops ########"  << std::endl;
     
@@ -57,7 +57,7 @@ int main ()
 
       LOGSTR (INFO, "main out") << "1 ############################################################"  << std::endl;
       
-      saga::async::task t = f.get_size <saga::async::Sync> ();
+      saga::async::task t = f.get_size <saga::async::Async> ();
       
       LOGSTR (INFO, "main out") << "2 ############################################################"  << std::endl;
 

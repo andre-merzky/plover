@@ -11,7 +11,9 @@
 #include <saga/api/async/state.hpp>
 
 #include <saga/engine/cpi_base.hpp>
+#include <saga/engine/impl_base.hpp>
 #include <saga/engine/result_types.hpp>
+#include <saga/engine/funcs.hpp>
 
 namespace saga
 {
@@ -26,7 +28,7 @@ namespace saga
       public:
         // We re-use the API-level task mode, so we do not define it here.
         // Alas, C++ does not define a good way to do something like this:
-        // typedef saga::async::mode saga::impl::call_context::mode;
+        // typedef saga::async::mode saga::async::mode;
 
         enum policy 
         {
@@ -35,20 +37,24 @@ namespace saga
           Collect    = 2,  // results are combined over all adaptors
         };
 
-        enum state 
-        {
-          New        = 0, 
-          Running    = 1, 
-          Done       = 2, 
-          Failed     = 3   // Needed?
-        };
+        // FIXME: we would like to inherit the saga::async enum, but that is not
+        // possible in C++ :-(
+        //
+        // enum state 
+        // {
+        //   New        = 0, 
+        //   Running    = 1, 
+        //   Done       = 2, 
+        //   Failed     = 3   // Needed?
+        // };
 
 
       // FIXME: don't use async::state
       private:
-        saga::util::shared_ptr <shareable>    impl_;              // calling object (has session)
+        // FIXME: the shareable should really be an impl_base?
+        saga::util::shared_ptr <impl_base>    impl_;              // calling object (has session)
         saga::async::mode                     mode_;              // sync, async, task
-        state                                 state_;             // new, running, done, failed ...
+        saga::async::state                    state_;             // new, running, done, failed ...
         policy                                policy_;            // any, bound, collect, ...
    ///  saga::impl::call_state                task_state_;        // new, running, done, failed ...
     //  saga::exception                       exception_;         // exception stack collected from adaptors_used_/failed
@@ -61,21 +67,24 @@ namespace saga
     //  std::vector <std::string>             adaptors_;          // adaptors to use
     //  std::vector <std::string>             adaptors_skip_;     // adaptors not to use
 
+        saga::util::shared_ptr <func_base>         func_;
         saga::util::shared_ptr <saga::impl::result_t> result_;    // container for function call result
         bool                                          result_ok_; // is result allocated/set?
 
       public:
         // TODO: reconsider to make call_context a template <res_t> after all,
         // to avoid the fragility with valid_result_.
-        call_context (saga::util::shared_ptr <shareable>    impl);
+        call_context (saga::util::shared_ptr <impl_base>    impl, 
+                      saga::util::shared_ptr <func_base> func);
 
-        saga::util::shared_ptr <shareable>    get_impl (void);
+        saga::util::shared_ptr <impl_base>    get_impl (void);
+        saga::util::shared_ptr <func_base> get_func (void);
 
         void                set_mode   (saga::async::mode   m);
         saga::async::mode   get_mode   (void);
 
-        void   set_state  (state  s);
-        state  get_state  (void);
+        void                set_state  (saga::async::state  s);
+        saga::async::state  get_state  (void);
 
         void   set_policy (policy p);
         policy get_policy (void);
