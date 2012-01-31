@@ -71,7 +71,6 @@ namespace saga
         SAGA_UTIL_STACKTRACE ();
 
         // FIXME: t_cc_->wait ();
-        ::sleep (3);
         t_cc_->dump ();
 
         return (t_cc_->get_result ());

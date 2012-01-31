@@ -29,7 +29,6 @@ namespace saga
       , state_     (saga::async::New)
       , mode_      (saga::async::Sync)
       , policy_    (Any)
-      , result_ok_ (false)
     {
       SAGA_UTIL_STACKTRACE ();
     }
@@ -48,7 +47,7 @@ namespace saga
 
     saga::util::shared_ptr <saga::impl::result_t> call_context::get_result  (void)
     {
-      if ( ! result_ok_ )
+      if ( ! result_ )
       {
         SAGA_UTIL_STACKDUMP ();
         throw ("result is not defined, yet");
@@ -71,7 +70,7 @@ namespace saga
       func_->dump        ();
 
       result_.dump       ("    result_     : ");
-      if ( result_ok_ )
+      if ( result_ )
         result_->dump    ();
     }
 

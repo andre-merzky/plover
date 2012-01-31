@@ -14,7 +14,7 @@ int main ()
   try
   {
     // file open, sync
-    if ( 0 )
+    if ( 1 )
     {
       LOGSTR (INFO, "main out") << "-sync dir ops #########"  << std::endl;
     
@@ -23,6 +23,11 @@ int main ()
     
       saga::filesystem::file f1 = d.open ("passwd");
       size_t size1 = f1.get_size ();
+      for ( int i = 0; i < 10000; i++ )
+      {
+        std::cout << "." << std::flush;
+        size_t size1 = f1.get_size ();
+      }
       LOGSTR (INFO, "main out") << "file1 size: " << size1 << std::endl;
 
       saga::filesystem::file f2 = d.open ("group");
@@ -49,7 +54,7 @@ int main ()
 
 
     // file get_size, async
-    if ( 1 )
+    if ( 0 )
     {
       LOGSTR (INFO, "main out") << "0 # (a)sync get_size ###########################################"  << std::endl;
       

@@ -127,11 +127,12 @@ namespace saga
             // which can run it.
 
             // create a call context to run task.run
-            typedef saga::impl::void_t                          res_t;
-            typedef saga::impl::async::task                     api_t;
-            typedef saga::impl::async::task_cpi                 cpi_t;
+            typedef saga::impl::void_t                       res_t;
+            typedef saga::impl::async::task                  api_t;
+            typedef saga::impl::async::task_cpi              cpi_t;
             typedef saga::impl::func_0 <api_t, cpi_t, res_t> func_t;
 
+            // get only task adaptors
             std::vector <saga::util::shared_ptr <cpi_t> > cpis = get_cpis <cpi_t> ();
 
             saga::util::shared_ptr <func_t> t_func (new func_t ("run", &cpi_t::run));

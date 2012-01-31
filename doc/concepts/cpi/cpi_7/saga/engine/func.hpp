@@ -8,7 +8,7 @@
 #include <saga/util/logging.hpp>
 #include <saga/util/stack_tracer.hpp>
 
-// FIXME: we do not actiually need RET, but is kind of keeps the whole function
+// FIXME: we do not actually *need* RET, but is kind of keeps the whole function
 // signature together in one place.  Kind of...
 
 namespace saga
@@ -21,7 +21,7 @@ namespace saga
 
     //////////////////////////////////////////////////////////////////
     //
-    // father and grandfather of all funcs
+    // father and grandfather of all funcs, no templates
     //
     class func_base : public saga::util::shareable
     {
@@ -33,8 +33,6 @@ namespace saga
         virtual ~func_base (void);
 
         std::string                                   get_name (void);
-
-        virtual int  nargs (void) { return -1; }
 
         virtual void call_cpi (saga::util::shared_ptr <saga::impl::cpi_base>      cpi, 
                                saga::util::shared_ptr <saga::impl::call_context>  cc) = 0;
@@ -104,8 +102,6 @@ namespace saga
           // FIXME: assert valid function ptr
           ((*casted).*(call_)) (cc); 
         }
-
-        virtual int  nargs (void) { return 0; }
 
         void dump (std::string msg = "")
         {
@@ -183,8 +179,6 @@ namespace saga
 
           ((*casted).*(call_)) (cc, arg_1_); 
         }
-
-        virtual int  nargs (void) { return 1; }
 
         void dump (std::string msg = "")
         {
