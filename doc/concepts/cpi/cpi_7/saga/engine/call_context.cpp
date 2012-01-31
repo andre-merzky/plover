@@ -45,17 +45,6 @@ namespace saga
     void                 call_context::set_policy (policy p) { policy_ = p;    }
     call_context::policy call_context::get_policy (void)     { return policy_; }
 
-    saga::util::shared_ptr <saga::impl::result_t> call_context::get_result  (void)
-    {
-      if ( ! result_ )
-      {
-        SAGA_UTIL_STACKDUMP ();
-        throw ("result is not defined, yet");
-      }
-
-      return result_;
-    }
-
     void call_context::dump (std::string msg)
     {
       // FIXME: to_key can throw
@@ -68,10 +57,6 @@ namespace saga
       impl_->dump        ();
       func_.dump         ("    IMPL_       : ");
       func_->dump        ();
-
-      result_.dump       ("    result_     : ");
-      if ( result_ )
-        result_->dump    ();
     }
 
   } // namespace impl

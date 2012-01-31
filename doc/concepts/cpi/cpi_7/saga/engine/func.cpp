@@ -6,8 +6,9 @@ namespace saga
   namespace impl
   {
     //////////////////////////////////////////////////////////////////
-    func_base::func_base (std::string name)
-      : name_ (name)
+    func_base::func_base (std::string name, result_t * rp)
+      : name_   (name)
+      , result_ (rp)
     {
       SAGA_UTIL_STACKTRACE ();
     }

@@ -83,7 +83,7 @@ namespace saga
           throw " dir::get_url () indicates failed";
         }
 
-        return cc->get_result <res_t> ();
+        return cc->get_func ()->get_result <res_t> ();
       }
 
       //////////////////////////////////////////////////////////////////
@@ -108,7 +108,7 @@ namespace saga
           throw " dir::open () indicates failed";
         }
 
-        return cc->get_result <res_t> ();
+        return cc->get_func ()->get_result <res_t> ();
       }
 
     } // namespace filesystem

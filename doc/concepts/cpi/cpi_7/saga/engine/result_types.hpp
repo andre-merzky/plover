@@ -14,20 +14,24 @@
 // a call context represents a function call to be dispatched to a 
 // backend.  That function call usually has a typed return value.
 // In order to keep the call_context template free, we wrap that
-// result in a separate result_t.  Well, result_t itself is a 
-// interface class used by the cc -- the actual templetized container
-// inherits that interface class.
+// result in a separate result_t, and add it to the function class.
+// Well, result_t itself is a interface class used by func_base 
+// -- the actual templetized container inherits that interface class.
 //
-// class call_context
+// class func_base
 // {
 //   private:
 //    shared_ptr <result_t> result_; // no template here
 //
 //  public:
+//    func_base (shared_ptr <result_t> sp)
+//      result_ (sp)
+//    {
+//    }
+//
 //    template <typename T>
 //    void set_result (T res)
 //    {
-//        result_ = shared_ptr <result_t> (new result_t_detail_ <T> ());
 //        result_->set <T> (res);
 //    }
 //
@@ -37,6 +41,15 @@
 //      return result_->get <T> ();
 //    }
 // }
+//
+// template <typename RET>
+// func : public func_base 
+// {
+//   public:
+//     func (void)
+//       : func_base (new result_t_detail_ <RET> ())
+//     {
+//     }
 //
 //////////////////////////////////////////////////////////////////////
 

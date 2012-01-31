@@ -118,7 +118,7 @@ namespace saga
         }
 
         // FIXME: nuclear when void_t result types get allocated
-        // return cc->get_result <res_t> ();
+        // return cc->get_func ()->get_result <res_t> ();
       }
 
     } // namespace filesystem

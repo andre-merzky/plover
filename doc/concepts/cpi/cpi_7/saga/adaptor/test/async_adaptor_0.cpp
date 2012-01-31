@@ -73,7 +73,7 @@ namespace saga
 
           // t_cc->dump ();
           // t_cc->set_state (saga::async::Done);
-          // t_cc->set_result <int> (42);
+          // t_cc->get_func ()->set_result <int> (42);
           t_cc->dump ();
 
           LOGSTR (INFO, "async_adaptor_0 threaded_cc") << "thread done " << pthread_self () << std::endl;
@@ -118,7 +118,7 @@ namespace saga
         saga::util::shared_ptr <api_t>   impl  = cc->get_impl (); 
 
         // confirm result type
-        cc->set_result <res_t> (impl->t_cc_->get_state ());
+        cc->get_func ()->set_result <res_t> (impl->t_cc_->get_state ());
 
         cc->set_state (saga::async::Done);
 
@@ -133,7 +133,7 @@ namespace saga
 
         saga::util::shared_ptr <api_t>   impl  = cc->get_impl (); 
 
-        cc->set_result <res_t> (impl->t_cc_->get_result <res_t> ());
+        cc->get_func ()->set_result <res_t> (impl->t_cc_->get_func ()->get_result <res_t> ());
         cc->set_state          (saga::async::Done);
 
         return;

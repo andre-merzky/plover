@@ -11,7 +11,6 @@
 #include <saga/api/async/state.hpp>
 
 #include <saga/engine/impl_base.hpp>
-#include <saga/engine/result_types.hpp>
 #include <saga/engine/func.hpp>
 
 //////////////////////////////////////////////////////////////////////
@@ -58,7 +57,7 @@ namespace saga
           Collect    = 2,  // results are combined over all adaptors
         };
 
-        // FIXME: we would like to inherit the saga::async enum, but that is not
+        // FIXME: we would like to inherit the saga::async enums, but that is not
         // possible in C++ :-(
         //
         // enum state 
@@ -67,6 +66,13 @@ namespace saga
         //   Running    = 1, 
         //   Done       = 2, 
         //   Failed     = 3   // Needed?
+        // };
+
+        // enum mode 
+        // {
+        //   Sync       = 0, 
+        //   Async      = 1, 
+        //   Task       = 2
         // };
 
 
@@ -78,7 +84,6 @@ namespace saga
         saga::async::mode                     mode_;              // call mode   - sync, async, task
         saga::async::state                    state_;             // call state  - new, running, done, failed ...
         policy                                policy_;            // call policy - any, bound, collect, ...
-        saga::util::shared_ptr <result_t>     result_;            // call result container
 
     //  saga::exception                       exception_;         // exception stack collected from adaptors_used_/failed
     //  saga::util::timestamp                 created_;           // created time stamp
@@ -92,8 +97,6 @@ namespace saga
     //  std::vector <std::string>             adaptors_used_;     // adaptors which have been used (audit trail)
 
       public:
-        // TODO: reconsider to make call_context a template <res_t> after all,
-        // to avoid the fragility with valid_result_.
         call_context (saga::util::shared_ptr <impl_base> impl, 
                       saga::util::shared_ptr <func_base> func);
 
@@ -110,65 +113,6 @@ namespace saga
         policy get_policy (void);
 
         void dump (std::string msg = "");
-
-
-        template <typename T>
-        void set_result (T res)
-        {
-          // FIXME: make sure this is called only once, or, at least, always
-          // called with the same type.  We might want to do that on
-          // result_t_detail level though.  Also, this ambiguity would be
-          // avoided by class level templatization
-
-          SAGA_UTIL_STACKTRACE ();
-
-          LOGSTR (DEBUG, "call_context set_result") << "typeset   " << saga::util::demangle (typeid (T).name ()) << std::endl;
-
-          result_ = saga::util::shared_ptr <saga::impl::result_t> (new saga::impl::result_t_detail_ <T> ());
-          result_->set <T> (res);
-        }
-
-        template <typename T>
-        bool has_result_type  (void) 
-        {
-          SAGA_UTIL_STACKTRACE ();
-
-          if ( ! result_ )
-          {
-            // no type set, yet
-            SAGA_UTIL_STACKDUMP ();
-            throw "result type is not yet defined";
-          }
-
-          return result_->has_a <T> ();
-        }
-
-
-        template <typename T>
-        T get_result  (void) 
-        {
-          SAGA_UTIL_STACKTRACE ();
-
-          if ( ! result_ )
-          {
-            // no type set, yet
-            SAGA_UTIL_STACKDUMP ();
-            throw "result type is not yet set";
-          }
-
-          if ( ! has_result_type <T> () )
-          {
-            LOGSTR (DEBUG, "call_context get_result") << "requested " << saga::util::demangle (typeid (T).name ()) << std::endl;
-            LOGSTR (DEBUG, "call_context get_result") << "available " << result_->get_ptype () << std::endl;
-
-            SAGA_UTIL_STACKDUMP ();
-            throw "Incorrect result type requested";
-          }
-
-          return result_->get <T> ();
-        }
-
-        saga::util::shared_ptr <saga::impl::result_t> get_result  (void);
     };
 
   } // namespace impl

@@ -77,7 +77,7 @@ namespace saga
 
               {
                 // FIXME: scoped lock for cc.  always.
-                cc->set_result <int> (buf.st_size);
+                cc->get_func ()->set_result <int> (buf.st_size);
                 cc->set_state        (saga::async::Done);
               }
 
@@ -145,7 +145,7 @@ namespace saga
 
         LOGSTR (INFO, "dir_adaptor_1 get_url") << "dir adaptor 1 : get_url: " << impl->url_ << std::endl;
 
-        cc->set_result <std::string> (impl->url_);
+        cc->get_func ()->set_result <std::string> (impl->url_);
         cc->set_state                (saga::async::Done);
 
         return;
@@ -183,8 +183,8 @@ namespace saga
         cc->dump ();
         LOGSTR (INFO, "dir_adaptor_1 open") << "4--------------------------------------------" << std::endl;
 
-        cc->set_result <res_t> (ret);
-        cc->set_state          (saga::async::Done);
+        cc->get_func ()->set_result <res_t> (ret);
+        cc->set_state (saga::async::Done);
 
         LOGSTR (INFO, "dir_adaptor_1 open") << "5--------------------------------------------" << std::endl;
 

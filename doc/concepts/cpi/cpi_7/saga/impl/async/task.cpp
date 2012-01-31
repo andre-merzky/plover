@@ -63,7 +63,7 @@ namespace saga
           throw " task::get_state failed - can't get state";
         }
 
-        return cc->get_result <res_t> ();
+        return cc->get_func ()->get_result <res_t> ();
       }
 
       saga::util::shared_ptr <result_t> task::get_result (void)
@@ -73,7 +73,7 @@ namespace saga
         // FIXME: t_cc_->wait ();
         t_cc_->dump ();
 
-        return (t_cc_->get_result ());
+        return (t_cc_->get_func ()->get_result ());
 
         // typedef saga::util::shared_ptr <result_t>           res_t;
         // typedef saga::impl::async::task                     api_t;
@@ -92,7 +92,7 @@ namespace saga
         //   throw " task::get_state indicates failed";
         // }
 
-        // return cc->get_result <res_t> ();
+        // return cc->get_func ()->get_result <res_t> ();
       }
 
 
