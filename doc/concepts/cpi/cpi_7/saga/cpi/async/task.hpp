@@ -21,6 +21,7 @@ namespace saga
           virtual void get_state   (saga::util::shared_ptr <call_context> cc);
           virtual void get_result  (saga::util::shared_ptr <call_context> cc);
           virtual void run         (saga::util::shared_ptr <call_context> cc);
+          virtual void wait        (saga::util::shared_ptr <call_context> cc);
       };
 
     } // namespace async

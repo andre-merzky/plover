@@ -37,6 +37,12 @@ namespace saga
       impl_->run ();
     }
 
+    void task::wait (void)
+    {
+      SAGA_UTIL_STACKTRACE ();
+      impl_->wait ();
+    }
+
   } // namespace async
 
 } // namespace saga

@@ -32,15 +32,18 @@ namespace saga
 
           t_cc  = t_cc_tmp->get_shared_ptr (); 
 
+          // set task zu Running
+          t_cc->set_state (saga::async::Running);
+
+          // signal the main thread that init is done.
+          /// t_cc->unlock (); // FIXME
+
           LOGSTR (INFO, "async_adaptor_0 ctor") << "async adaptor 0 : constructor ()" << std::endl;
           LOGSTR (INFO, "async_adaptor_0 threaded_cc") << "thread created " << pthread_self () << std::endl;
 
           t_cc->dump ();
 
           LOGSTR (INFO, "async_adaptor_0 threaded_cc") << "1 xxxxxxxxxxxxxxx" << std::endl;
-
-          // set task zu Running
-          t_cc->set_state (saga::async::Running);
 
           // we want to wrap a sync call...
           // FIXME: shouldn't we operate on a copy?  At least we need to make
@@ -54,7 +57,7 @@ namespace saga
           while ( i < 10 )
           {
             LOGSTR (INFO, "async_adaptor_0 threaded_cc") << "thread is running " << i << std::endl;
-            ::sleep (1);
+            ::usleep (TASK_DELAY);
             i++;
           }
 
@@ -70,10 +73,6 @@ namespace saga
           LOGSTR (INFO, "async_adaptor_0 threaded_cc") << "6 xxxxxxxxxxxxxxx" << std::endl;
 
           // the sync call is now in Done state (or Failed etc), and its result is stored
-
-          // t_cc->dump ();
-          // t_cc->set_state (saga::async::Done);
-          // t_cc->get_func ()->set_result <int> (42);
           t_cc->dump ();
 
           LOGSTR (INFO, "async_adaptor_0 threaded_cc") << "thread done " << pthread_self () << std::endl;
@@ -129,7 +128,7 @@ namespace saga
       {
         SAGA_UTIL_STACKTRACE ();
 
-        typedef saga::util::shared_ptr <saga::impl::result_t> res_t;
+        typedef saga::util::shared_ptr <saga::impl::result_base> res_t;
 
         saga::util::shared_ptr <api_t>   impl  = cc->get_impl (); 
 
@@ -207,14 +206,11 @@ namespace saga
 
               LOGSTR (INFO, "async_adaptor_0 ctor") << " async adaptor 0 : create new thread " << std::endl;
 
+              // we lock the t_cc, and expect the thread
+              impl->t_cc_->lock ();
               int err = pthread_create (&thread, NULL,
                                         saga::adaptor::test::async_adaptor_0::threaded_cc, 
                                         (void*)&(impl->t_cc_));
-
-              // FIXME: we need to sync with the thread startup, and only
-              // continue here after it successfully got it's t_cc_ shared
-              // pointer back...
-              ::sleep (1);
 
               if ( 0 != err )
               {
@@ -222,15 +218,22 @@ namespace saga
                   << " @@@ could not create thread: " << ::strerror (err) <<
                   std::endl;
                 SAGA_UTIL_STACKDUMP ();
+                /// impl->t_cc_->unlock (); // FIXME
                 throw "oops";
               }
+
+              // this second lock will wait for the thread to remove the first
+              // lock, thus synchronizing.  Once that happened, we can
+              // immediately unlock again...
+              /// impl->t_cc_->lock   (); // FIXME
+              /// impl->t_cc_->unlock (); // FIXME
+              ::usleep (TASK_DELAY);
 
               // async call is done, thread state is set to Running, and then
               // maintained by the thread itself.
               // FIXME: sync with thread, so that any state setting there is done
               //        after the one below
               cc->set_state (saga::async::Done); 
-              
 
               break;
             }
@@ -243,6 +246,20 @@ namespace saga
             }
         } // switch mode
 
+      }
+
+      void async_adaptor_0::wait (saga::util::shared_ptr <saga::impl::call_context> cc)
+      {
+        SAGA_UTIL_STACKTRACE ();
+
+        saga::util::shared_ptr <api_t> impl  = cc->get_impl (); 
+
+        while ( saga::async::Running == impl->t_cc_->get_state () )
+        {
+          ::usleep (TASK_DELAY);
+        }
+
+        cc->set_state (saga::async::Done); 
       }
 
     } // namespace test

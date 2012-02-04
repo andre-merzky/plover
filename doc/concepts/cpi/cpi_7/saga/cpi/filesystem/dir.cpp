@@ -32,7 +32,7 @@ namespace saga
       }
 
       void dir_cpi::constructor (saga::util::shared_ptr <call_context> cc, 
-                                         std::string                           url) 
+                                 std::string                           url) 
       { 
         SAGA_UTIL_STACKTRACE ();
         throw "constructor: NotImplemented"; 
@@ -45,7 +45,7 @@ namespace saga
       } 
 
       void dir_cpi::open (saga::util::shared_ptr <call_context> cc, 
-                                  std::string                           url)
+                          std::string                           url)
       {
         SAGA_UTIL_STACKTRACE ();
         throw "open : NotImplemented"; 

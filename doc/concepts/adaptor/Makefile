@@ -18,3 +18,5 @@ check:: all
 run: all
 	/usr/bin/env LD_LIBRARY_PATH=`pwd`/adaptor/ ./$(SAGA_BIN)
 
+$(SAGA_BIN):| $(SAGA_SUBDIRS)
+

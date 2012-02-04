@@ -1,4 +1,5 @@
 
+#include <saga/api/async/task.hpp>
 #include <saga/cpi/filesystem/dir.hpp>
 #include <saga/impl/filesystem/dir.hpp>
   
@@ -48,7 +49,7 @@ namespace saga
         while ( cc->get_state () == saga::async::Running )
         {
           // this is a sync call, so we just wait it out
-          ::sleep (1);
+          ::usleep (TASK_DELAY);
         }
         
         // check if the call was completed all right

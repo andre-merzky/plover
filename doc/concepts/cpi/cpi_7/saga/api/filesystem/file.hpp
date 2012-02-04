@@ -26,12 +26,12 @@ namespace saga
 
         void copy    (std::string tgt);
 
-        int get_size (void)
+        size_t get_size (void)
         {
           // NOTE: the two lines below MUST be semantically equivalent to the
           // sync call.
           saga::async::task t = get_size <saga::async::Sync> ();
-          int ret = t.get_result <int> ();
+          int ret = t.get_result <size_t> ();
 
           LOGSTR (DEBUG, "file api get_size") << "size: " << ret << std::endl;
 

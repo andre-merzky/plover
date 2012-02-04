@@ -11,6 +11,8 @@
 
 #include <saga/impl/async/task.hpp>
 
+#define TASK_DELAY 5000
+
 namespace saga
 {
   namespace async
@@ -26,6 +28,7 @@ namespace saga
 
         saga::async::state get_state (void);
         void               run       (void);
+        void               wait      (void);
 
         template <typename T>
         T get_result (void)

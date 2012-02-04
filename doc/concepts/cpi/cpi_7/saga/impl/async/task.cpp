@@ -66,7 +66,7 @@ namespace saga
         return cc->get_func ()->get_result <res_t> ();
       }
 
-      saga::util::shared_ptr <result_t> task::get_result (void)
+      saga::util::shared_ptr <result_base> task::get_result (void)
       {
         SAGA_UTIL_STACKTRACE ();
 
@@ -75,7 +75,7 @@ namespace saga
 
         return (t_cc_->get_func ()->get_result ());
 
-        // typedef saga::util::shared_ptr <result_t>           res_t;
+        // typedef saga::util::shared_ptr <result_base>        res_t;
         // typedef saga::impl::async::task                     api_t;
         // typedef saga::impl::async::task_cpi                 cpi_t;
         // typedef saga::impl::func_0 <api_t, cpi_t, res_t> func_t;
@@ -113,6 +113,26 @@ namespace saga
         {
           SAGA_UTIL_STACKDUMP ();
           throw " task::run () failed";
+        }
+      }
+
+      void_t task::wait (void)
+      {
+        typedef saga::impl::void_t                          res_t;
+        typedef saga::impl::async::task                     api_t;
+        typedef saga::impl::async::task_cpi                 cpi_t;
+        typedef saga::impl::func_0 <api_t, cpi_t, res_t> func_t;
+
+        saga::util::shared_ptr <func_t> func (new func_t ("wait", &cpi_t::wait));
+
+        saga::util::shared_ptr <saga::impl::call_context> cc (new saga::impl::call_context (shared_this <api_t> (), func)); 
+
+        engine_->call /* <cpi_t> */ (cc);
+
+        if ( cc->get_state () == saga::async::Failed )
+        {
+          SAGA_UTIL_STACKDUMP ();
+          throw " task::wait () failed";
         }
       }
 

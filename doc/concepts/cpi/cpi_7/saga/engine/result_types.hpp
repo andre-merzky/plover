@@ -14,17 +14,17 @@
 // a call context represents a function call to be dispatched to a 
 // backend.  That function call usually has a typed return value.
 // In order to keep the call_context template free, we wrap that
-// result in a separate result_t, and add it to the function class.
-// Well, result_t itself is a interface class used by func_base 
+// result in a separate result_base, and add it to the function class.
+// Well, result_base itself is a interface class used by func_base 
 // -- the actual templetized container inherits that interface class.
 //
 // class func_base
 // {
 //   private:
-//    shared_ptr <result_t> result_; // no template here
+//    shared_ptr <result_base> result_; // no template here
 //
 //  public:
-//    func_base (shared_ptr <result_t> sp)
+//    func_base (shared_ptr <result_base> sp)
 //      result_ (sp)
 //    {
 //    }
@@ -79,10 +79,10 @@ namespace saga
     //////////////////////////////////////////////////////////////////
     //
     // the result type classes allow to keep call_context template-free on impl
-    // level and below - the template-free result_t base class is used wherever
+    // level and below - the template-free result_base class is used wherever
     // possible, and the typed result_t_detail_ is only aquired as needed.
     //
-    class result_t : public saga::util::shareable
+    class result_base : public saga::util::shareable
     {
       private:
         // The c'tor is private to avoid instancies of this
@@ -96,14 +96,14 @@ namespace saga
         template <class T>
         friend class result_t_detail_;
 
-        result_t (void) 
+        result_base (void) 
         {
           SAGA_UTIL_STACKTRACE ();
         }
 
 
       public:
-        virtual ~result_t (void)
+        virtual ~result_base (void)
         {
           SAGA_UTIL_STACKTRACE ();
         }
@@ -112,7 +112,8 @@ namespace saga
         template <typename T>
         bool has_a (void)
         {
-          saga::util::shared_ptr <result_t> shared_me = shared_this <result_t> (); // this should always work... (tm)
+          // this should always work... (tm)
+          saga::util::shared_ptr <result_base> shared_me = shared_this <result_base> (); 
 
           // make shure that 'this' is pointing to a result_t_detail of the
           // requested type
@@ -137,8 +138,9 @@ namespace saga
         // get result from container
         template <typename T>
         T get (void)
-        {
-          saga::util::shared_ptr <result_t> shared_me = shared_this <result_t> (); // this should always work... (tm)
+        { 
+          // this should always work... (tm)
+          saga::util::shared_ptr <result_base> shared_me = shared_this <result_base> (); 
 
           // make shure that 'this' is pointing to a result_t_detail of the
           // requested type
@@ -154,7 +156,8 @@ namespace saga
         template <typename T>
         void set (T res)
         {
-          saga::util::shared_ptr <result_t> shared_me = shared_this <result_t> (); // this should always work... (tm)
+          // this should always work... (tm)
+          saga::util::shared_ptr <result_base> shared_me = shared_this <result_base> (); 
 
           // make shure that 'this' is pointing to a result_t_detail of the
           // requested type
@@ -175,19 +178,19 @@ namespace saga
     //////////////////////////////////////////////////////////////////
     //
     // This is a templatized container for func return values -- whenever
-    // possible, its template-free result_t base class is used and passed
+    // possible, its template-free result_base class is used and passed
     // around -- only the actual value set/get methods require the
     // templatization.
     //
     // all members of this class are private, so that it cannot be used
-    // directly, but only via its result_t interface.
+    // directly, but only via its result_base interface.
     //
     template <typename T>
-    class result_t_detail_ : public result_t
+    class result_t_detail_ : public result_base
     {
-      // this class should only be used via its result_t interface - all 
+      // this class should only be used via its result_base interface - all 
       // methods are private otherwise.
-      friend class result_t;
+      friend class result_base;
 
       private:
         T t_;

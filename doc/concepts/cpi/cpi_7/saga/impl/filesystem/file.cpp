@@ -53,7 +53,7 @@ namespace saga
         SAGA_UTIL_STACKTRACE ();
 
         typedef saga::util::shared_ptr <saga::impl::async::task>  ret_t;
-        typedef int                                               res_t;
+        typedef size_t                                            res_t;
         typedef saga::impl::filesystem::file                      api_t;
         typedef saga::impl::filesystem::file_cpi                  cpi_t;
         typedef saga::impl::func_0 <api_t, cpi_t, res_t>          func_t;

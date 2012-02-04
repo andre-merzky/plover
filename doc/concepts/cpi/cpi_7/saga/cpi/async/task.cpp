@@ -35,8 +35,13 @@ namespace saga
         throw "get_result : NotImplemented"; 
       } 
 
-      // FIXME: cont here (any needed)
       void task_cpi::run (saga::util::shared_ptr <call_context> cc)
+      { 
+        SAGA_UTIL_STACKTRACE ();
+        throw "void : NotImplemented"; 
+      } 
+
+      void task_cpi::wait (saga::util::shared_ptr <call_context> cc)
       { 
         SAGA_UTIL_STACKTRACE ();
         throw "void : NotImplemented"; 

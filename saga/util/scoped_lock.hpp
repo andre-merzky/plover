@@ -3,6 +3,7 @@
 #define SAGA_UTIL_SCOPEDLOCK_HPP
 
 #include <saga/util/mutex.hpp>
+#include <saga/util/lockable.hpp>
 
 namespace saga 
 {
@@ -24,6 +25,7 @@ namespace saga
 
       public:
         scoped_lock  (saga::util::mutex * mtx_);
+        scoped_lock  (saga::util::lockable & mtx_);
         ~scoped_lock (void); 
     };
 

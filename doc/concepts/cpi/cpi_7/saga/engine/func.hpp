@@ -9,6 +9,7 @@
 #include <saga/util/stack_tracer.hpp>
 
 #include <saga/engine/result_types.hpp>
+#include <saga/engine/cpi_base.hpp>
 
 // FIXME: do we need to support functions with more than one return value?
 
@@ -27,10 +28,11 @@ namespace saga
     class func_base : public saga::util::shareable
     {
       protected:
-        std::string                        name_;    // name of function call 
-        saga::util::shared_ptr <result_t>  result_;  // call result container
+        std::string                           name_;    // name of function call 
+        saga::util::shared_ptr <result_base>  result_;  // call result container
+        saga::util::shared_ptr <cpi_base>     cpi_;     // cpi_ for type inspection
 
-        func_base (std::string name, result_t * rp);
+        func_base (std::string name, result_base * r, cpi_base * c);
 
       public: 
         virtual ~func_base (void);
@@ -99,7 +101,23 @@ namespace saga
           return result_->get <T> ();
         }
 
-        saga::util::shared_ptr <result_t> get_result  (void)
+        template <typename T>
+        bool has_cpi_type  (void) 
+        {
+          SAGA_UTIL_STACKTRACE ();
+
+          if ( ! cpi_ )
+          {
+            // no cpi type set, yet
+            SAGA_UTIL_STACKDUMP ();
+            throw "cpi type is not yet defined";
+          }
+
+          return cpi_.is_a <T> ();
+        }
+
+
+        saga::util::shared_ptr <result_base> get_result  (void)
         {
           return result_;
         }
@@ -113,11 +131,10 @@ namespace saga
         // FIXME: check if the funcs below would simplify code elsewhere.
         void set_result      (RET ret);
         RET  get_result      (void)   ;
-        bool has_result_type (void)   ;
 
       public:
         func (std::string name)
-          : func_base (name, new saga::impl::result_t_detail_ <RET> ())
+          : func_base (name, new saga::impl::result_t_detail_ <RET> (), new CPI ())
         {
           SAGA_UTIL_STACKTRACE ();
         }
@@ -126,6 +143,8 @@ namespace saga
         {
           SAGA_UTIL_STACKTRACE ();
         }
+
+
 
         virtual void dump (std::string msg = "")
         {
@@ -157,8 +176,7 @@ namespace saga
         void (CPI::* call_)(saga::util::shared_ptr <call_context>);
 
       public: 
-        func_0 (std::string name, 
-                   void (CPI::*call )(saga::util::shared_ptr <call_context>))
+        func_0 (std::string name, void (CPI::*call )(saga::util::shared_ptr <call_context>))
           : func <IMPL, CPI, RET> (name)
           , call_   (call) 
         { 
@@ -171,6 +189,8 @@ namespace saga
           SAGA_UTIL_STACKTRACE ();
 
           // cast cpi_base to CPI
+          // FIXME: throw something sensible to the engine if we got
+          // a incompatible cpi
           saga::util::shared_ptr <CPI> casted = cpi.get_shared_ptr <CPI> ();
 
           // FIXME: assert valid function ptr

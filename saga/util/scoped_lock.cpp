@@ -13,6 +13,12 @@ namespace saga
       mtx_->lock ();
     }
 
+    scoped_lock::scoped_lock (saga::util::lockable & l)
+      : mtx_ (l.get_mutex ())
+    {
+      mtx_->lock ();
+    }
+
     scoped_lock::~scoped_lock () 
     {
       mtx_->unlock ();

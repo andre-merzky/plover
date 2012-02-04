@@ -34,10 +34,11 @@ namespace saga
                 saga::util::shared_ptr <saga::impl::engine>       t_engine_);
          ~task (void);
 
-          void_t                            constructor (void);
-          saga::async::state                get_state   (void);
-          saga::util::shared_ptr <result_t> get_result  (void);
-          void_t                            run         (void);
+          void_t                               constructor (void);
+          saga::async::state                   get_state   (void);
+          saga::util::shared_ptr <result_base> get_result  (void);
+          void_t                               run         (void);
+          void_t                               wait        (void);
 
           virtual void dump (std::string msg = "")
           {

@@ -70,14 +70,14 @@ namespace saga
             {
               LOGSTR (INFO, "file_adaptor_1 get_size") << "file adaptor 1 : get_size ()" << std::endl;
 
-              saga::util::shared_ptr <api_t>   impl  = cc->get_impl (); 
+              saga::util::shared_ptr <api_t> impl  = cc->get_impl (); 
 
               struct stat buf;
               (void) ::stat (impl->url_.c_str (), &buf);
 
               {
                 // FIXME: scoped lock for cc.  always.
-                cc->get_func ()->set_result <int> (buf.st_size);
+                cc->get_func ()->set_result <size_t> (buf.st_size);
                 cc->set_state        (saga::async::Done);
               }
 
