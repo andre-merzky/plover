@@ -25,6 +25,8 @@ namespace saga
           typedef saga::impl::async::task               api_t;
           typedef saga::impl::async::task_cpi           cpi_t;
 
+          static  saga::util::mutex mtx_;
+
           static void * threaded_cc (void * cc_sp);
 
         public:

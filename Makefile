@@ -1,6 +1,6 @@
 
 # SAGA_SUBDIRS = config make generator saga doc # examples
-SAGA_SUBDIRS = saga doc # examples
+SAGA_SUBDIRS = saga doc generator config make # examples
 
 doc: saga
 

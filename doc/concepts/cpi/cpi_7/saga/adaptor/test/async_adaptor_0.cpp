@@ -16,6 +16,9 @@ namespace saga
   {
     namespace test // test adaptprs
     {
+      // this should be a mutex on cc level...
+      saga::util::mutex async_adaptor_0::mtx_;
+        
       void * async_adaptor_0::threaded_cc (void * t_cc_sp)
       {
         saga::util::shared_ptr <saga::impl::call_context> t_cc; 
@@ -36,7 +39,7 @@ namespace saga
           t_cc->set_state (saga::async::Running);
 
           // signal the main thread that init is done.
-          /// t_cc->unlock (); // FIXME
+          mtx_.unlock (); // FIXME
 
           LOGSTR (INFO, "async_adaptor_0 ctor") << "async adaptor 0 : constructor ()" << std::endl;
           LOGSTR (INFO, "async_adaptor_0 threaded_cc") << "thread created " << pthread_self () << std::endl;
@@ -218,15 +221,15 @@ namespace saga
                   << " @@@ could not create thread: " << ::strerror (err) <<
                   std::endl;
                 SAGA_UTIL_STACKDUMP ();
-                /// impl->t_cc_->unlock (); // FIXME
+                mtx_.unlock (); // FIXME
                 throw "oops";
               }
 
               // this second lock will wait for the thread to remove the first
               // lock, thus synchronizing.  Once that happened, we can
               // immediately unlock again...
-              /// impl->t_cc_->lock   (); // FIXME
-              /// impl->t_cc_->unlock (); // FIXME
+              mtx_.lock   (); // FIXME
+              mtx_.unlock (); // FIXME
               ::usleep (TASK_DELAY);
 
               // async call is done, thread state is set to Running, and then
