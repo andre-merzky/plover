@@ -1,27 +1,41 @@
 
+SHELL = /bin/bash
 SAGA_ROOT     = $(shell pwd)/../
 
 include $(SAGA_ROOT)/make/saga.application.mk
 
-all:: idl cpp
+all:: gen 
 
-idl:
-	@./tex2idl.pl *.tex
+gen:
+	@./generate_saga.pl *.tex
 
-cpp: idl
-	@./parse_idl.pl *.idl
+test1:: distclean
+	@./generate_saga.pl   saga_core_object.tex
+	@echo ------------------------------
+#	@cat saga_simple/saga/api/*object*pp
+	@echo ------------------------------
+	@for file in saga_simple/saga/api/object/object_type.hpp; do \
+		echo ------- $$file -----------; \
+		cat $$file; \
+		done
+	@echo ------------------------------
+	@for file in saga_simple/saga/api/object/object.hpp; do \
+		echo ------- $$file -----------; \
+		cat $$file; \
+		done
+	@echo ------------------------------
 
-clean::
-	@rm -f *.idl
-	
 
-test::
-	@-rm *.idl
-	@./tex2idl.pl   saga_core_testing.tex
-	@./parse_idl.pl saga_core_testing.idl
-	@du -a saga_simple/ | grep -i testing
-	# @cat saga_simple/saga/api/*testing*pp
-	# @cat saga_simple/saga/api/testing/*pp
+test2:: distclean
+	@./generate_saga.pl   saga_core_error.tex
+#	@echo ------------------------------
+#	@du -a saga_simple/ | grep -e '\..pp'
+	@echo ----- saga_simple/saga/api/error/exception.hpp -------------------------
+	@cat saga_simple/saga/api/error/exception.hpp
+#	@echo ----- saga_simple/saga/api/error/incorrect_state.hpp -------------------------
+#	@cat saga_simple/saga/api/error/incorrect_state.hpp
+#	@echo ----- saga_simple/saga/api/error.hpp -------------------------
+#	@cat saga_simple/saga/api/error.hpp
 
 
 distclean::

@@ -7,7 +7,7 @@ BEGIN {
   use Data::Dumper;
 
   sub grab_idl                    ($   );
-  sub idl_to_code                 ($   );
+  sub idl_to_cpp                  ($   );
   sub parse_idl                   ($   );
   sub format_comment              ($$  );
   sub create_enum_api_hpp         ($$$ );
@@ -20,8 +20,6 @@ BEGIN {
 # global vars
 my $TW   = 72;  # textwidth
 my $BASE = './saga_simple/';
-my %idl  = ();
-
 
 ########################################################################
 # usage
@@ -55,12 +53,12 @@ foreach my $arg ( @ARGV )
 }
 
 ########################################################################
-# convert input idl to src code
+# convert input tex to idl to src code
 foreach my $arg ( @args_clean )
 {
   my $idl_txt = grab_idl  ($arg);
   my $idl     = parse_idl ($idl_txt);
-  idl_to_code ($idl);
+  idl_to_cpp ($idl);
 }
 
 ########################################################################
@@ -148,6 +146,11 @@ sub create_enum_api_hpp ($$$)
 
   my $comm  = format_comment (4, $enum->{'comm'});
 
+  if ( $comm )
+  {
+    $comm = "\n$comm";
+  }
+
 #------------------------------------------------------------
   print $out <<EOT;
 
@@ -159,8 +162,7 @@ sub create_enum_api_hpp ($$$)
 namespace saga
 {
   namespace $pname
-  { 
-$comm
+  { $comm
     enum $ename 
     {
 EOT
@@ -187,11 +189,11 @@ EOT
     # is the enum used, or just a comment?
     if ( $u )
     {
-      printf $out ("      %-15s = %6d$comma%s\n", $n, $e, $c);
+      printf $out ("      %-18s = %5d$comma%s\n", $n, $e, $c);
     }
     else
     {
-      printf $out ("   // %-15s = %6d$comma%s\n", $n, $e, $c);
+      printf $out ("   // %-18s = %5d$comma%s\n", $n, $e, $c);
     }
   }
 
@@ -230,14 +232,32 @@ sub create_iface_api_hpp ($$$)
 
   my $comm  = format_comment (4, $iface->{'comm'});
 
-  # print Dumper \$iface if ( $iname eq "unit_test" );
+  print Dumper \$iface if ( $iname eq "incorrect_state");
 
   my $impltxt = "";
   my $impls   = $iface->{'impl'} || "";
+  my $bases   = $iface->{'base'} || "";
 
+  my $first      = 1;
   my $impl_async = 0;
-  my $impl_first = 1;
-  my $impl_ind   = ' ' x (11 + length ($iname));
+# my $impl_ind   = ' ' x (11 + length ($iname));
+  my $impl_ind   = ' ' x 8;
+
+  # C++ handles interfaces and base classes the same way, for inheritance :-(
+  foreach my $base ( @{$bases} )
+  {
+    if ( $first )
+    {
+      $impltxt .= "\n$impl_ind: public $base \t// base";
+    }
+    else
+    {
+      $impltxt .= "\n$impl_ind, public $base \t// base";
+    }
+
+    $first = 0;
+  }
+
   foreach my $impl ( @{$impls} )
   {
     if ( $impl eq 'saga::async' )
@@ -245,16 +265,16 @@ sub create_iface_api_hpp ($$$)
       $impl_async = 1;
     }
 
-    if ( $impl_first )
+    if ( $first )
     {
-      $impltxt .= " : public $impl";
+      $impltxt .= "\n$impl_ind: public $impl \t// interface";
     }
     else
     {
-      $impltxt .= "\n$impl_ind, public $impl";
+      $impltxt .= "\n$impl_ind, public $impl \t// interface";
     }
 
-    $impl_first = 0;
+    $first = 0;
   }
 
 
@@ -432,7 +452,7 @@ sub format_method_sync_api_hpp ($$)
     $out .= "\n$IND" . "template <typename $tname>\n";
   }
   
-  my $tmp = sprintf ("$IND%-15s  %-20s (", $mtype, $mname);
+  my $tmp = sprintf ("$IND%-18s  %-20s (", $mtype, $mname);
   $out .= $tmp;
   $IND = ' ' x length  ($tmp);
 
@@ -456,7 +476,7 @@ sub format_method_sync_api_hpp ($$)
         $pref = "*";
       }
 
-      my $ptxt = sprintf ("%-15s $pref %s\n", $ptype, $pname);
+      my $ptxt = sprintf ("%-18s $pref %s\n", $ptype, $pname);
 
       unless ( $noind )
       {
@@ -565,7 +585,7 @@ sub format_method_async_api_hpp ($$)
         $pref = "*";
       }
 
-      my $ptxt = sprintf ("%-15s $pref %s\n", $ptype, $pname);
+      my $ptxt = sprintf ("%-18s $pref %s\n", $ptype, $pname);
 
       unless ( $noind )
       {
@@ -1105,10 +1125,26 @@ PACKAGE:
 }
 
 
-sub idl_to_code ($)
+sub idl_to_cpp ($)
 {
   my $idl_ref = shift;
   my %idl = %{$idl_ref};
+
+  ########################################################################
+  #
+  # before we do anything with the idl, we apply a number of magic cpp fixes
+  # to avoid clashes with later use of the idl, we from now on operate on a copy
+  #
+  my %cpp_idl = %idl;
+  
+
+  if ( exists ($cpp_idl{'saga.error'}{'exception'}) )
+  {
+    # exception inherits from std::exception -- add to base and header includes
+    push (@{$cpp_idl{'saga.error'}{'exception'}{'base'}}, "std::exception");
+    push (@{$cpp_idl{'saga.error'}{'exception'}{'hincs'}}, "exception");
+  }
+
 
   ########################################################################
   
@@ -1128,7 +1164,7 @@ sub idl_to_code ($)
   my @p_hdrs = ();
   
   ########################################################################
-  foreach my $pname ( sort keys (%idl) )
+  foreach my $pname ( sort keys (%cpp_idl) )
   {
     my $pkg = $pname;
   
@@ -1147,42 +1183,29 @@ sub idl_to_code ($)
     my %pkg_elems    = ();
     my @p_elem_hdrs  = ();
   
-    foreach my $ename ( keys %{ $idl{$pname} } )
+    foreach my $ename ( keys %{ $cpp_idl{$pname} } )
     {
-      my $type = $idl{$pname}{$ename}{'type'};
+      my $type = $cpp_idl{$pname}{$ename}{'type'};
+      my $hdr  = "";
   
-      push (@{$pkg_elems{$type}}, $ename);
+      if ( $type eq 'enum' )
+      {
+        $hdr = create_enum_api_hpp ($pkg, $ename, $cpp_idl{$pname}{$ename});
+      }
+      elsif ( $type eq 'interface' )
+      {
+        $hdr = create_iface_api_hpp ($pkg, $iname, $cpp_idl{$pname}{$iname});
+      }
+      elsif ( $type eq 'class' )
+      {
+        $hdr = create_iface_api_hpp ($pkg, $cname, $cpp_idl{$pname}{$cname});
+      }
+
+      push (@p_elem_hdrs, $hdr);
     }
   
-    # print Dumper (\%pkg_elems);
-  
-    foreach my $ename ( @{$pkg_elems{'enum'}} )
-    {
-      # print "  enum   \t $ename\n";
-      my $p_elem_hdr = create_enum_api_hpp ($pkg, $ename, $idl{$pname}{$ename});
-      push (@p_elem_hdrs, $p_elem_hdr);
-    }
-  
-    foreach my $iname ( @{$pkg_elems{'interface'}} )
-    {
-      # print "  iface  \t $iname\n";
-      my $p_elem_hdr = create_iface_api_hpp ($pkg, $iname, $idl{$pname}{$iname});
-      push (@p_elem_hdrs, $p_elem_hdr);
-    }
-  
-    foreach my $cname ( @{$pkg_elems{'class'}} )
-    {
-      # print "  iface  \t $cname\n";
-      my $p_elem_hdr = create_iface_api_hpp ($pkg, $cname, $idl{$pname}{$cname});
-      push (@p_elem_hdrs, $p_elem_hdr);
-    }
-  
-    foreach my $cname ( @{$pkg_elems{'class'}} )
-    {
-      # print "  class  \t $cname\n";
-    }
-  
-  
+
+
     # create package header, which pulls all package member headers
     my $PKG   = uc ($pkg);
     my $p_hdr = "saga/api/$pkg.hpp";
@@ -1190,32 +1213,33 @@ sub idl_to_code ($)
     my $out   = new IO::File ("> $BASE/$p_hdr") || die "Cannot create enum entry
     at $BASE/$p_hdr: $!\n";
   
-  #------------------------------------------------------------
+#------------------------------------------------------------
     print $out <<EOT;
   
-  #ifndef $guard
-  #define $guard
+#ifndef $guard
+#define $guard
   
-  #include <saga/saga/hpp>
+#include <saga/saga.hpp>
   
 EOT
-  #------------------------------------------------------------
+#------------------------------------------------------------
     
     foreach my $p_elem_hdr ( @p_elem_hdrs )
     {
-  #------------------------------------------------------------
+#------------------------------------------------------------
       print $out <<EOT;
-  #include <$p_elem_hdr>
+#include <$p_elem_hdr>
 EOT
+#------------------------------------------------------------
     }
   
-  #------------------------------------------------------------
+#------------------------------------------------------------
     print $out <<EOT;
   
-  #endif // $guard
+#endif // $guard
   
 EOT
-  #------------------------------------------------------------
+#------------------------------------------------------------
     $out->close ();
   
     # save the package header for the api header
@@ -1226,36 +1250,34 @@ EOT
   ########################################################################
   {
     # create saga header, which pulls are package headers
-    my $a_hdr = "saga/saga_api.hpp";
+    my $a_hdr = "saga/saga.hpp";  # FIXME: correct would be saga/api.hpp
     my $guard = get_guard ($a_hdr);
-    my $out   = new IO::File ("> $BASE/$a_hdr") || die "Cannot create enum entry at $BASE/$a_hdr: $!\n";
+    my $out   = new IO::File ("> $BASE/$a_hdr") || die "Cannot create saga header at $BASE/$a_hdr: $!\n";
   
-  #------------------------------------------------------------
+#------------------------------------------------------------
     print $out <<EOT;
   
   #ifndef $guard
   #define $guard
   
-  #include <saga/saga.hpp>
-  
 EOT
-  #------------------------------------------------------------
+#------------------------------------------------------------
     
     foreach my $pname ( @p_hdrs )
     {
-  #------------------------------------------------------------
+#------------------------------------------------------------
       print $out <<EOT;
   #include <$pname>
 EOT
     }
   
-  #------------------------------------------------------------
+#------------------------------------------------------------
     print $out <<EOT;
   
   #endif // $guard
   
 EOT
-  #------------------------------------------------------------
+#------------------------------------------------------------
     $out->close ();
   }  
 }
