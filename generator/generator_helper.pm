@@ -69,6 +69,90 @@ sub format_comment ($$)
 }
 ########################################################################
 
+########################################################################
+#
+# rename a key in hash
+#
+sub rename_package ($$$)
+{
+  my $idl = shift;
+  my $old = shift;
+  my $new = shift;
+
+  # first, rename package
+  if ( exists $idl->{"saga.$old"} )
+  {
+    print "=== package $old -> $new\n";
+    $idl->{"saga.$new"} = delete $idl->{"saga.$old"};
+  }
+
+  # we also need to rename any argument or retval types which use the package
+  # name
+  foreach my $pkg (keys (%{$idl}) )
+  {
+    my $phash = $idl->{$pkg};
+    foreach my $entry ( keys (%{$idl->{$pkg}}) )
+    {
+      my $ehash = $phash->{$entry};
+
+      if ( $ehash->{'type'} eq 'class' )
+      {
+        my $cdef = $ehash->{'def'};
+
+        foreach my $method ( @{$cdef->{'methods'}} )
+        {
+          foreach my $param ( @{$method->{'params'}} )
+          {
+            if ( $param->{'type'} =~ /\b($old)\b::/ )
+            {
+              # print " === $param->{'type'} \t\t\t ($old -> $new)\n";
+              $param->{'type'} =~ s/\b($old)\b::/$new/g;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+########################################################################
+#
+# rename a type in method signs
+#
+sub rename_type ($$$)
+{
+  my $idl = shift;
+  my $old = shift;
+  my $new = shift;
+
+  # rename any argument or retval types which use the package
+  # name
+  foreach my $pkg (keys (%{$idl}) )
+  {
+    my $phash = $idl->{$pkg};
+    foreach my $entry ( keys (%{$idl->{$pkg}}) )
+    {
+      my $ehash = $phash->{$entry};
+
+      if ( $ehash->{'type'} eq 'class' )
+      {
+        my $cdef = $ehash->{'def'};
+
+        foreach my $method ( @{$cdef->{'methods'}} )
+        {
+          foreach my $param ( @{$method->{'params'}} )
+          {
+            if ( $param->{'type'} =~ /\b($old)$/ )
+            {
+              # print " === $param->{'type'} \t\t\t ($old -> $new)\n";
+              $param->{'type'} =~ s/\b($old)$/$new/g;
+            }
+          }
+        }
+      }
+    }
+  }
+}
 
 1;
 

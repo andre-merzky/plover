@@ -201,24 +201,48 @@ sub parse_idl ($)
 
         my %elem = ();
 
-        $elem{'name'} = $ename;
-        $elem{'type'} = $etype;
-        $elem{'idx'}  = $eidx;
-        $elem{'comm'} = $ecomm;
+        $elem{'name'}  = $ename;
+        $elem{'type'}  = $etype;
+        $elem{'idx'}   = $eidx;
+        $elem{'comm'}  = $ecomm;
+        $elem{'async'} = 0;
         $eidx++;
     
         # parse inheritance qualifiers
+        # along the way, try to find info about async inheritance, either in the
+        # qualifiers or in the comments
+        if ( $equal =~ /\bfrom\s+\S*\s+saga::async\b/io )
+        {
+          $elem{'async'} = 1;
+        }
+        
         $equal =~ s/^\s*\/\/.*$//iomg;
         my @equallines = split (/\n/, $equal);
 
-        foreach my $equalline ( @equallines ) {
-          if ( $equalline =~ /^\s*implements\s+(\S+?)\s*$/io ) {
-            push (@{$elem{'impl'}}, $1);
+        foreach my $equalline ( @equallines ) 
+        {
+          if ( $equalline =~ /^\s*implements\s+(\S+?)\s*$/io ) 
+          {
+            my $base = $1;
+            push (@{$elem{'impl'}}, $base);
+
+            if ( $base eq 'saga::async' )
+            {
+              $elem{'async'} = 1;
+            }
           }
-          elsif ( $equalline =~ /^\s*extends\s+(\S+?)\s*$/io ) {
-            push (@{$elem{'base'}}, $1);
+          elsif ( $equalline =~ /^\s*extends\s+(\S+?)\s*$/io ) 
+          {
+            my $base = $1;
+            push (@{$elem{'base'}}, $base);
+
+            if ( $base eq 'saga::async' )
+            {
+              $elem{'async'} = 1;
+            }
           }
-          else {
+          else 
+          {
             die "Cannot parse qualifier in line '$equalline'\n";
           }
         }
@@ -263,27 +287,44 @@ sub parse_idl ($)
             my $mcomm = $1 || "";  # comment before method def?
             my $mname = $2;
             my $mtemp = $3 || "";
-            my $mtxt  = $4;
+            my $msig  = $4;
                $etxt  = $5 || "";
 
             my %method  = ();
 
-            $method{'name'} = $mname;
-            $method{'comm'} = $mcomm;
-            $method{'temp'} = $mtemp;
-            $method{'idx'}  = $midx;
-            $midx++;
+            my $msig_orig = $msig;
 
-            if ( $mtxt =~ /^\s*void\s*$/ios )
+            $method{'name'}    = $mname;
+            $method{'comm'}    = $mcomm;
+            $method{'temp'}    = $mtemp;
+            $method{'idx'}     = $midx;
+            $method{'sig'}     = '';      # call sig (w/o default specs)
+            $method{'sigd'}    = '';      # call sig (w/  default specs)
+            $method{'sigt'}    = '';      # call sig types
+            $method{'sign'}    = '';      # call sig names
+            $method{'rtype'}   = 'void';  # type of return parameter
+            $method{'rpar'}    = '';      # name or return parameter
+
+
+            if ( $mname =~ /^CONSTRUCTOR$/io )
             {
-              $method{'is_void'} = 1;
-              $mtxt = "";
+              $method{'type'}    = 'ctor';
+            }
+            elsif ( $mname =~ /^DESTRUCTOR$/io )
+            {
+              $method{'type'}    = 'dtor';
             }
             else
             {
-              $method{'is_void'} = 0;
+              $method{'type'} = 'sync';
+            }
 
-              while ( $mtxt =~ /^
+            if ( $msig !~ /^\s*void\s*$/ios )
+            {
+              my $first_par     = 1;
+              my $first_out_par = 1;
+
+              while ( $msig =~ /^
                                   \s*(in|out|inout)   # param modifier
                                   \s+(\S.+?)          # param type
                                   \s+(\S+)            # param name
@@ -294,24 +335,78 @@ sub parse_idl ($)
                 my $parammode = $1;
                 my $paramtype = $2;
                 my $paramname = $3;
-                my $paramdef  = $4;
-                   $mtxt      = $5 || "";
+                my $paramdef  = $4 || undef;
+                   $msig      = $5 || "";
 
-                push (@{$method{'params'}}, {'name'    => $paramname, 
-                                             'type'    => $paramtype, 
-                                             'mode'    => $parammode,
-                                             'default' => $paramdef});
+                my $add_to_sig = 1;
+                my $push_par   = 1;
+
+                if ( $parammode =~ /^out$/io )
+                {
+                  if ( $first_out_par )
+                  {
+                    if ( $method{'type'} ne 'ctor' )
+                    {
+                      $method{'rtype'}   = $paramtype;
+                      $add_to_sig        = 0;
+                      $first_out_par     = 0;
+                      $push_par          = 0;
+                    }
+
+                    $method{'rpar'} = $paramname;
+                  }
+                }
+
+                if ( $add_to_sig )
+                {
+                  my $sep = ", ";
+                  if ( $first_par )
+                  {
+                    $sep = "";
+                  }
+
+                  my $def = "";
+
+                  if ( defined $paramdef )
+                  {
+                    $def = " = $paramdef";
+                  }
+
+                  $method{'sig'}  .= "$sep$paramtype $paramname";
+                  $method{'sigd'} .= "$sep$paramtype $paramname$def";
+                  $method{'sigt'} .= "$sep$paramtype";
+                  $method{'sign'} .= "$sep$paramname";
+                }
+
+
+                if ( $push_par )
+                {
+                  push (@{$method{'params'}}, {'name'    => $paramname, 
+                                               'type'    => $paramtype, 
+                                               'mode'    => $parammode,
+                                               'default' => $paramdef});
+                }
+
+                $first_par = 0;
               }
             }
 
+            if ( $method{'sigt'} eq '' )
+            {
+              $method{'sigt'} = 'void';
+            }
 
-            
+
             push (@{$elem{'def'}{'methods'}}, \%method);
 
-            if ( $mtxt !~ /^\s*$/o ) {
-              die "Could not fully parse method $mname: '$mtxt'\n";
+            if ( $msig !~ /^\s*(?:void\s*)?$/o ) {
+              die "Could not fully parse method $mname: '$msig'\n";
             }
-          }
+
+            $midx++;
+
+          } # done parsing methods
+
 
 
           # there may be metric and attribute definitions, too
@@ -602,7 +697,8 @@ sub parse_idl ($)
                   $match_found = 1;
               
                   # print "storing detail in $pname :: $ename :: $mname\n";
-                  $method->{'detail'} = $mtxt;
+                  # FIXME: comment out detail for dumper readibility
+                  $method->{'detail'} = ""; # , $mtxt;
                   $method->{'precom'} = $extra_comm;
 
                 }
@@ -665,25 +761,27 @@ sub idl_to_cpp ($)
   #   file         -> filesystem
   #   namespace    -> name_space
   #   logical_file -> replica
+
+  # print Dumper \%cpp_idl;
   
-  if ( exists ($cpp_idl{'saga.file'}) )
-  {
-    $cpp_idl{'saga.filesystem'} = $cpp_idl{'saga.file'};
-    delete ($cpp_idl{'saga.file'})
-  }
+  # package renames
+  generator_helper::rename_type    (\%cpp_idl, 'logical_file',      'entry');
+  generator_helper::rename_type    (\%cpp_idl, 'logical_directory', 'directory');
 
-  if ( exists ($cpp_idl{'saga.namespace'}) )
-  {
-    $cpp_idl{'saga.name_space'} = $cpp_idl{'saga.namespace'};
-    delete ($cpp_idl{'saga.namespace'})
-  }
+  # class renames
+  generator_helper::rename_package (\%cpp_idl, 'file',              'filesystem');
+  generator_helper::rename_package (\%cpp_idl, 'namespace',         'name_space');
+  generator_helper::rename_package (\%cpp_idl, 'logical_file',      'replica');
 
-  if ( exists ($cpp_idl{'saga.logical_file'}) )
-  {
-    $cpp_idl{'saga.replica'} = $cpp_idl{'saga.logical_file'};
-    delete ($cpp_idl{'saga.logical_file'})
-  }
+  # FIXME: we need size_t and ssize_t in several places
+  # FIXME: the use of strings implies #include<string>
+  # FIXME: array<> -> std::vector<> + #include<vector>
+  # FIXME: enums need registration?
+  # FIXME: package nd class names need fixing in inheritances / bases
 
+  # move some classes from saga:: to saga::core
+
+  # add includes as we know (exception, string)
   if ( exists ($cpp_idl{'saga.core'}) )
   {
     if ( exists ($cpp_idl{'saga.core'}{'exception'}) )
@@ -693,9 +791,7 @@ sub idl_to_cpp ($)
       push (@{$cpp_idl{'saga.core'}{'exception'}{'hincs'}}, "exception");
     }
   }
-  ########################################################################
   
-  # print Dumper %cpp_idl;
   ##############################################################################
 
 

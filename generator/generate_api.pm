@@ -17,6 +17,9 @@ use generator_helper;
 use Data::Dumper;
 
 ########################################################################
+#
+# write an api enum header
+#
 sub enum_hpp ($$$$)
 {
   my $BASE  = shift;
@@ -107,12 +110,22 @@ EOT
 
 
 ########################################################################
+#
+# write an enum class or interface header
+#
 sub iface_hpp ($$$$)
 {
   my $BASE  = shift;
   my $pname = shift;
   my $iname = shift;
   my $iface = shift;
+
+  _fix_api_ctors    ($pname, $iface);
+  _fix_api_dtors    ($pname, $iface);
+
+  print Dumper $iface;
+
+  my $is_async = $iface->{'async'};
 
   my $PNAME = uc ($pname);
   my $INAME = uc ($iname);
@@ -140,11 +153,10 @@ sub iface_hpp ($$$$)
   my $bases   = $iface->{'base'} || [];
 
   my $first      = 1;
-  my $impl_async = 0;
 # my $impl_ind   = ' ' x (11 + length ($iname));
   my $impl_ind   = ' ' x 8;
 
-  # C++ handles interfaces and base classes the same way, for inheritance :-(
+  # C++ handles interfaces and base classes the same way, for inheritance
   foreach my $base ( @{$bases} )
   {
     if ( $first )
@@ -161,11 +173,6 @@ sub iface_hpp ($$$$)
 
   foreach my $impl ( @{$impls} )
   {
-    if ( $impl eq 'saga::async' )
-    {
-      $impl_async = 1;
-    }
-
     if ( $first )
     {
       $impltxt .= "\n$impl_ind: public $impl \t// interface";
@@ -189,7 +196,20 @@ sub iface_hpp ($$$$)
 #include <saga/util/logging.hpp>
 #include <saga/util/stack_tracer.hpp>
 
+EOT
+#------------------------------------------------------------
+
+  if ( $is_async )
+  {
+#------------------------------------------------------------
+  print $out <<EOT;
 #include <saga/api/async/task.hpp>
+EOT
+#------------------------------------------------------------
+  }
+
+#------------------------------------------------------------
+  print $out <<EOT;
 #include <saga/impl/$pname/$iname.hpp>
 
 namespace saga
@@ -205,34 +225,57 @@ namespace saga
 EOT
 #------------------------------------------------------------
 
-
-  # sync methods
+  # ctor/dtor methods
   {
-    if ( $impl_async )
-    {
-      print $out "      //-------------------------\n";
-      print $out "      // sync method definitions \n";
-      print $out "      //-------------------------\n\n";
-    }
+    print $out "\n\n";
+    print $out "      //--------------------------\n";
+    print $out "      // construction/destruction \n";
+    print $out "      //--------------------------\n\n";
 
     my $m_first = 1;
     foreach my $method ( @{$iface->{'def'}{'methods'}} )
     {
+      if ( $method->{'type'} eq 'ctor' ||
+           $method->{'type'} eq 'dtor' )
+      {
+        my $mtxt = _format_method_sync_api_hpp (6, $method);
+
+        # no empty line before first method
+        if ( $m_first )
+        {
+          $mtxt =~ s/^\s*\n//io;
+        }
+
+        $m_first = 0;
+        print $out "$mtxt\n";
+      }
+    }
+  }
+
+
+  # sync methods
+  if ( $is_async )
+  {
+    print $out "      //-------------------------\n";
+    print $out "      // sync method definitions \n";
+    print $out "      //-------------------------\n\n";
+  }
+
+  foreach my $method ( @{$iface->{'def'}{'methods'}} )
+  {
+    if ( $method->{'type'} eq 'sync' )
+    {
       my $mtxt = _format_method_sync_api_hpp (6, $method);
 
-      # no empty line before first method
-      if ( $m_first )
-      {
-        $mtxt =~ s/^\s*\n//io;
-      }
-
-      $m_first = 0;
       print $out "$mtxt\n";
     }
   }
 
+  print $out "\n";
+  
+
   # async methods
-  if ( $impl_async )
+  if ( $is_async )
   {
     print $out "\n\n";
     print $out "      //--------------------------\n";
@@ -242,16 +285,20 @@ EOT
     my $m_first = 1;
     foreach my $method ( @{$iface->{'def'}{'methods'}} )
     {
-      my $mtxt = _format_method_async_api_hpp (6, $method);
-
-      # no empty line before first method
-      if ( $m_first )
+      unless ( $method->{'type'} eq 'ctor' ||
+               $method->{'type'} eq 'dtor' )
       {
-        $mtxt =~ s/^\s*\n//io;
-      }
+        my $mtxt = _format_method_async_api_hpp (6, $method);
 
-      $m_first = 0;
-      print $out "$mtxt\n";
+        # no empty line before first method
+        if ( $m_first )
+        {
+          $mtxt =~ s/^\s*\n//io;
+        }
+
+        $m_first = 0;
+        print $out "$mtxt\n";
+      }
     }
   }
 
@@ -283,11 +330,19 @@ sub _format_method_sync_api_hpp ($$)
   my $IND   = ' ' x $ind;
 
   my $mname  = $m->{'name'};
+  my $mtype  = $m->{'type'};
+  my $mbody  = $m->{'body'};
+  my $minit  = $m->{'init'};
+  my $rtype  = $m->{'rtype'};
+  my $msign  = $m->{'sign'};
+  my $oparam = $m->{'rpar'};
+
+
   my $comm   = generator_helper::format_comment ($ind, $m->{'comm'}); 
 
   if ( $comm )
   {
-    $out .= "\n$comm";
+    $out .= $comm;
   }
 
   print " --- $mname\n";
@@ -296,83 +351,35 @@ sub _format_method_sync_api_hpp ($$)
   # print Dumper \$m                             if ( $mname eq "get_test_obj");
   # print "----------------------------------\n" if ( $mname eq "get_test_obj");
 
-  # search for 'out' params - the first will determine the return value type.
-  # If none is found, we have a void method.  Rember that param's index, as we
-  # don't need it for the signature
-  my $mtype  = "void";
-  my $oparam = "";
-
-  FORMAT_METHOD_SYNC_PARAM:
-  foreach my $param ( @{$m->{'params'}} )
-  {
-    if ( $param->{'mode'} eq 'out' )
-    {
-      $oparam = $param->{'name'};
-      $mtype  = $param->{'type'};
-      last FORMAT_METHOD_SYNC_PARAM;
-    }
-  }
-
   my $tname = $m->{'temp'} || "";
   my $slen  = 0;
 
   if ( $tname )
   {
-    $out .= "\n$IND" . "template <typename $tname>\n";
+    $out .= "$IND" . "template <typename $tname>\n";
   }
   
-  my $tmp = sprintf ("$IND%-18s  %-20s (", $mtype, $mname);
-  $out .= $tmp;
-  $IND = ' ' x length  ($tmp);
-
-  # add parameter signatures
-  my $noind = 1; # noi indent for first param
-
-  foreach my $param ( @{$m->{'params'}} )
+  my $tmp  = "";
+  my $body = "";
+  
+  if ( $mtype eq 'ctor' ||
+       $mtype eq 'dtor' )
   {
-    my $pname = $param->{'name'};
-    my $pmode = $param->{'mode'};
-    my $pdef  = $param->{'default'};
-    my $ptype = $param->{'type'};
-
-    # skip output param - already handled as return type
-    unless ( $pname eq $oparam )
-    {
-      # out and inout params are to be passed by reference pointers
-      my $pref = " ";
-      unless ( $pmode eq 'in' )
-      {
-        $pref = "*";
-      }
-
-      my $ptxt = sprintf ("%-18s $pref %s\n", $ptype, $pname);
-
-      unless ( $noind )
-      {
-        $out .= $IND;
-      }
-
-      $out .= $ptxt;
-    
-      $noind = 0;
-    }
-  }
-
-  # remove last \n
-  chomp ($out);
-
-  # close method signature
-  if ( $noind )
-  {
-    # no param got inserted - method has void signature)
-    $out .= "void);\n";
+    $tmp = sprintf ("$IND%-20s ", $mname);
   }
   else
   {
-    $out .= ");\n";
+    $tmp = sprintf ("$IND%-18s  %-20s ", $rtype, $mname);
+    $body = "return ($mname <saga::async::Sync> ($msign).get_result <$rtype> ());";
   }
 
-  chomp ($out);
+  $out .= "$tmp";
+  my $IND2 = ' ' x length ($tmp);
+
+  $out .= _format_method_sig  ($IND2, $m, $body);
+  $out .= _format_method_body ($IND , $m, $body);
+
+  $out .= "\n";
 
   return $out;
 }
@@ -406,6 +413,7 @@ sub _format_method_async_api_hpp ($$)
 
   if ( $tname )
   {
+    warn "horribly template overload!" . Dumper \$m;
     # add the async flag to the template
     my $tmp = sprintf ("$IND" . "template <typename ASYNC,\n$IND          typename %-5s> ", $tname);
     $out .= $tmp;
@@ -413,81 +421,357 @@ sub _format_method_async_api_hpp ($$)
   else
   {
     # just the async template flag needed
-    $out    .= "$IND" . "template <typename ASYNC> ";
+    $out    .= "$IND" . "template <typename ASYNC>\n";
   }
   
 
-  # return type for async calls is always saga::task.  We still need to filter
-  # out the original out par, as that will not be part of the func signature,
-  # but will be returned by the task on get_result<mtype>();
-  my $oparam = "";
+  # return type for async calls is always saga::task.
+  $out .= "";
 
-  FORMAT_METHOD_SYNC_PARAM:
-  foreach my $param ( @{$m->{'params'}} )
+  my $tmp  = sprintf ("$IND%-20s  %-20s ", 'saga::task', $mname);
+  my $IND2 = ' ' x length ($tmp);
+
+
+  my $body  = "";
+  my $msign = $m->{'sign'};
+
+  if ( $m->{'sigt'} eq 'void' )
   {
-    if ( $param->{'mode'} eq 'out' )
-    {
-      $oparam = $param->{'name'};
-      last FORMAT_METHOD_SYNC_PARAM;
-    }
-  }
-  $out .= "saga::task  ";
-
-  my $tmp = sprintf ("%-20s (", $mname);
-  $out .= $tmp;
-  $IND = ' ' x ($ind + 38 + length ($tmp));
-
-  # add parameter signatures
-  my $noind = 1; # noi indent for first param
-
-  foreach my $param ( @{$m->{'params'}} )
-  {
-    my $pname = $param->{'name'};
-    my $pmode = $param->{'mode'};
-    my $pdef  = $param->{'default'};
-    my $ptype = $param->{'type'};
-
-    unless ( $pname eq $oparam )
-    {
-      # out and inout params are to be passed by reference pointers
-      my $pref = " ";
-      unless ( $pmode eq 'in' )
-      {
-        $pref = "*";
-      }
-
-      my $ptxt = sprintf ("%-18s $pref %s\n", $ptype, $pname);
-
-      unless ( $noind )
-      {
-        $out .= $IND;
-      }
-
-      $out .= $ptxt;
-      $noind = 0;
-    }
-  }
-
-  # remove last \n
-  chomp ($out);
-
-  # close method signature
-  if ( $noind )
-  {
-    # no param got inserted - method has void signature)
-    $out .= "void);\n";
+    $body = "return saga::async::task (impl_->$mname (ASYNC));";
   }
   else
   {
-    $out .= ");\n";
+    $body = "return saga::async::task (impl_->$mname (ASYNC, $msign));";
   }
 
-  chomp ($out);
+  $out    .= $tmp;
+  $out    .= _format_method_sig  ($IND2, $m, $body); 
+  $out    .= _format_method_body ($IND , $m, $body); 
 
   return $out;
 }
 ########################################################################
 
+########################################################################
+#
+# each CONSTRUCTOR needs to be replaced with a C++ c'tor, and an ctor(impl)
+# needs to be added for the API layer
+#
+sub _fix_api_ctors ($$)
+{
+  my $pname = shift;
+  my $entry = shift;
+
+  my $ename = $entry->{'name'};
+
+  if ( $entry->{'type'} eq 'interface' ||
+       $entry->{'type'} eq 'class'     )
+  {
+    my $cdef      = $entry->{'def'};
+    my $methods   = $cdef->{'methods'};
+    my $have_ctor = 0;
+
+    foreach my $method ( @{$methods} )
+    {
+      if ( $method->{'name'} eq 'CONSTRUCTOR' )
+      {
+        # get list of params
+        my $parstr    = "";
+        my $first_par = 1;
+        foreach my $par ( @{$method->{'params'}} )
+        {
+          if ( $par->{'type'} ne $ename )
+          {
+            $parstr   .= ', ' unless $first_par;
+            $parstr   .= $par->{'name'};
+            $first_par = 0;
+          }
+        }
+
+        # print Dumper \$method;
+        # print "\n";
+        $method->{'name'} = $ename;
+        $method->{'init'} = "impl_ (new saga::impl::${pname}::${ename});",
+        $method->{'body'} = "(void) impl_->constructor ($parstr);"
+      }
+    }
+
+    my $sp = "saga::util::shared_ptr ";
+
+    # add a void ctor
+    my %vctor = ('name'    => $ename,
+                 'comm'    => '// void constructor',
+                 'type'    => 'ctor',
+                 'precomm' => '',
+                 'init'    => 'impl_ (NULL)',
+                 'body'    => ' ',
+                 'detail'  => undef,
+                 'sig'     => 'void',
+                 'sigd'    => 'void',
+                 'sigt'    => 'void',
+                 'sign'    => '',
+                 'params'  => []);
+
+
+    # add an impl ctor
+    my %ictor = ('name'    => $ename,
+                 'comm'    => '// impl constructor',
+                 'type'    => 'ctor',
+                 'precomm' => '',
+                 'detail'  => undef,
+                 'sig'     => "$sp<saga::impl::${pname}::${ename}> impl",
+                 'sigd'    => "$sp<saga::impl::${pname}::${ename}> impl",
+                 'sigt'    => "$sp<saga::impl::${pname}::${ename}>",
+                 'sign'    => 'impl',
+                 'init'    => "impl_ (impl)",
+                 'body'    => ' ',
+                 'params'  => [ { 'mode'    => 'in',
+                                  'name'    => 'impl',
+                                  'default' => undef,
+                                  'type'    => "$sp<saga::impl::${pname}::${ename}>"} ] );
+
+    splice (@{$methods}, 0, 0, \%ictor);
+    splice (@{$methods}, 0, 0, \%vctor);
+
+    print " === $pname\n";
+  }
+}
+  
+  
+
+########################################################################
+#
+# we don't need no dtors...
+#
+sub _fix_api_dtors ($$)
+{
+  my $pname = shift;
+  my $entry = shift;
+
+  if ( $entry->{'type'} eq 'interface' ||
+       $entry->{'type'} eq 'class'     )
+  {
+    my $cdef      = $entry->{'def'};
+    my $methods   = $cdef->{'methods'};
+    my @replaced  = ();
+
+    foreach my $method ( @{$methods} )
+    {
+      if ( $method->{'name'} ne 'DESTRUCTOR' )
+      {
+        push (@replaced, $method);
+      }
+      else
+      {
+        # instead of the d'tor, we add a close call
+        my %mclose = ('name'    => 'close',
+                      'comm'    => '// close impl',
+                      'precomm' => '',
+                      'detail'  => undef,
+                      'init'    => undef,
+                      'type'    => 'sync',
+                      'rtype'   => 'void',
+                      'sig'     => 'void',
+                      'sigd'    => 'void',
+                      'sigt'    => 'void',
+                      'sign'    => '',
+                      'body'    => "impl_ = NULL;",
+                      'params'  => [ ]
+                     );
+        push (@replaced, \%mclose);
+      }
+    }
+
+    $cdef->{'methods'} = \@replaced;
+  }
+}
+  
+
+########################################################################
+#
+# fill all API methods with a body
+#
+sub _fill_api_methods ($$)
+{
+  my $pname = shift;
+  my $entry = shift;
+
+  if ( $entry->{'type'} eq 'interface' ||
+       $entry->{'type'} eq 'class'     )
+  {
+    my $cdef      = $entry->{'def'};
+    my $methods   = $cdef->{'methods'};
+    my $is_async  = $entry->{'async'};
+    my @replaced  = ();
+
+    foreach my $method ( @{$methods} )
+    {
+      # keep the original (sync) method
+      push (@replaced, $method);
+
+      unless ( $method->{'type'} eq 'ctor' ||
+               $method->{'type'} eq 'dtor' )
+      {
+        if ( $is_async )
+        {
+          my $mname = $method->{'name'};
+          my $rtype = $method->{'rtype'} || "void";
+
+          my $body = "";
+          
+
+          # add the new async method
+          my %async_m = ('name'    => $method->{'name'   },
+                         'comm'    => $method->{'comm'   },
+                         'precomm' => $method->{'precomm'},
+                         'detail'  => $method->{'detail' },
+                         'init'    => $method->{'init'   },
+                         'type'    => 'async',
+                         'rtype'   => 'saga::task',
+                         'sig'     => $method->{'sig'    },
+                         'sigd'    => $method->{'sigd'   },
+                         'sign'    => $method->{'sign'   },
+                         'sigt'    => $method->{'sigt'   },
+                         'params'  => $method->{'params' },
+                         'body'    => $body
+                        );
+
+          push (@replaced, \%async_m);
+        }
+        else
+        {
+          # plain sync call
+          if ( ! exists  ($method->{'body'}) || 
+               ! defined ($method->{'body'}) || 
+               !         ($method->{'body'}) )
+          {
+            my $mname = $method->{'name'};
+            my $sign  = $method->{'sign'};
+            my $rtype = $method->{'rtype'} || "void";
+
+          }
+        }
+      }
+
+      $cdef->{'methods'} = \@replaced;
+
+    }
+  }
+}
+
+######################################################################
+#
+#
+#
+sub _format_method_sig ($$;$)
+{
+  my $ind  = shift;
+  my $m    = shift;
+  my $body = shift || $m->{'body'};
+  my $out  = "";
+
+
+  # FIXME: do not use refs for SAGA typed out/inout pars
+  
+  if ( $m->{'sigt'} eq 'void' )
+  {
+    # no param got inserted - method has void signature)
+    $out .= "(void)";
+  }
+  else
+  {
+    $out = "(";
+
+    # add parameter signatures
+    my $first_par = 1; # noi indent for first param
+    my $oparam    = $m->{'rpar'} || "";
+
+    foreach my $param ( @{$m->{'params'}} )
+    {
+      my $pname = $param->{'name'};
+      my $pmode = $param->{'mode'};
+      my $pdef  = $param->{'default'};
+      my $ptype = $param->{'type'};
+
+      unless ( $pname eq $oparam )
+      {
+        # out and inout params are to be passed by reference pointers
+        # FIXME: not true for saga object types, but true otherwise *sigh*
+
+        my $pref = " ";
+        # unless ( $pmode eq 'in' )
+        # {
+        #   $pref = "*";
+        # }
+
+
+        $out       .= ",\n$ind "  unless ( $first_par );
+        $out       .= sprintf ("%-18s $pref %s", $ptype, $pname);
+        $first_par  = 0;
+      }
+    }
+
+    $out .= ")";
+  }
+
+  return $out;
+}
+
+######################################################################
+#
+#
+#
+sub _format_method_body ($$;$)
+{
+  my $ind   = shift;
+  my $m     = shift;
+  my $mbody = shift || $m->{'body'};
+  my $minit =          $m->{'init'};
+  my $out   = "";
+
+  if ( $mbody )
+  {
+    $out .= "\n";
+
+    if ( $minit )
+    {
+      my $init_first = 1;
+      foreach my $iline ( split (/\n/, $minit) )
+      {
+        if ( $init_first )
+        {
+          $out .= "$ind    : $iline\n";
+          $init_first = 0;
+        }
+        else
+        {
+          $out .= "$ind    , $iline\n";
+        }
+      }
+    }
+
+    if ( $mbody =~ /^\s*$/io )
+    {
+      $out .= "$ind" . "{\n$ind" . "}\n";
+    }
+    else
+    {
+      $out .= "$ind" . "{\n";
+      foreach my $bline ( split (/\n/, $mbody) )
+      {
+        $out .= "$ind  $bline\n";
+      }
+      $out .= "$ind}\n";
+    }
+  }
+  else
+  {
+    $out .= ';';
+  }
+
+  return $out;
+}
+  
 
 1;
 

@@ -21,31 +21,37 @@ namespace saga
         saga::util::shared_ptr <saga::impl::filesystem::file> impl_;
 
       public:
-        file (std::string url);
-        file (saga::util::shared_ptr <saga::impl::filesystem::file> impl);
+      // void constructor
+      file                 (void)
+          : impl_ (NULL)
+      {
+      }
+        file (saga::util::shared_ptr <saga::impl::filesystem::file> impl)
+          : impl_ (impl)
+        {
+        }
 
-        void copy    (std::string tgt);
+
+        file (std::string url)
+          : impl_ (new saga::impl::filesystem::file)
+        {
+          (void) impl_->constructor (url);
+        }
+
+        void copy (std::string tgt)
+        {
+          (void) impl_->copy (tgt);
+        }
 
         size_t get_size (void)
         {
-          // NOTE: the two lines below MUST be semantically equivalent to the
-          // sync call.
-          saga::async::task t = get_size <saga::async::Sync> ();
-          int ret = t.get_result <size_t> ();
-
-          LOGSTR (DEBUG, "file api get_size") << "size: " << ret << std::endl;
-
-          return ret;
+          return (get_size <saga::async::Sync> ().get_result <size_t> ());
         }
 
         template <enum saga::async::mode M>
         saga::async::task get_size (void)
         {
-          SAGA_UTIL_STACKTRACE ();
-
-          saga::util::shared_ptr <saga::impl::async::task> t_impl = impl_->get_size (M);
-
-          return saga::async::task (t_impl);
+          return saga::async::task (impl_->get_size (M));
         }
 
     };

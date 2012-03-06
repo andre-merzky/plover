@@ -332,29 +332,29 @@
                   // from object  saga::error_handler
     {
       CONSTRUCTOR        (in  session        s,
-                          in  saga::url      name,
+                          in  url            name,
                           in  int            flags   = None,
                           out ns_entry       obj     );
       DESTRUCTOR         (in  ns_entry       obj     );
  
       // basic properties
-      get_url            (out saga::url      url     );
-      get_cwd            (out saga::url      cwd     );
-      get_name           (out saga::url      name    );
+      get_url            (out url            url     );
+      get_cwd            (out url            cwd     );
+      get_name           (out url            name    );
  
       // navigation/query methods
       is_dir             (out boolean        test    );
       is_entry           (out boolean        test    );
       is_link            (out boolean        test    );
-      read_link          (out saga::url      link    );
+      read_link          (out url            link    );
 +     get_mtime          (out int            time    );
  
       // management methods
-      copy               (in  saga::url      target,
+      copy               (in  url            target,
                           in  int            flags = None);
-      link               (in  saga::url      target,
+      link               (in  url            target,
                           in  int            flags = None);
-      move               (in  saga::url      target,
+      move               (in  url            target,
                           in  int            flags = None);
       remove             (in  int            flags = None);
       close              (in  float          timeout = 0.0);
@@ -377,80 +377,80 @@
                          // from object    saga::error_handler
     {
       CONSTRUCTOR        (in  session        s,
-                          in  saga::url      name,
+                          in  url            name,
                           in  int            flags = None,
                           out ns_directory   obj     );
       DESTRUCTOR         (in  ns_directory   obj     );
  
       // navigation/query methods
-      change_dir         (in  saga::url      dir     );
+      change_dir         (in  url            dir     );
       list               (in  string         name_pattern = ".",
                           in  int            flags   = None, 
-                          out array<saga::url> names   );
+                          out array<url>     names   );
       find               (in  string         name_pattern,
                           in  int            flags = Recursive,
-                          out array<saga::url> names   );
-      exists             (in  saga::url      name,
+                          out array<url>     names   );
+      exists             (in  url            name,
                           out boolean        exists  );
-      is_dir             (in  saga::url      name,
+      is_dir             (in  url            name,
                           out boolean        test    );
-      is_entry           (in  saga::url      name,
+      is_entry           (in  url            name,
                           out boolean        test    );
-      is_link            (in  saga::url      name,
+      is_link            (in  url            name,
                           out boolean        test    );
-      read_link          (in  saga::url      name,
-                          out saga::url      link    );
-+     get_mtime          (in  saga::url      name,
+      read_link          (in  url            name,
+                          out url            link    );
++     get_mtime          (in  url            name,
 +                         out int            time    );
  
       // manage entries by number
       get_num_entries    (out int            num     );
       get_entry          (in  int            entry,
-                          out saga::url      name    );
+                          out url            name    );
  
       // management methods
-      copy               (in  saga::url      source,
-                          in  saga::url      target,
+      copy               (in  url            source,
+                          in  url            target,
                           in  int            flags = None);
-      link               (in  saga::url      source,
-                          in  saga::url      target,
+      link               (in  url            source,
+                          in  url            target,
                           in  int            flags = None);
-      move               (in  saga::url      source,
-                          in  saga::url      target,
+      move               (in  url            source,
+                          in  url            target,
                           in  int            flags = None);
-      remove             (in  saga::url      target,
+      remove             (in  url            target,
                           in  int            flags = None);
-      make_dir           (in  saga::url      target,
+      make_dir           (in  url            target,
                           in  int            flags = None);
  
       // management methods - wildcard versions
       copy               (in  string         source,
-                          in  saga::url      target,
+                          in  url            target,
                           in  int            flags = None);
       link               (in  string         source,
-                          in  saga::url      target,
+                          in  url            target,
                           in  int            flags = None);
       move               (in  string         source,
-                          in  saga::url      target,
+                          in  url            target,
                           in  int            flags = None);
       remove             (in  string         target,
                           in  int            flags = None);
  
       // factory methods
-      open               (in  saga::url      name,
+      open               (in  url            name,
 !                         in  int            flags = Read,
                           out ns_entry       entry   );
-      open_dir            (in  saga::url     name,
+      open_dir            (in  url           name,
 !                         in  int            flags = Read,
                           out ns_directory   dir     );
  
  
       // permissions with flags
-      permissions_allow  (in  saga::url      target,
+      permissions_allow  (in  url            target,
                           in  string         id,
                           in  int            perm, 
                           in  int            flags = None);
-      permissions_deny   (in  saga::url      target,
+      permissions_deny   (in  url            target,
                           in  string         id,
                           in  int            perm, 
                           in  int            flags = None);
@@ -612,7 +612,7 @@
     - CONSTRUCTOR
       Purpose:  create the object
       Format:   CONSTRUCTOR          (in  session   s, 
-                                      in  saga::url name,
+                                      in  url       name,
 !                                     in  int       flags = Read,
                                       out ns_entry obj)
       Inputs:   s:                    session handle
@@ -666,7 +666,7 @@
  
     - get_url
       Purpose:  obtain the complete url pointing to the entry
-      Format:   get_url            (out  saga::url url);
+      Format:   get_url            (out  url       url);
       Inputs:   -
       InOuts:   -
       Outputs:  url                 url pointing to the entry
@@ -684,7 +684,7 @@
     - get_cwd
       Purpose:  obtain the current working directory for the
                 entry
-      Format:   get_cwd            (out saga::url cwd);
+      Format:   get_cwd            (out url       cwd);
       Inputs:   -
       InOuts:   -
       Outputs:  cwd                 current working directory
@@ -703,7 +703,7 @@
  
     - get_name
       Purpose:  obtain the name part of the url path element
-      Format:   get_name           (out  saga::url name);
+      Format:   get_name           (out  url       name);
       Inputs:   -
       InOuts:   -
       Outputs:  name                last part of path element
@@ -793,7 +793,7 @@
  
     - read_link 
       Purpose:  returns the name of the link target
-      Format:   read_link          (out saga::url link);
+      Format:   read_link          (out url       link);
       Inputs:   -
       InOuts:   -
       Outputs:  link:               resolved name
@@ -848,7 +848,7 @@
  
     - copy
       Purpose:  copy the entry to another part of the name space
-      Format:   copy               (in  saga::url target,
+      Format:   copy               (in  url       target,
                                     in  int       flags = None);
       Inputs:   target:             name to copy to
                 flags:              flags defining the operation
@@ -915,7 +915,7 @@
       Purpose:  create a symbolic link from the target entry to
                 the source entry ( this entry) so that any reference 
                 to the target refers to the source entry
-      Format:   link               (in  saga::url target,
+      Format:   link               (in  url       target,
                                     in  int       flags = None);
       Inputs:   target:             name to link to
                 flags:              flags defining the operation
@@ -986,7 +986,7 @@
     - move
       Purpose:  rename source to target, or move source to
                 target if target is a directory.
-      Format:   move               (in  saga::url target,
+      Format:   move               (in  url       target,
                                     in  int       flags = None);
       Inputs:   target:             name to move to
                 flags:              flags defining the operation
@@ -1202,7 +1202,7 @@
     - CONSTRUCTOR
       Purpose:  create the object
       Format:   CONSTRUCTOR          (in  session   s,
-                                      in  saga::url name,
+                                      in  url       name,
 !                                     in  int       flags = Read,
                                       out ns_directory obj)
       Inputs:   name:                 initial working dir
@@ -1256,7 +1256,7 @@
  
     - change_dir
       Purpose:  change the working directory
-      Format:   change_dir         (in  saga::url  dir);
+      Format:   change_dir         (in  url        dir);
       Inputs:   dir:                directory to change to
       InOuts:   -
       Outputs:  -
@@ -1286,7 +1286,7 @@
       Purpose:  list entries in this directory
       Format:   list               (in  string name_pattern = ".",
                                     in  int    flags        = None
-                                    out array<saga::url> names);
+                                    out array<url> names);
       Inputs:   flags:              flags defining the operation
                                     modus
                 name_pattern:       name or pattern to list
@@ -1343,7 +1343,7 @@
       Purpose:  find entries in the current directory and below
       Format:   find               (in  string  name_pattern,
                                     in  int     flags = Recursive,
-                                    out array<saga::url> names);
+                                    out array<url> names);
       Inputs:   name_pattern:       pattern for names of
                                     entries to be found
                 flags:              flags defining the operation
@@ -1390,7 +1390,7 @@
  
     - exists
       Purpose:  returns true if entry exists, false otherwise
-      Format:   exists             (in  saga::url name,
+      Format:   exists             (in  url       name,
                                     out boolean  exists);
       Inputs:   name:               name to be tested for
                                     existence
@@ -1422,7 +1422,7 @@
  
     - is_dir
       Purpose:  tests name for being a directory
-      Format:   is_dir             (in  saga::url name,
+      Format:   is_dir             (in  url       name,
                                     out boolean test);
       Inputs:   name:               name to be tested
       InOuts:   -
@@ -1458,7 +1458,7 @@
  
     - is_entry
       Purpose:  tests name for being an ns_entry
-      Format:   is_entry           (in  saga::url name,
+      Format:   is_entry           (in  url       name,
                                     out boolean   test);
       Inputs:   name:               name to be tested
       InOuts:   -
@@ -1492,7 +1492,7 @@
  
     - is_link
       Purpose:  tests name for being a symbolic link
-      Format:   is_link            (in  saga::url name,
+      Format:   is_link            (in  url       name,
                                     out boolean   test);
       Inputs:   name:               name to be tested
       InOuts:   -
@@ -1526,8 +1526,8 @@
  
     - read_link 
       Purpose:  returns the name of the link target
-      Format:   read_link          (in  saga::url name,
-                                    out saga::url link);
+      Format:   read_link          (in  url       name,
+                                    out url       link);
       Inputs:   name:               name to be resolved
       InOuts:   -
       Outputs:  link:               resolved name
@@ -1556,7 +1556,7 @@
 +
 +   - get_mtime
 +     Purpose:  returns the last modification time
-+     Format:   get_time           (in  saga::url name,
++     Format:   get_time           (in  url       name,
 +                                   out int time);
 +     Inputs:   name:               name to be checked
 +     InOuts:   -
@@ -1618,7 +1618,7 @@
                 based upon the enumeration defined by
                 get_num_entries
       Format:   get_entry          (in  int       entry,
-                                    out saga::url name);
+                                    out url       name);
       Inputs:   entry:              index of entry to get
       InOuts:   -
       Outputs:  name:               name of entry at index
@@ -1654,8 +1654,8 @@
  
     - copy
       Purpose:  copy the entry to another part of the name space
-      Format:   copy               (in  saga::url  source,
-                                    in  saga::url  target,
+      Format:   copy               (in  url        source,
+                                    in  url        target,
                                     in  int     flags = None);
       Inputs:   source:             name to copy
                 target:             name to copy to
@@ -1703,8 +1703,8 @@
       Purpose:  create a symbolic link from the target entry to
                 the source entry so that any reference to the
                 target refers to the source entry
-      Format:   link               (in  saga::url  source,
-                                    in  saga::url  target,
+      Format:   link               (in  url        source,
+                                    in  url        target,
                                     in  int     flags = None);
       Inputs:   source:             name to link
                 target:             name to link to
@@ -1763,8 +1763,8 @@
     - move
       Purpose:  rename source to target, or move source to
                 target if target is a directory.
-      Format:   move               (in  saga::url  source,
-                                    in  saga::url  target,
+      Format:   move               (in  url        source,
+                                    in  url        target,
                                     in  int     flags = None);
       Inputs:   source:             name to move
                 target:             name to move to
@@ -1828,7 +1828,7 @@
  
     - remove
       Purpose:  removes the entry
-      Format:   remove             (in  saga::url  target,
+      Format:   remove             (in  url        target,
                                     in  int     flags = None);
       Inputs:   target:             entry to be removed
       InOuts:   -
@@ -1879,7 +1879,7 @@
  
     - make_dir
       Purpose:  creates a new directory
-      Format:   make_dir           (in  saga::url  target,
+      Format:   make_dir           (in  url        target,
                                     in  int     flags = None);
       Inputs:   target:             directory to create
       InOuts:   -
@@ -1922,7 +1922,7 @@
  
     - open_dir
       Purpose:  creates a new ns_directory instance
-      Format:   open_dir           (in  saga::url name,
+      Format:   open_dir           (in  url       name,
 !                                   in  int       flags = Read,
                                     out ns_directory dir);
       Inputs:   name:               directory to open
@@ -1983,7 +1983,7 @@
  
     - open
       Purpose:  creates a new ns_entry instance
-      Format:   open               (in  saga::url name,
+      Format:   open               (in  url       name,
 !                                   in  int       flags = Read,
                                     out ns_entry  entry);
       Inputs:   name:               entry
@@ -2058,7 +2058,7 @@
     - copy
       Purpose:  copy the entry to another part of the name space
       Format:   copy               (in  string     source,
-                                    in  saga::url  target,
+                                    in  url        target,
                                     in  int        flags = None);
       Notes:    - the syntax and semantics of this call is 
                   identical to its URL based counterpart.  
@@ -2080,7 +2080,7 @@
                 the source entry so that any reference to the
                 target refers to the source entry
       Format:   link               (in  string     source,
-                                    in  saga::url  target,
+                                    in  url        target,
                                     in  int        flags = None);
       Notes:    - the syntax and semantics of this call is 
                   identical to its URL based counterpart.  
@@ -2099,7 +2099,7 @@
     - move
       Purpose:  moves sources to a target directory.
       Format:   move               (in  string     source,
-                                    in  saga::url  target,
+                                    in  url        target,
                                     in  int        flags = None);
       Notes:    - the syntax and semantics of this call is 
                   identical to its URL based counterpart.  
@@ -2135,7 +2135,7 @@
  
     - permissions_allow
       Purpose:  enable a permission 
-      Format:   permissions_allow    (in  saga::url target, 
+      Format:   permissions_allow    (in  url       target, 
                                       in  string    id,
                                       in  int       perm, 
                                       in  int       flags = None);
@@ -2168,7 +2168,7 @@
  
     - permissions_deny
       Purpose:  disable a permission flag
-      Format:   permissions_deny     (in  saga::url target, 
+      Format:   permissions_deny     (in  url       target, 
                                       in  string    id,
                                       in  int       perm,
                                       in  int       flags = None);

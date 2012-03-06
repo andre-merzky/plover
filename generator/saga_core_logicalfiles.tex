@@ -95,19 +95,19 @@
     // going over several lines
     enum flags
     {
-      None            =    0, // same as in namespace::flags
-      Overwrite       =    1, // same as in namespace::flags
-      Recursive       =    2, // same as in namespace::flags
-      Dereference     =    4, // same as in namespace::flags
-      Create          =    8, // same as in namespace::flags
-      Exclusive       =   16, // same as in namespace::flags
-      Lock            =   32, // same as in namespace::flags
-      CreateParents   =   64, // same as in namespace::flags
+      None            =    0, // same as in saga::namespace::flags
+      Overwrite       =    1, // same as in saga::namespace::flags
+      Recursive       =    2, // same as in saga::namespace::flags
+      Dereference     =    4, // same as in saga::namespace::flags
+      Create          =    8, // same as in saga::namespace::flags
+      Exclusive       =   16, // same as in saga::namespace::flags
+      Lock            =   32, // same as in saga::namespace::flags
+      CreateParents   =   64, // same as in saga::namespace::flags
       //                 128,    reserved for Truncate
       //                 256,    reserved for Append
-!     Read            =  512, // same as in namespace::flags 
-!     Write           = 1024, // same as in namespace::flags 
-!     ReadWrite       = 1536, // same as in namespace::flags 
+!     Read            =  512, // same as in saga::namespace::flags 
+!     Write           = 1024, // same as in saga::namespace::flags 
+!     ReadWrite       = 1536, // same as in saga::namespace::flags 
       //                2048     reserved for Binary
     }
  
@@ -119,21 +119,21 @@
                       // from object    saga::error_handler
     {
       CONSTRUCTOR     (in  session             s,
-                       in  saga::url           name,
+                       in  url                 name,
                        in  int                 flags = Read,
                        out logical_file        obj);
       DESTRUCTOR      (in  logical_file        obj);
  
  
       // manage the set of associated replicas
-      add_location    (in  saga::url           name);
-      remove_location (in  saga::url           name);
-      update_location (in  saga::url           name_old,
-                       in  saga::url           name_new);
-      list_locations  (out array<saga::url>    names);
+      add_location    (in  url                 name);
+      remove_location (in  url                 name);
+      update_location (in  url                 name_old,
+                       in  url                 name_new);
+      list_locations  (out array<url>          names);
  
       // create a new physical replica
-      replicate       (in  saga::url           name, 
+      replicate       (in  url                 name, 
                        in  int                 flags = None);
  
       // Attributes (extensible):
@@ -151,22 +151,22 @@
     {
  
       CONSTRUCTOR     (in  session             s,
-                       in  saga::url           name,
+                       in  url                 name,
                        in  int                 flags = Read,
                        out logical_directory   obj);
       DESTRUCTOR      (in  logical_directory   obj);
  
  
       // inspection methods
-      is_file         (in  saga::url           name,
+      is_file         (in  url                 name,
                        out boolean             test);
  
       // open methods
-      open_dir        (in  saga::url           name,
+      open_dir        (in  url                 name,
                        in  int                 flags = Read,
                        out logical_directory   dir);
  
-      open            (in  saga::url           name,
+      open            (in  url                 name,
                        in  int                 flags = Read,
                        out logical_file        file);
  
@@ -174,7 +174,7 @@
       find            (in  string              name_pattern,
                        in  array<string>       attr_pattern,
                        in  int                 flags = Recursive,
-                       out array<saga::url>    names   );
+                       out array<url>          names   );
     }
   }
  \end{myspec}
@@ -224,7 +224,7 @@
     - CONSTRUCTOR
       Purpose:  create the object
       Format:   CONSTRUCTOR      (in session    s,
-                                  in  saga::url name,
+                                  in  url       name,
                                   in  int       flags = Read,
                                   out logical_file  obj)
       Inputs:   s:                session to associate with
@@ -277,7 +277,7 @@
  
     - add_location
       Purpose:  add a replica location to the replica set
-      Format:   add_location     (in  saga::url name);
+      Format:   add_location     (in  url       name);
       Inputs:   name:             location to add to set
       InOuts:   -
       Outputs:  -
@@ -316,7 +316,7 @@
  
     - remove_location
       Purpose:  remove a replica location from the replica set
-      Format:   remove_location  (in  saga::url name);
+      Format:   remove_location  (in  url       name);
       Inputs:   name:             replica to remove from set
       InOuts:   -
       Outputs:  -
@@ -360,8 +360,8 @@
  
     - update_location
       Purpose:  change a replica location in replica set
-      Format:   update_location  (in saga::url name_old,
-                                  in saga::url name_new);
+      Format:   update_location  (in url       name_old,
+                                  in url       name_new);
       Inputs:   name_old          replica to be updated
                 name_new          update of replica
       InOuts:   -
@@ -411,7 +411,7 @@
  
     - list_locations
       Purpose:  list the locations in the location set
-      Format:   list_locations   (out array<saga::url> names);
+      Format:   list_locations   (out array<url>       names);
       Inputs:   -
       InOuts:   -
       Outputs:  names:            array of locations in set
@@ -440,7 +440,7 @@
                 replica locations to a new location, and, on 
                 success, add the new replica location to the 
                 set of associated replicas 
-      Format:   replicate        (in  saga::url name, 
+      Format:   replicate        (in  url       name, 
                                   in  int       flags = None);
       Inputs:   name:             location to replicate to
                 flags:            flags defining the operation
@@ -508,7 +508,7 @@
     - CONSTRUCTOR
       Purpose:  create the object
       Format:   CONSTRUCTOR      (in  session       s,
-                                  in  saga::url     name,
+                                  in  url           name,
                                   in  int           flags = Read,
                                   out logical_directory
                                                     obj)
@@ -563,7 +563,7 @@
  
     - open_dir
       Purpose:  creates a new logical_directory instance
-      Format:   open_dir         (in  saga::url name,
+      Format:   open_dir         (in  url       name,
                                   in  int       flags = Read,
                                   out logical_directory dir);
       Inputs:   name:             name of directory to open
@@ -599,7 +599,7 @@
  
     - open
       Purpose:  creates a new logical_file instance
-      Format:   open             (in  saga::url    name,
+      Format:   open             (in  url          name,
                                   in  int          flags = Read,
                                   out logical_file file);
       Inputs:   name:             file to be opened
@@ -641,7 +641,7 @@
       Format:   find             (in  string           name_pattern,
                                   in  array<string>    attr_pattern,
                                   in  int              flags = Recursive,
-                                  out array<saga::url> names);
+                                  out array<url>       names);
       Inputs:   name_pattern:     pattern for names of
                                   entries to be found
                 attr_pattern:     pattern for meta data

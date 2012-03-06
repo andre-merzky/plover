@@ -103,11 +103,11 @@
                         // from object  saga::error_handler
     {
       CONSTRUCTOR       (in    session         s,
-                         in    saga::url       url,
+                         in    url             url,
                          out   stream_server   obj);
       DESTRUCTOR        (in    stream_server   obj);
  
-      get_url           (out   saga::url       url);
+      get_url           (out   url             url);
 
       serve             (in    float           timeout = -1.0,
                          out   stream          stream);
@@ -135,12 +135,12 @@
     {
       // constructor / destructor
       CONSTRUCTOR  (in    session          s,
-                    in    saga::url        url = "",
+                    in    url              url = "",
                     out   stream           obj);
       DESTRUCTOR   (in    stream           obj);
  
       // inspection methods
-      get_url      (out   saga::url        url);
+      get_url      (out   url              url);
       get_context  (out   context          ctx);
  
       // management methods
@@ -385,7 +385,7 @@
     - CONSTRUCTOR
       Purpose:  create a new stream_server object
       Format:   CONSTRUCTOR          (in  session   s,
-                                      in  saga::url url = "",
+                                      in  url       url = "",
                                       out stream_server obj);
       Inputs:   s:                    session to be used for
                                       object creation
@@ -437,7 +437,7 @@
     // inspection
     - get_url
       Purpose:  get URL to be used to connect to this server
-      Format:   get_url              (out saga::url url);
+      Format:   get_url              (out url       url);
       Inputs:   -
       InOuts:   -
       Outputs:  url:                  the URL of the connection.
@@ -556,7 +556,7 @@
       Purpose:  Constructor, initializes a client stream,
                 for later connection to a server.
       Format:   CONSTRUCTOR          (in  session    s,
-                                      in  saga::url  url,
+                                      in  url        url,
                                       out stream  obj);
       Inputs:   s:                    saga session handle
                 url:                  server location as URL
@@ -611,7 +611,7 @@
  
     - get_url
       Purpose:  get URL used for creating the stream
-      Format:   get_url               (out saga::url url);
+      Format:   get_url               (out url       url);
       Inputs:   -
       InOuts:   -
       Outputs:  url:                  the URL of the connection.

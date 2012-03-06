@@ -132,19 +132,19 @@
   { 
     enum flags 
     { 
-      None           =    0, // same as in namespace::flags 
-      Overwrite      =    1, // same as in namespace::flags
-      Recursive      =    2, // same as in namespace::flags 
-      Dereference    =    4, // same as in namespace::flags 
-      Create         =    8, // same as in namespace::flags 
-      Exclusive      =   16, // same as in namespace::flags
-      Lock           =   32, // same as in namespace::flags 
-      CreateParents  =   64, // same as in namespace::flags 
+      None           =    0, // same as in saga::namespace::flags 
+      Overwrite      =    1, // same as in saga::namespace::flags
+      Recursive      =    2, // same as in saga::namespace::flags 
+      Dereference    =    4, // same as in saga::namespace::flags 
+      Create         =    8, // same as in saga::namespace::flags 
+      Exclusive      =   16, // same as in saga::namespace::flags
+      Lock           =   32, // same as in saga::namespace::flags 
+      CreateParents  =   64, // same as in saga::namespace::flags 
       Truncate       =  128, 
       Append         =  256, 
-!     Read           =  512, // same as in namespace::flags 
-!     Write          = 1024, // same as in namespace::flags 
-!     ReadWrite      = 1536, // same as in namespace::flags 
+!     Read           =  512, // same as in saga::namespace::flags 
+!     Write          = 1024, // same as in saga::namespace::flags 
+!     ReadWrite      = 1536, // same as in saga::namespace::flags 
       Binary         = 2048 
     }
  
@@ -184,7 +184,7 @@
               // from object    saga::error_handler
     {
       CONSTRUCTOR (in    session           s,
-                   in    saga::url         name,
+                   in    url               name,
                    in    int               flags = Read,
                    out   file              obj      );
       DESTRUCTOR  (in    file              obj      );
@@ -233,33 +233,33 @@
     }
  
  
-    class directory : extends            saga::ns_directory
-                   // from ns_directory  saga::ns_entry
+    class directory : extends            saga::namespace::ns_directory
+                   // from ns_directory  saga::namespace::ns_entry
                    // from ns_entry      saga::object
                    // from ns_entry      saga::async
                    // from ns_entry      saga::permissions
                    // from object        saga::error_handler
     {
       CONSTRUCTOR (in    session           s,
-                   in    saga::url         name,
+                   in    url               name,
                    in    int               flags = Read,
                    out   directory         obj      );
       DESTRUCTOR  (in    directory         obj      );
  
       // inspection methods
-      get_size    (in    saga::url         name,
+      get_size    (in    url               name,
                    in    int               flags = None,
                    out   int               size     );
-      is_file     (in    saga::url         name,
+      is_file     (in    url               name,
                    in    int               flags = None,
                    out   boolean           test     );
  
       // factory-like methods
-      open_dir    (in    saga::url         name,
+      open_dir    (in    url               name,
                    in    int               flags = Read,
                    out   directory         dir      );
  
-      open        (in    saga::url         name,
+      open        (in    url               name,
                    in    int               flags = Read,
                    out   file              file     );
     }
@@ -485,7 +485,7 @@
     - CONSTRUCTOR
       Purpose:  create the obj
       Format:   CONSTRUCTOR        (in  session   s,
-                                    in  saga::url name,
+                                    in  url       name,
                                     in  int       flags = Read,
                                     out file      obj)
       Inputs:   s:                  session to associate the
@@ -1033,7 +1033,7 @@
     - CONSTRUCTOR
       Purpose:  open the directory
       Format:   CONSTRUCTOR        (in  session    s,
-                                    in  saga::url  name,
+                                    in  url        name,
                                     in  int        flags = Read,
                                     out directory  obj)
       Inputs:   s:                  session to associate the
@@ -1085,7 +1085,7 @@
  
     - get_size
       Purpose:  returns the number of bytes in the file
-      Format:   get_size           (in  saga::url name,
+      Format:   get_size           (in  url       name,
                                     in  int       flags = None,
                                     out int       size);
       Inputs:   name:               name of file to inspect
@@ -1127,7 +1127,7 @@
                   as defined by POSIX
  
     - is_file
-      Alias:    for is_entry in saga::ns_directory
+      Alias:    for is_entry in ns_directory
  
  
     Factory-like methods for creating objects:
@@ -1135,7 +1135,7 @@
  
     - open_dir
       Purpose:  creates a directory object
-      Format:   open_dir           (in  saga::url name,
+      Format:   open_dir           (in  url       name,
                                     in  int       flags = Read,
                                     out directory dir)
       Inputs:   name:               name of directory to open
@@ -1171,7 +1171,7 @@
  
     - open
       Purpose:  creates a new file instance
-      Format:   open               (in  saga::url name,
+      Format:   open               (in  url       name,
                                     in  int       flags = Read,
                                     out file      file);
       Inputs:   name:               file to be opened
@@ -1277,7 +1277,7 @@
   %   future API version may have something like:
   % 
   % \begin{myspectxt}
-  %   stat             (in  saga::url        name,
+  %   stat             (in  url              name,
   %                     out struct           statinfo );
   % \end{myspectxt}
  
