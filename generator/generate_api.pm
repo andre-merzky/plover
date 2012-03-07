@@ -15,6 +15,8 @@ $VERSION     = 1.00;
 
 use generator_helper;
 use Data::Dumper;
+use Storable qw(dclone);
+
 
 ########################################################################
 #
@@ -81,11 +83,11 @@ EOT
     # is the enum used, or just a comment?
     if ( $u )
     {
-      printf $out ("      %-18s = %5d$comma%s\n", $n, $e, $c);
+      printf $out ("      %-20s = %5d$comma%s\n", $n, $e, $c);
     }
     else
     {
-      printf $out ("   // %-18s = %5d$comma%s\n", $n, $e, $c);
+      printf $out ("   // %-20s = %5d$comma%s\n", $n, $e, $c);
     }
   }
 
@@ -153,8 +155,8 @@ sub iface_hpp ($$$$)
   my $bases   = $iface->{'base'} || [];
 
   my $first      = 1;
-# my $impl_ind   = ' ' x (11 + length ($iname));
-  my $impl_ind   = ' ' x 8;
+  my $ind        = 8;
+  my $impl_ind   = ' ' x $ind;
 
   # C++ handles interfaces and base classes the same way, for inheritance
   foreach my $base ( @{$bases} )
@@ -227,10 +229,9 @@ EOT
 
   # ctor/dtor methods
   {
-    print $out "\n\n";
-    print $out "      //--------------------------\n";
-    print $out "      // construction/destruction \n";
-    print $out "      //--------------------------\n\n";
+    print $out "        //--------------------------\n";
+    print $out "        // construction/destruction \n";
+    print $out "        //--------------------------\n\n";
 
     my $m_first = 1;
     foreach my $method ( @{$iface->{'def'}{'methods'}} )
@@ -238,7 +239,7 @@ EOT
       if ( $method->{'type'} eq 'ctor' ||
            $method->{'type'} eq 'dtor' )
       {
-        my $mtxt = _format_method_sync_api_hpp (6, $method);
+        my $mtxt = _format_method_sync_api_hpp ($ind, $method);
 
         # no empty line before first method
         if ( $m_first )
@@ -254,54 +255,29 @@ EOT
 
 
   # sync methods
-  if ( $is_async )
-  {
-    print $out "      //-------------------------\n";
-    print $out "      // sync method definitions \n";
-    print $out "      //-------------------------\n\n";
-  }
+  print $out "        //-------------------------\n";
+  print $out "        // api method definitions  \n";
+  print $out "        //-------------------------\n\n";
 
   foreach my $method ( @{$iface->{'def'}{'methods'}} )
   {
     if ( $method->{'type'} eq 'sync' )
     {
-      my $mtxt = _format_method_sync_api_hpp (6, $method);
+      my $stxt .= _format_method_sync_api_hpp ($ind, $method);
+      print $out "$stxt";
 
-      print $out "$mtxt\n";
+      if ( $is_async )
+      {
+        $method->{'comm'} = '';
+        my $atxt .= _format_method_async_api_hpp ($ind, $method);
+        print $out "\n$atxt";
+      }
     }
+    print $out "\n\n";
   }
 
   print $out "\n";
   
-
-  # async methods
-  if ( $is_async )
-  {
-    print $out "\n\n";
-    print $out "      //--------------------------\n";
-    print $out "      // async method definitions \n";
-    print $out "      //--------------------------\n\n";
-
-    my $m_first = 1;
-    foreach my $method ( @{$iface->{'def'}{'methods'}} )
-    {
-      unless ( $method->{'type'} eq 'ctor' ||
-               $method->{'type'} eq 'dtor' )
-      {
-        my $mtxt = _format_method_async_api_hpp (6, $method);
-
-        # no empty line before first method
-        if ( $m_first )
-        {
-          $mtxt =~ s/^\s*\n//io;
-        }
-
-        $m_first = 0;
-        print $out "$mtxt\n";
-      }
-    }
-  }
-
 #------------------------------------------------------------
   print $out <<EOT;
     };
@@ -369,7 +345,7 @@ sub _format_method_sync_api_hpp ($$)
   }
   else
   {
-    $tmp = sprintf ("$IND%-18s  %-20s ", $rtype, $mname);
+    $tmp = sprintf ("$IND%-20s  %-20s ", $rtype, $mname);
     $body = "return ($mname <saga::async::Sync> ($msign).get_result <$rtype> ());";
   }
 
@@ -378,8 +354,6 @@ sub _format_method_sync_api_hpp ($$)
 
   $out .= _format_method_sig  ($IND2, $m, $body);
   $out .= _format_method_body ($IND , $m, $body);
-
-  $out .= "\n";
 
   return $out;
 }
@@ -399,7 +373,7 @@ sub _format_method_async_api_hpp ($$)
 
   if ( $comm )
   {
-    $out .= "\n$comm";
+    $out .= "$comm";
   }
 
   # print "----------------------------------\n" if ( $mname eq "get_test_obj");
@@ -467,9 +441,12 @@ sub _fix_api_ctors ($$)
   if ( $entry->{'type'} eq 'interface' ||
        $entry->{'type'} eq 'class'     )
   {
-    my $cdef      = $entry->{'def'};
-    my $methods   = $cdef->{'methods'};
-    my $have_ctor = 0;
+    my $cdef            = $entry->{'def'};
+    my $methods         = $cdef->{'methods'};
+    my $have_ctor       = 0;
+    my $use_session     = 0;
+    my @wo_session_pars = ();
+    my @new_methods     = ();
 
     foreach my $method ( @{$methods} )
     {
@@ -480,6 +457,19 @@ sub _fix_api_ctors ($$)
         my $first_par = 1;
         foreach my $par ( @{$method->{'params'}} )
         {
+          # if we found a session as first parameter, save the remaining pars
+          # w/o that session
+          if ( $use_session )
+          {
+            push (@wo_session_pars, $par);
+          }
+
+          # also check if first ctor param is session
+          if ( $first_par &&  $par->{'type'} eq 'session' )
+          {
+            $use_session = 1;
+          }
+
           if ( $par->{'type'} ne $ename )
           {
             $parstr   .= ', ' unless $first_par;
@@ -491,8 +481,29 @@ sub _fix_api_ctors ($$)
         # print Dumper \$method;
         # print "\n";
         $method->{'name'} = $ename;
-        $method->{'init'} = "impl_ (new saga::impl::${pname}::${ename});",
-        $method->{'body'} = "(void) impl_->constructor ($parstr);"
+        $method->{'init'} = "impl_ (new saga::impl::${pname}::${ename});";
+        $method->{'body'} = "(void) impl_->constructor ($parstr);";
+        $method->{'comm'} = "// ctor with session\n" . $method->{'comm'};
+        chomp ($method->{'comm'});
+
+        push (@new_methods, $method);
+
+        # add a similar ctor w/o session, if needed
+        if ( $use_session )
+        {
+          my $wo_session_ctor              = dclone ($method);
+             $wo_session_ctor->{'params'}  = \@wo_session_pars;
+             $wo_session_ctor->{'comm'}    = "// ctor without session";
+             $wo_session_ctor->{'body'}    = "saga::core::session s (true); " . 
+                                             "// use default session\n";
+             $wo_session_ctor->{'body'}   .= $method->{'body'};
+
+          push (@new_methods, $wo_session_ctor);
+        }
+      }
+      else
+      {
+        push (@new_methods, $method);
       }
     }
 
@@ -512,6 +523,8 @@ sub _fix_api_ctors ($$)
                  'sign'    => '',
                  'params'  => []);
 
+    push (@new_methods, \%vctor);
+
 
     # add an impl ctor
     my %ictor = ('name'    => $ename,
@@ -529,9 +542,9 @@ sub _fix_api_ctors ($$)
                                   'name'    => 'impl',
                                   'default' => undef,
                                   'type'    => "$sp<saga::impl::${pname}::${ename}>"} ] );
+    push (@new_methods, \%ictor);
 
-    splice (@{$methods}, 0, 0, \%ictor);
-    splice (@{$methods}, 0, 0, \%vctor);
+    $cdef->{'methods'} = \@new_methods;
 
     print " === $pname\n";
   }
@@ -587,78 +600,6 @@ sub _fix_api_dtors ($$)
 }
   
 
-########################################################################
-#
-# fill all API methods with a body
-#
-sub _fill_api_methods ($$)
-{
-  my $pname = shift;
-  my $entry = shift;
-
-  if ( $entry->{'type'} eq 'interface' ||
-       $entry->{'type'} eq 'class'     )
-  {
-    my $cdef      = $entry->{'def'};
-    my $methods   = $cdef->{'methods'};
-    my $is_async  = $entry->{'async'};
-    my @replaced  = ();
-
-    foreach my $method ( @{$methods} )
-    {
-      # keep the original (sync) method
-      push (@replaced, $method);
-
-      unless ( $method->{'type'} eq 'ctor' ||
-               $method->{'type'} eq 'dtor' )
-      {
-        if ( $is_async )
-        {
-          my $mname = $method->{'name'};
-          my $rtype = $method->{'rtype'} || "void";
-
-          my $body = "";
-          
-
-          # add the new async method
-          my %async_m = ('name'    => $method->{'name'   },
-                         'comm'    => $method->{'comm'   },
-                         'precomm' => $method->{'precomm'},
-                         'detail'  => $method->{'detail' },
-                         'init'    => $method->{'init'   },
-                         'type'    => 'async',
-                         'rtype'   => 'saga::task',
-                         'sig'     => $method->{'sig'    },
-                         'sigd'    => $method->{'sigd'   },
-                         'sign'    => $method->{'sign'   },
-                         'sigt'    => $method->{'sigt'   },
-                         'params'  => $method->{'params' },
-                         'body'    => $body
-                        );
-
-          push (@replaced, \%async_m);
-        }
-        else
-        {
-          # plain sync call
-          if ( ! exists  ($method->{'body'}) || 
-               ! defined ($method->{'body'}) || 
-               !         ($method->{'body'}) )
-          {
-            my $mname = $method->{'name'};
-            my $sign  = $method->{'sign'};
-            my $rtype = $method->{'rtype'} || "void";
-
-          }
-        }
-      }
-
-      $cdef->{'methods'} = \@replaced;
-
-    }
-  }
-}
-
 ######################################################################
 #
 #
@@ -706,7 +647,7 @@ sub _format_method_sig ($$;$)
 
 
         $out       .= ",\n$ind "  unless ( $first_par );
-        $out       .= sprintf ("%-18s $pref %s", $ptype, $pname);
+        $out       .= sprintf ("%-15s $pref %s", $ptype, $pname);
         $first_par  = 0;
       }
     }

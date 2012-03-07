@@ -46,9 +46,25 @@ sub format_comment ($$)
   my $out   = "";
   my $IND   = ' ' x $ind;
   my @lines = split (/\n/, $comm);
+  my $start = 1; 
 
+  COMM_LINE:
   foreach my $line ( @lines ) 
   {
+    # remove leading empty lines
+
+    if ( $start )
+    {
+      if ( $line =~ /^\s*(?:\/\/)?\s*$/o )
+      {
+        # ignore
+        next COMM_LINE;
+      }
+      
+      # non-empty line - comment starts
+      $start = 0;
+    }
+
     if ( $line =~ /^\s*\/\/(.*)$/o )
     {
       my $txt = $1 || " ";
