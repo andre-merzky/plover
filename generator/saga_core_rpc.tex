@@ -1,0 +1,697 @@
+ 
+  GridRPC is one of the few high level APIs that have been
+  specified by the GGF~\cite{gridrpc}.  Thus including the
+  GridRPC specification in the SAGA API benefits both SAGA and
+  the GridRPC effort: SAGA becomes more complete and provides a
+  better coverage of its use cases with a single
+  Look-\&-Feel, whilst GridRPC gets embedded into a set
+  of other tools of similar scope, which opens it to a
+  potentially wider user community, and ensures its further
+  development.
+ 
+  Semantically, the methods defined in the GridRPC
+  specification, as described in GFD.52~\cite{gridrpc}, map
+  exactly with the RPC package of the SAGA API as described
+  here. In essence, the GridRPC API has been imported into the
+  SAGA RPC package, and has been equipped with the
+  Look-\&-Feel, error conventions, task model, etc.  of
+  the SAGA API.
+ 
+  The rpc class constructor initializes the remote function
+  handle.  This process may involve connection setup, service
+  discovery, etc.  The rpc class further offers one method
+  'call', which invokes the remote procedure, and returns the
+  respective return data and values.  The asynchronous call
+  versions described in the GridRPC specification are realized
+  by the SAGA task model, and are not represented as separate
+  calls here.
+  
+  In the constructor, the remote procedure to be invoked is
+  specified by a URL, with the syntax:
+ 
+    \shift |gridrpc://server.net:1234/my_function|
+ 
+  with the elements responding to:
+ 
+  \begin{tabbing}
+    \shift XXXXXXXXX     \= --~~ XXXXX  \= --~~ \kill
+    \shift |gridrpc|     \> --~~ scheme \> --~~ identifying a grid rpc operation\\
+    \shift |server.net|  \> --~~ server \> --~~ server host serving the rpc call\\
+    \shift |1234|        \> --~~ port   \> --~~ contact point for the server\\
+    \shift |my_function| \> --~~ name   \> --~~ name of the remote method to invoke\\
+  \end{tabbing}
+  
+  All elements can be empty, which allows the implementation to
+  fall back to a default remote method to invoke.
+  
+  The argument and return value handling is very basic, and
+  reflects the traditional scheme for remote procedure calls,
+  that is, an array of structures acts as variable parameter
+  vector. For each element of the vector, the |parameter| struct
+  describes its data |buffer|, the |size| of that buffer, and
+  its input/output |mode|.
+  
+  The |mode| value has to be initialized for each |parameter|,
+  and |size| and |buffer| values have to be initialized for each
+  |In| and |InOut| struct. For |Out| parameters, |size| may have
+  the value |0| in which case the |buffer| must be un-allocated,
+  and is to be created (e.g. allocated) by the SAGA
+  implementation upon arrival of the result data, with a size
+  sufficient to hold all result data.  The |size| value is to be
+  set by the implementation to the allocated buffer size.  SAGA
+  language bindings MUST prescribe the responsibilities for
+  releasing the allocated buffer, according to usual procedures
+  in the respective languages.
+  
+  When an |Out| or |InOut| struct uses a pre-allocated buffer,
+  any data exceeding the buffer size are discarded.  The
+  application is responsible for specifying correct buffer sizes
+  for pre-allocated buffers; otherwise the behavior is
+  undefined.
+ 
+  This argument handling scheme allows efficient (copy-free)
+  passing of parameters. The parameter vector must be passed by
+  reference because it is specified as |inout| in SIDL. (See
+  also Section~\ref{ssec:sidl}.) 
+  
+   \subsubsection{RPC Permissions}
+ 
+    The SAGA API allows for application level
+    authorization of RPC calls an application is able to set
+    permissions on \T{saga::rpc} instances.  Not all
+    implementations will be able to fully implement that
+    security model -- the implementation MUST carefully document
+    which permissions are supported, and which are not.
+ 
+ \subsubsection{Specification}
+ 
+ \begin{myspec}
+  package saga.rpc 
+  {
+    enum io_mode 
+    {
+      In    = 1,          // input  parameter
+      Out   = 2,          // output parameter
+      InOut = 3           // input and output parameter
+    }
+ 
+    class parameter : extends saga::core::buffer
+               // from buffer saga::core::object
+               // from object saga::core::error_handler
+    {
+      CONSTRUCTOR (in    array<byte>       data = "",
+!                  in    int               size = -1,
+                   in    io_mode           mode = In,
+                   out   parameter         obj);
+      DESTRUCTOR  (in    parameter         obj);
+ 
+      set_io_mode (in    io_mode           mode);
+      get_io_mode (out   io_mode           mode);
+    }
+ 
+    class rpc : implements   saga::core::object
+                implements   saga::core::async   
+                implements   saga::core::permissions
+             // from object  saga::core::error_handler
+    {
+      CONSTRUCTOR (in    session           s,
+                   in    url               url = "", 
+                   out   rpc               obj          );
+      DESTRUCTOR  (in    rpc               obj          );
+ 
+      // rpc method invocation
+      call        (inout array<parameter>  parameters   );
+ 
+      // handle management
+      close       (in    float             timeout = 0.0);
+    }
+  }
+ \end{myspec}
+ 
+ \subsubsection{Specification Details}
+ 
+  \subsubsection*{Enum \T{io\_mode}}
+ 
+   The \T{io\_mode} enum specifies the modus of the
+   \T{rpc::parameter} instances:
+ 
+   |In|\\[1.5mm]
+   \begin{tabular}{cp{110mm}}
+     ~~ & The parameter is an input parameter: its initial
+          value will be evaluated, and its data buffer will
+          not be changed during the invocation of \T{call()}.
+   \end{tabular}
+ 
+   |Out|\\[1.5mm]
+   \begin{tabular}{cp{110mm}}
+     ~~ & The parameter is an output parameter: its initial
+          value will not be evaluated, and its data buffer will
+          likely be changed during the invocation of \T{call()}.
+   \end{tabular}
+ 
+   |InOut|\\[1.5mm]
+   \begin{tabular}{cp{110mm}}
+     ~~ & The parameter is input and output parameter: its 
+          initial value will not evaluated, \I{and} its data buffer 
+          will likely be changed during the invocation of \T{call()}.
+   \end{tabular}
+ 
+ 
+  \subsubsection*{Class \T{parameter}}
+ 
+    The \T{parameter} class inherits the
+    \T{saga::buffer} class, and adds one additional state
+    attribute: \T{io\_mode}, which is read-only.  With that
+    addition, the new class can conveniently be used to define
+    input, inout and output parameters for RPC calls.
+ 
+ 
+ \begin{myspec}
+    - CONSTRUCTOR
+      Purpose:  create an parameter instance
+      Format:   CONSTRUCTOR          (in  array<byte> data = "",
+                                      in  int         size = -1,
+                                      in  io_mode     mode = In,
+                                      out parameter       obj);
+      Inputs:   type:                 data to be used
+                size:                 size of data to be used
+                io_mode:              type of parameter
+      InOuts:   -
+      Outputs:  parameter:            the newly created parameter 
+      PreCond:  -
+      PostCond: -
+      Perms:    - 
+      Throws:   NotImplemented
+                BadParameter
+                NoSuccess
+      Notes:    - all notes from the buffer CONSTRUCTOR apply.
+ 
+ 
+    - DESTRUCTOR
+      Purpose:  destroy an parameter instance
+      Format:   DESTRUCTOR           (in  parameter obj);
+      Inputs:   obj:                  the parameter to destroy
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: -
+      Perms:    - 
+      Throws:   - 
+      Notes:    - all notes from the buffer DESTRUCTOR apply.
+ 
+ 
+    - set_io_mode
+      Purpose:  set io_mode
+      Format:   set_io_mode          (in  io_mode mode);
+      Inputs:   mode:                 value for io mode
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: -
+      Perms:    - 
+      Throws:   -
+      Notes:    - 
+ 
+    - get_io_mode
+      Purpose:  retrieve the current value for io mode
+      Format:   get_io_mode          (out io_mode mode);
+      Inputs:   -
+      InOuts:   -
+      Outputs:  mode:                 value of io mode
+      PreCond:  -
+      PostCond: -
+      Perms:    - 
+      Throws:   -
+      Notes:    -
+ \end{myspec}
+ 
+ 
+  \subsubsection*{Class \T{rpc}}
+ 
+    This class represents a remote function handle, which can be
+    called (repeatedly), and returns the result of the
+    respective remote procedure invocation.  
+    
+ 
+ \begin{myspec}
+    - CONSTRUCTOR
+      Purpose:  initializes a remote function handle
+      Format:   CONSTRUCTOR  (in  session   s, 
+                              in  url       url = "", 
+                              out rpc       obj);
+      Inputs:   s:            saga session to use
+!               url:          remote method to
+                              initialize
+      InOuts:   -
+      Outputs:  obj           the newly created object
+      PreCond:  -
+      PostCond: - the instance is open.
+      Perms:    Query
+      Throws:   NotImplemented
+                IncorrectURL
+                BadParameter
+                DoesNotExist
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - if url is not given, or is empty (the 
+                  default), the implementation will choose an 
+                  appropriate default value.
+                - according to the GridRPC specification, the 
+                  constructor may or may not contact the RPC
+                  server; absence of an exception does not imply
+                  that following RPC calls will succeed, or that
+                  a remote function handle is in fact available.
+                - the following mapping MUST be applied from
+                  GridRPC errors to SAGA exceptions:
+                  GRPC_SERVER_NOT_FOUND   : BadParameter
+                  GRPC_FUNCTION_NOT_FOUND : DoesNotExist
+                  GRPC_RPC_REFUSED        : AuthorizationFailed
+                  GRPC_OTHER_ERROR_CODE   : NoSuccess
+                - non-GridRPC based implementations SHOULD ensure
+                  upon object construction that the remote handle
+                  is available, for consistency with the
+                  semantics on other SAGA object constructors.
+ 
+    - DESTRUCTOR
+      Purpose:  destroy the object
+      Format:   DESTRUCTOR           (in  rpc  obj)
+      Inputs:   obj:                  the object to destroy
+      InOuts:   -
+      Outputs:  -
+      PreCond:  - 
+      PostCond: - the instance is closed.
+      Perms:    -
+      Throws:   - 
+      Notes:    - if the instance was not closed before, the 
+                  destructor performs a close() on the instance,
+                  and all notes to close() apply.
+ 
+ 
+    - call
+      Purpose:  call the remote procedure
+      Format:   call         (inout array<parameter> param);
+      Inputs:   - 
+      In/Out:   param:        argument/result values for call
+      InOuts:   -
+      Outputs:  - 
+      PreCond:  - the instance is open.
+      PostCond: - the instance is available for another call()
+                  invocation, even if the present call did not
+                  yet finish, in the asynchronous case.
+      Perms:    Exec
+      Throws:   NotImplemented
+                IncorrectURL
+                BadParameter
+                DoesNotExist
+                IncorrectState
+                PermissionDenied
+                AuthorizationFailed
+                AuthenticationFailed
+                Timeout
+                NoSuccess
+      Notes:    - according to the GridRPC specification, the 
+                  RPC server might not be contacted before
+                  invoking call(). For this reason, all notes to
+                  the object constructor apply to the call()
+                  method as well.
+                - if an implementation finds inconsistent
+                  information in the parameter vector, a 
+                  'BadParameter' exception is thrown.
+                - arbitrary backend failures (e.g. semantic
+                  failures in the provided parameter stack, or
+                  any errors occurring during the execution of
+                  the remote procedure) MUST be mapped to a
+                  'NoSuccess' exception, with a descriptive
+                  error message.  That way, error semantics of
+                  the SAGA implementation and of the RPC
+                  function implementation are strictly
+                  distinguished.
+                - the notes about memory management from the
+                  buffer class apply.
+ 
+ 
+    - close
+      Purpose:  closes the rpc handle instance
+      Format:   close              (in  float timeout = 0.0);
+      Inputs:   timeout             seconds to wait
+      InOuts:   -
+      Outputs:  -
+      PreCond:  -
+      PostCond: - the instance is closed.
+      Perms:    -
+      Throws:   NotImplemented
+-               IncorrectState
+                NoSuccess
+      Notes:    - any subsequent method call on the object
+                  MUST raise an 'IncorrectState' exception
+                  (apart from DESTRUCTOR and close()).
+                - if close() is implicitly called in the
+                  DESTRUCTOR, it will never throw an exception.
+                - close() can be called multiple times, with no
+                  side effects.
+                - for resource deallocation semantics, see 
+                  Section 2.
+                - for timeout semantics, see Section 2.
+ \end{myspec}
+ 
+ 
+ \subsubsection{Examples}
+ 
+ \begin{mycode}
+  // c++ example
+  // call a remote matrix multiplication A = A * B
+  try 
+  {
+    rpc rpc ("gridrpc://rpc.matrix.net/matrix-mult");
+ 
+    std::vector <saga::rpc::parameter> params (2);
+ 
+    params[0].set_data (A); // ptr to matrix A
+    params[0].set_io_mode (saga::rpc::InOut);
+ 
+    params[1].set_data (B); // ptr to matrix B
+    params[1].set_io_mode (saga::rpc::In);
+ 
+    rpc.call (params);
+ 
+    // A now contains the result
+  }
+  catch ( const saga::exception & e)
+  {
+    std::err << "SAGA error: " 
+             << e.get_message () 
+             << std::endl;
+  }
+ 
+  +------------------------------------------------------------+
+ 
+  // c++ example
+  // call a remote matrix multiplication C = A * B
+  try 
+  {
+    rpc rpc ("gridrpc://rpc.matrix.net//matrix-mult-2");
+ 
+    std::vector <saga::rpc::parameter> params (3);
+ 
+    params[0].set_data (NULL); // buffer will be created
+    params[0].set_io_mode (saga::rpc::Out);
+ 
+    params[1].set_data (A); // ptr to matrix A
+    params[1].set_io_mode (saga::rpc::In);
+ 
+    params[2].set_data (B); // ptr to matrix B
+    params[2].set_io_mode (saga::rpc::In);
+ 
+    rpc.call (params);
+ 
+    // params[0].get_data () now contains the result
+  }
+  catch ( const saga::exception & e)
+  {
+    std::err << "SAGA error: " 
+             << e.get_message () 
+             << std::endl;
+  }
+ 
+  +------------------------------------------------------------+
+ 
+  // c++ example
+  // asynchronous version of A = A * B
+  try 
+  {
+    rpc rpc ("gridrpc://rpc.matrix.net/matrix-mult");
+ 
+    std::vector <saga::rpc::parameter> params (2);
+ 
+    params[0].set_data (A); // ptr to matrix A
+    params[0].set_io_mode (saga::rpc::InOut);
+ 
+    params[1].set_data (B); // ptr to matrix B
+    params[1].set_io_mode (saga::rpc::In);
+ 
+    saga::task t = rpc.call <saga::task::ASync> (params);
+ 
+    // do something else
+ 
+    t.wait ();
+    // A now contains the result
+  }
+  catch ( const saga::exception & e)
+  {
+    std::err << "SAGA error: " 
+             << e.get_message () 
+             << std::endl;
+  }
+ 
+  +------------------------------------------------------------+
+ 
+  // c++ example
+  // parameter sweep example from
+  // http://ninf.apgrid.org/documents/ng4-manual/examples.html
+  //
+  // Monte Carlo computation of PI
+  //
+  try 
+  {
+    saga::url     uri[NUM_HOSTS]; // initialize...
+    long times, count[NUM_HOSTS], sum;
+ 
+    std::vector <saga::rpc> servers;
+ 
+    // create the rpc handles for all URIs
+    for ( int i = 0; i < NUM_HOSTS; ++i )
+    {
+      servers.push_back (saga::rpc (uri[i]));
+    }
+ 
+    // create persistent storage for tasks and parameter structs
+    saga::task_container tc;
+    std::vector <std::vector <saga:parameter> > params;
+ 
+    // fill parameter structs and start async rpc calls
+    for ( int i = 0; i < NUM_HOSTS; ++i )
+    {
+      std::vector <saga::rpc::parameter> param (3);
+ 
+      param[0].set_data (i); // use as random seed
+      param[0].set_io_mode (saga::rpc::In);
+ 
+      param[1].set_data (times);
+      param[1].set_io_mode (saga::rpc::In);
+ 
+      param[2].set_data (count[i]);
+      param[2].set_io_mode (saga::rpc::Out);
+ 
+      // start the async calls
+      saga::task t = servers[i].call <saga::task::Async> (param);
+ 
+      // save the task;
+      tc.add (t[i]);
+ 
+      // save the parameter structs
+      params.push_back (param);
+    }
+ 
+    // wait for all async calls to finish
+    tc.wait (saga::task::All);
+ 
+    // compute and print pi
+    for ( int i = 0; i < NUM_HOSTS; ++i )
+    {
+      sum += count[i];
+    }
+ 
+    std::out << "PI = " 
+             << 4.0 * ( sum / ((double) times * NUM_HOSTS))
+             << std::endl;
+  }
+  catch ( const saga::exception & e)
+  {
+    std::err << "SAGA error: " 
+             << e.get_message () 
+             << std::endl;
+  }
+ \end{mycode}
+ 
+ 
+  %  Do we need that detailed list?  We don't have that anywhere
+  %  else (JSDL/DRMAA/GridFTP/...), but have a verbose statement
+  %  in that respect in the description above... -- AM
+ 
+  % \subsubsection{Notes}
+  % 
+  % \begin{myspec}
+  %   Comparison to the original GridRPC calls:
+  %   ------------------------------------------
+  % 
+  %     initialization:
+  %     ---------------
+  % 
+  %     - grpc_initialize 
+  %       
+  %       GridRPC: reads the configuration file and initializes the
+  %                required modules.
+  %       SAGA:    not needed, implicit
+  %      
+  %      
+  %     - grpc_finalize 
+  % 
+  %       GridRPC: releases any resources being used
+  %       SAGA:    not needed, implicit
+  %       
+  %      
+  %     handle management:
+  %     ------------------
+  %      
+  %     - grpc_function_handle_default 
+  %     
+  %       GridRPC: creates a new function handle using the default
+  %                server.  This could be a pre-determined server 
+  %                name or it could be a server that is dynamically 
+  %                chosen by the resource discovery mechanisms of 
+  %                the underlying GridRPC implementation, such as 
+  %                the NetSolve agent.
+  %       SAGA:    default constructor
+  % 
+  %      
+  %     - grpc_function_handle_init 
+  %       
+  %       GridRPC: creates a new function handle with a server
+  %                explicitly specified by the user.
+  %       SAGA:    explicit constructor
+  %       
+  %     
+  %     - grpc_function_handle_destruct 
+  %       
+  %       GridRPC: releases the memory associated with the
+  %                specified function handle.
+  %       SAGA:    destructor
+  %     
+  %     
+  %     - grpc_get_handle
+  % 
+  %       GridRPC: returns the handle corresponding to the given
+  %                session ID (that is, corresponding to that 
+  %                particular non-blocking request).
+  %       SAGA:    not possible right now.
+  %                However, status of asynchronous operations can be checked
+  %                via the corresponding task objects.
+  % 
+  % 
+  %     call functions:
+  %     ---------------
+  % 
+  %     - grpc_call 
+  %     
+  %       GridRPC: makes a blocking remote procedure call with a variable
+  %                number of arguments.
+  %       SAGA:    has no variable number of arguments, this case is covered
+  %                via the SAGA version of grpc_call_argstack.
+  % 
+  % 
+  %     - grpc_call_async 
+  %     
+  %       GridRPC: makes a non-blocking remote procedure call with a
+  %                variable number of arguments.
+  %       SAGA:    done via task model and equivalent to grpc_call_argstack.
+  % 
+  % 
+  %     - grpc_call_argstack 
+  %     
+  %       GridRPC: makes a blocking call using the argument stack
+  %       SAGA:    call provides a parameter array of variable size
+  % 
+  %       
+  %     - grpc_call_argstack_async 
+  %     
+  %       GridRPC: makes a non-blocking call using the argument stack.
+  %       SAGA:    done via the task model and call
+  % 
+  % 
+  %     asynchronous control functions:
+  %     -------------------------------
+  % 
+  %     - grpc_probe 
+  %     
+  %       GridRPC: checks whether the asynchronous GridRPC call has
+  %                completed.
+  %       SAGA:    done via the task model
+  % 
+  % 
+  %     - grpc_cancel 
+  %     
+  %       GridRPC: cancels the specified asynchronous GridRPC call.
+  %       SAGA:    done via the task model
+  %        
+  % 
+  %     asynchronous wait functions:
+  %     ----------------------------
+  % 
+  %     - grpc_wait 
+  %     
+  %       GridRPC: blocks until the specified non-blocking requests to
+  %                complete.
+  %       SAGA:    done via the task model
+  %        
+  %     
+  %     - grpc_wait_and 
+  %     
+  %       GridRPC: blocks until all of the specified non- blocking requests
+  %                in a given set have completed.
+  %       SAGA:    done via the task container
+  % 
+  %     
+  %     - grpc_wait_or 
+  %     
+  %       GridRPC: blocks until any of the specified non- blocking requests
+  %                in a given set has completed.
+  %       SAGA:    done via the task container
+  %            
+  %     
+  %     - grpc_wait_all 
+  %     
+  %       GridRPC: blocks until all previously issued non-blocking requests
+  %                have completed.
+  %       SAGA:    done via the task container
+  %              
+  %     
+  %     - grpc_wait_any 
+  %     
+  %       GridRPC: blocks until any previously issued non-blocking request
+  %                has completed.
+  %       SAGA:    done via the task container
+  %       
+  % 
+  %     error reporting functions:
+  %     --------------------------
+  % 
+  %     - grpc_perror 
+  %     
+  %       GridRPC: prints the error string associated with the last GridRPC
+  %                call.
+  %       SAGA:    exceptions
+  %      
+  %      
+  %     - grpc_error_string 
+  %     
+  %       GridRPC: returns the error description string, given a numeric
+  %                error code.
+  %       SAGA:    exceptions
+  %      
+  %      
+  %     - grpc_get_error 
+  %     
+  %       GridRPC: returns the error code associated with a given
+  %                non-blocking request.
+  %       SAGA:    exceptions
+  %     
+  %      
+  %     - grpc_get_last_error 
+  %     
+  %       GridRPC: returns the error code for the last invoked GridRPC call.
+  %       SAGA:    exceptions
+  % \end{myspec}
+  
