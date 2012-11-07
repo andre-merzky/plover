@@ -37,9 +37,9 @@
  
  
     // a metric represents an entity / value to be monitored.
-    class metric : implements   saga::object
-                   implements   saga::attributes
-                // from object  saga::error_handler
+    class metric : implements   saga::core::object
+                   implements   saga::core::attributes
+                // from object  saga::core::error_handler
     {
       CONSTRUCTOR        (in  string          name,
                           in  string          desc,
@@ -118,7 +118,7 @@
  
     // SAGA objects which can be steered by changing their
     // metrics implement the steerable interface
-    interface steerable : implements monitorable
+    interface steerable : implements saga::core::monitorable
     {
       // metric handling
       add_metric         (in  metric          metric,

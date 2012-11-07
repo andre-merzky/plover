@@ -6,7 +6,7 @@
 //
 // This is the same example as shown in doc_pimple_multiple_inheritance.cpp, but
 // instead of a PIMPL (Pointer to IMPLementation) we keep a SharedPIMPL (Shared
-// Pointer to implementation).  which elleviates many of the memory management
+// Pointer to implementation).  which alleviates many of the memory management
 // and thread safety issues of the pure PIMPL approach.
 //
 
@@ -31,7 +31,7 @@ namespace impl
   // also polymorph) inheritance hierarchy of the facade side, and ensure that
   // dynamic_cast's up and down that hierarchy function as expected.
   //
-  // Note that in this exmaple code, polymorphism is used on both sides of 
+  // Note that in this example code, polymorphism is used on both sides of 
   // the hierarchy.  That is, depending on the application code, not really
   // required for the pimpl scheme to work.
   //
@@ -39,7 +39,7 @@ namespace impl
   {
     private:
       // the impl::pimpl class needs to be polymorphic for the up/down casting of
-      // its (and its decendent's) pointers to work (via dynamic_cast).  So, we add
+      // its (and its descendent's) pointers to work (via dynamic_cast).  So, we add
       // one virtual function, but hide it.
       virtual void polymorph_ (void) 
       {
@@ -89,7 +89,7 @@ namespace impl
 
   ////////////////////////////////////////////////////////////////////////////////
   // in order to keep the pimpl hierarchy consistent, we continue to  
-  // use 'virtual public' inheriatance.  That is not strictly neccessary 
+  // use 'virtual public' inheritance.  That is not strictly necessary 
   // (I think).
   class context : public virtual impl::object
                   , public virtual impl::attribs 
@@ -118,7 +118,7 @@ namespace impl
 // base class for storage.  
 //
 // Anyway, once the impl pointer is needed by the facade class, or by any other 
-// class in the facade's inheritance tree, the pointer is retreived again from 
+// class in the facade's inheritance tree, the pointer is retrieved again from 
 // the pimpl base class, and dynamic_cast'ed back into its appropriate type.
 //
 // This pimpl base class is not an actual part of the API!  One could trick
@@ -149,9 +149,9 @@ class pimpl
 
   protected:
     // we don't want to expose the c'tors of this class on API level - the end
-    // user should not need to explicitely create any pimpl instance.
+    // user should not need to explicitly create any pimpl instance.
 
-    // the first c'tor is explicitely *not* getting an impl pointer: in the case 
+    // the first c'tor is explicitly *not* getting an impl pointer: in the case 
     // of multiple inheritance, only one of the classes on any level of the 
     // class hierarchy will pass down the impl pointer - all others will invoke 
     // this c'tor for their base class.
@@ -260,7 +260,7 @@ class pimpl
 //
 // the object class is an intermediate class in out facade hierarchy, and as
 // such passed the impl pointer down from any derived class to the pimpl base
-// class.  But another c'tor allows to explicitely create an object instance
+// class.  But another c'tor allows to explicitly create an object instance
 // - that c'tor then also creates its own impl pointer and passes it on.
 //
 class object : public virtual pimpl 

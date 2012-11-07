@@ -12,5 +12,5 @@ SAGA_LIB_OBJ += func.o
 include $(SAGA_ROOT)/make/saga.mk
 
 SAGA_CXXFLAGS += -I$(SAGA_PWD)/../..
-SAGA_LDFLAGS  += -L$(SAGA_ROOT)/saga/util/ -lsaga_util -lpthread --Wl,--no-as-needed
+SAGA_LDFLAGS  += -L$(SAGA_ROOT)/saga/util/ -lsaga_util
 

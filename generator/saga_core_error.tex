@@ -91,18 +91,18 @@
 +     get_all_messages     (out array<string>    mlist);
     }
  
-    class incorrect_url         : extends saga::exception { }
-    class bad_parameter         : extends saga::exception { }
-    class already_exists        : extends saga::exception { }
-    class does_not_exist        : extends saga::exception { }
-    class incorrect_state       : extends saga::exception { }
-+   class incorrect_type        : extends saga::exception { }
-    class permission_denied     : extends saga::exception { }
-    class authorization_failed  : extends saga::exception { }
-    class authentication_failed : extends saga::exception { }
-    class timeout               : extends saga::exception { }
-    class no_success            : extends saga::exception { }
-    class not_implemented       : extends saga::exception { }
+    class incorrect_url         : extends saga::core::exception { }
+    class bad_parameter         : extends saga::core::exception { }
+    class already_exists        : extends saga::core::exception { }
+    class does_not_exist        : extends saga::core::exception { }
+    class incorrect_state       : extends saga::core::exception { }
++   class incorrect_type        : extends saga::core::exception { }
+    class permission_denied     : extends saga::core::exception { }
+    class authorization_failed  : extends saga::core::exception { }
+    class authentication_failed : extends saga::core::exception { }
+    class timeout               : extends saga::core::exception { }
+    class no_success            : extends saga::core::exception { }
+    class not_implemented       : extends saga::core::exception { }
  
  
     interface error_handler
@@ -668,10 +668,10 @@
 +
 +   - get_type
 +     Purpose:  gets the type associated with the exception    
-+     Format:   get_type      (out exception_type type);
++     Format:   get_type       (out exception_type t);
 +     Inputs:   -
 +     InOuts:   -
-+     Outputs:  type:          the error type
++     Outputs:  t:              the error type
 +     PreCond:  -
 +     PostCond: -
 +     Perms:    -
@@ -680,10 +680,10 @@
 +
 +   - get_all_exceptions
 +     Purpose:  gets list of lower level exceptions
-+     Format:   get_all_exceptions (out array<exception> el);
++     Format:   get_all_exceptions (out array<exception> elist);
 +     Inputs:   -
 +     InOuts:   -
-+     Outputs:  el:            list of exceptions
++     Outputs:  elist:          list of exceptions
 +     PreCond:  -
 +     PostCond: -
 +     Perms:    -
@@ -696,10 +696,10 @@
 +
 +   - get_all_messages
 +     Purpose:  gets list of lower level error messages
-+     Format:   get_all_messages    (out array<string> ml);
++     Format:   get_all_messages    (out array<string> mlist);
 +     Inputs:   -
 +     InOuts:   -
-+     Outputs:  ml:            list of error messages
++     Outputs:  mlist:         list of error messages
 +     PreCond:  -
 +     PostCond: -
 +     Perms:    -

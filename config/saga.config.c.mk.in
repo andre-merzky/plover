@@ -14,6 +14,7 @@ SAGA_INI_ROOT = $(SAGA_LOCATION)/share/saga
 SAGA_HDR_ROOT = $(SAGA_LOCATION)/include
 SAGA_MAK_ROOT = $(SAGA_LOCATION)/share/saga/make
 SAGA_EXT_ROOT = $(SAGA_ROOT)/external
+SAGA_M4_ROOT  = $(SAGA_LOCATION)/share/saga/m4
 #
 ###########################################################
 

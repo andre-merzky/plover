@@ -6,7 +6,7 @@
 //
 // This is the same example as shown in doc_pimple_multiple_inheritance.cpp, but
 // instead of a PIMPL (Pointer to IMPLementation) we keep a SharedPIMPL (Shared
-// Pointer to implementation).  which elleviates many of the memory management
+// Pointer to implementation),  which alleviates many of the memory management
 // and thread safety issues of the pure PIMPL approach.
 //
 // When using shared pointers, one has to ensure that no pointer instances are
@@ -40,7 +40,7 @@ namespace impl
   // also polymorph) inheritance hierarchy of the facade side, and ensure that
   // dynamic_cast's up and down that hierarchy function as expected.
   //
-  // Note that in this exmaple code, polymorphism is used on both sides of 
+  // Note that in this example code, polymorphism is used on both sides of 
   // the hierarchy.  That is, depending on the application code, not really
   // required for the pimpl scheme to work.
   //
@@ -48,7 +48,7 @@ namespace impl
   {
     private:
       // the impl::pimpl class needs to be polymorphic for the up/down casting of
-      // its (and its decendent's) pointers to work (via dynamic_cast).  So, we add
+      // its (and its descendent's) pointers to work (via dynamic_cast).  So, we add
       // one virtual function, but hide it.
       virtual void polymorph_ (void) 
       {
@@ -57,27 +57,31 @@ namespace impl
 
     protected:
       // the c'tor is protected - that way, the only means to create an
-      // impl::pimpl instance it to use the static create() methid - which
+      // impl::pimpl instance it to use the static create() method - which
       // returns a shared_pointer!
       pimpl (void) { std::cout << " impl    pimpl   c'tor" << std::endl; }
 
 
     public:
       // we need a virtual d'tor, too.  Note that all d'tors in derived classes
-      // will automatically be virtual now - no need to declare that again
+      // will automatically be virtual now - no need to declare that again, but
+      // no problem in doing so either...
       virtual ~pimpl (void) 
       {
         std::cout << " impl    pimpl   d'tor" << std::endl; 
       }
 
       // other methods do not need to be virtual (but can be if needed).  In
-      // general, impl::pimpl should be kept empty, to make its job (to act as
-      // polymorphic impl base) more obvious.
+      // general though, impl::pimpl should be kept empty, to make its job (to 
+      // act as polymorphic impl base) more obvious.
       void impl_test (void) 
       {
         std::cout << " impl    pimpl   test" << std::endl; 
       }
 
+      // the static create method acts as factory for class instances, and
+      // ensures that in fact only shared pointers to class instances ever
+      // exist.
       static saga::util::shared_ptr <impl::pimpl> create (void)
       {
         return saga::util::shared_ptr <impl::pimpl> (new impl::pimpl ());
@@ -125,7 +129,7 @@ namespace impl
 
   ////////////////////////////////////////////////////////////////////////////////
   // in order to keep the pimpl hierarchy consistent, we continue to  
-  // use 'virtual public' inheriatance.  That is not strictly neccessary 
+  // use 'virtual public' inheritance.  That is not strictly necessary 
   // (I think).
   class context : public virtual impl::object
                 , public virtual impl::attribs 
@@ -161,12 +165,11 @@ namespace impl
 // base class for storage.  
 //
 // Anyway, once the impl pointer is needed by the facade class, or by any other 
-// class in the facade's inheritance tree, the pointer is retreived again from 
+// class in the facade's inheritance tree, the pointer is retrieved again from 
 // the pimpl base class, and dynamic_cast'ed back into its appropriate type.
 //
-// This pimpl base class is not an actual part of the API!  One could trick
-// around to forbid users to directly create instances, but that is left out for
-// clarity.
+// This pimpl base class is not an actual part of the API, and instances cannot
+// be created (protected c'tor).
 // 
 class pimpl 
 {
@@ -184,7 +187,7 @@ class pimpl
     saga::util::shared_ptr <impl::pimpl> impl_;
 
     // make our class hierarchy polymorph.  This method can be removed - the
-    // pimpl paradigms works just as well on non-polymorph facades.
+    // pimpl paradigm works just as well on non-polymorph facades.
     virtual void polymorph_ (void) 
     {
     }
@@ -192,9 +195,9 @@ class pimpl
 
   protected:
     // we don't want to expose the c'tors of this class on API level - the end
-    // user should not need to explicitely create any pimpl instance.
+    // user should not need to explicitly create any pimpl instance.
 
-    // the first c'tor is explicitely *not* getting an impl pointer: in the case 
+    // the first c'tor is explicitly *not* getting an impl pointer: in the case 
     // of multiple inheritance, only one of the classes on any level of the 
     // class hierarchy will pass down the impl pointer - all others will invoke 
     // this c'tor for their base class.
@@ -217,13 +220,15 @@ class pimpl
     pimpl (saga::util::shared_ptr <impl::pimpl>  impl) 
       : impl_ (impl) 
     {
-      std::cout << " facade  pimpl   c'tor (impl) - " << impl_.get_ptype_demangled () << std::endl; 
+      std::cout << " facade  pimpl   c'tor (impl) - " 
+                << impl_.get_ptype_demangled () << std::endl; 
       impl_test ();  // impl should be valid
     }
 
 
   public:
-    // ~pimpl should be the only place where the impl pointer gets deleted
+    // ~pimpl is where the reference counter for the shared pointers is
+    // implicitly decremented, as the impl_ is getting out of scope.
     virtual ~pimpl (void)
     {
       std::cout << " facade  pimpl   d'tor" << std::endl; 
@@ -259,6 +264,8 @@ class pimpl
       }
 
       // try to cast to the wanted pointer type
+      std::cout << "COUNTME" << std::endl;
+
       saga::util::shared_ptr <T> ret = impl_.get_shared_ptr <T> (); 
 
       // if that fails, complain
@@ -303,7 +310,7 @@ class pimpl
 //
 // the object class is an intermediate class in our facade hierarchy, and as
 // such passes the impl pointer down from any derived class to the pimpl base
-// class.  But another c'tor allows to explicitely create an object instance
+// class.  But another c'tor allows to explicitly create an object instance
 // - that c'tor then also creates its own impl pointer and passes it down.
 //
 class object : public virtual pimpl 
@@ -416,61 +423,64 @@ class context : public object, public attribs
 //
 int main (int argc, char** argv)
 { 
-//  try
-//  {
-//    //////////////////////////////////////////////////////////////////////////////
-//    // facade tests for object
-//    {
-//      std::cout << " 1 --------------------------------" << std::endl;
-//
-//      object* p1 = new object ();
-//      pimpl*  p2 = p1;
-//
-//      p1->object_test ();
-//
-//      p1->impl_test ();
-//      p2->impl_test ();
-//
-//      delete (p1);
-//
-//      std::cout << " 2 --------------------------------" << std::endl;
-//    }
-//    //////////////////////////////////////////////////////////////////////////////
-//    
-//  
-//    //////////////////////////////////////////////////////////////////////////////
-//    // facade tests for context
-//    {
-//      std::cout << " 3 --------------------------------" << std::endl;
-//
-//      context* p1 = new context ();
-//      object*  p2 = p1;
-//      attribs* p3 = p1;
-//      pimpl*   p4 = p1;
-//
-//      p1->context_test ();
-//
-//      p1->object_test  ();
-//      p2->object_test  ();
-//
-//      p1->attribs_test ();
-//      p3->attribs_test ();
-//
-//      p1->impl_test    ();
-//      p2->impl_test    ();
-//      p3->impl_test    ();
-//      p4->impl_test    ();
-//
-//      delete (p1);
-//
-//      std::cout << " 4 --------------------------------" << std::endl;
-//    }
-//    //////////////////////////////////////////////////////////////////////////////
-//  } 
-//  catch ( const std::string & e )
-//  {
-//    std::cout << " exception: " << e << std::endl;
-//  }
+  try
+  {
+    for ( unsigned int i = 0; i < 10000; i++ )
+    {
+      //////////////////////////////////////////////////////////////////////////////
+      // facade tests for object
+      {
+        std::cout << " 1 --------------------------------" << std::endl;
+
+        object* p1 = new object ();
+        pimpl*  p2 = p1;
+
+        p1->object_test ();
+
+        p1->impl_test ();
+        p2->impl_test ();
+
+        delete (p1);
+
+        std::cout << " 2 --------------------------------" << std::endl;
+      }
+      //////////////////////////////////////////////////////////////////////////////
+      
+  
+      //////////////////////////////////////////////////////////////////////////////
+      // facade tests for context
+      {
+        std::cout << " 3 --------------------------------" << std::endl;
+
+        context* p1 = new context ();
+        object*  p2 = p1;
+        attribs* p3 = p1;
+        pimpl*   p4 = p1;
+
+        p1->context_test ();
+
+        p1->object_test  ();
+        p2->object_test  ();
+
+        p1->attribs_test ();
+        p3->attribs_test ();
+
+        p1->impl_test    ();
+        p2->impl_test    ();
+        p3->impl_test    ();
+        p4->impl_test    ();
+
+        delete (p1);
+
+        std::cout << " 4 --------------------------------" << std::endl;
+      }
+      //////////////////////////////////////////////////////////////////////////////
+    }
+  } 
+  catch ( const std::string & e )
+  {
+    std::cout << " exception: " << e << std::endl;
+  }
 
   return 0;
 } 

@@ -34,33 +34,17 @@ sub enum_hpp ($$$$)
 
   my $e_hdr = "saga/api/$pname/$ename.hpp";
   my $guard = generator_helper::get_guard ($e_hdr);
-  my $out   = new IO::File ("> $BASE/$e_hdr") || die "Cannot create enum entry at $BASE/$e_hdr: $!\n";
+  my $out   = new IO::File ("> $BASE/$e_hdr") 
+           || die "Cannot create enum header at $BASE/$e_hdr: $!\n";
 
-  my $comm  = generator_helper::format_comment (4, $enum->{'comm'});
 
-  if ( $comm )
-  {
-    $comm = "\n$comm";
-    chomp $comm;
-  }
-
-#------------------------------------------------------------
-  print $out <<EOT;
-
-#ifndef $guard
-#define $guard
-
-#include <saga/util/logging.hpp>
-#include <saga/util/enums.hpp>
-
-namespace saga
-{
-  namespace $pname
-  { $comm
-    enum $ename 
-    {
-EOT
-#------------------------------------------------------------
+  print $out generator_helper::format_guard_start (0, $guard);
+  print $out generator_helper::format_include     (0, "saga/util/logging.hpp");
+  print $out generator_helper::format_include     (0, "saga/util/enums.hpp");
+  print $out generator_helper::format_ns_start    (0, "saga::$pname");
+  print $out generator_helper::format_comment     (4, $enum->{'comm'});
+  print $out "    enum $ename\n";
+  print $out "    {\n";
 
 
   my @ekeys = sort { $a <=> $b } keys ( %{$enum->{'def'}} );
@@ -91,18 +75,9 @@ EOT
     }
   }
 
-#------------------------------------------------------------
-  print $out <<EOT;
-    };
-
-  } // namespace $pname
-
-} // namespace saga
-
-#endif // $guard
-
-EOT
-#------------------------------------------------------------
+  print $out "    };\n";
+  print $out generator_helper::format_ns_end    (4, "saga::$pname");
+  print $out generator_helper::format_guard_end (0, $guard);
     
   $out->close;
 
@@ -113,184 +88,139 @@ EOT
 
 ########################################################################
 #
-# write an enum class or interface header
+# write an class or interface header
 #
-sub iface_hpp ($$$$)
+sub class_hpp ($$$$)
 {
-  my $BASE  = shift;
-  my $pname = shift;
-  my $iname = shift;
-  my $iface = shift;
+  my $BASE       = shift;
+  my $pname      = shift;
+  my $cname      = shift;
+  my $class      = shift;
 
-  _fix_api_ctors    ($pname, $iface);
-  _fix_api_dtors    ($pname, $iface);
+  _fix_api_ctors ($pname, $class);
 
-  print Dumper $iface;
+  # print Dumper $class;
 
-  my $is_async = $iface->{'async'};
+  my $is_async   = $class->{'async'};
+  my $is_iface   = _class_is_iface  ($class);
+  my $is_class   = ! $is_iface;
+  my $has_base   = _class_has_base  ($class);
+  my $has_iface  = _class_has_iface ($class);
 
-  my $PNAME = uc ($pname);
-  my $INAME = uc ($iname);
+  my $PNAME      = uc ($pname);
+  my $CNAME      = uc ($cname);
 
-  my $i_hdr = "saga/api/$pname/$iname.hpp";
-  my $guard = generator_helper::get_guard ($i_hdr);
-  my $out   = new IO::File ("> $BASE/$i_hdr") || die "Cannot create enum entry at $BASE/$i_hdr: $!\n";
-
-
-  print "iface_hpp: $pname $iname\n";
-
-  my $comm  = generator_helper::format_comment (4, $iface->{'comm'});
-
-  if ( $comm )
-  {
-    $comm = "\n$comm";
-    chomp $comm;
-  }
+  my $i_hdr      = "saga/api/$pname/$cname.hpp";
+  my $guard      = generator_helper::get_guard ($i_hdr);
+  my $out        = new IO::File ("> $BASE/$i_hdr") 
+                || die "Cannot create class header at $BASE/$i_hdr: $!\n";
 
 
-  # print Dumper \$iface if ( $iname eq "incorrect_state");
+  print "-> $i_hdr\n";
 
-  my $impltxt = "";
-  my $impls   = $iface->{'impl'} || [];
-  my $bases   = $iface->{'base'} || [];
+
+  my $impltxt    = "";
+  my $impls      = $class->{'impl'} || [];
+  my $bases      = $class->{'base'} || [];
 
   my $first      = 1;
   my $ind        = 8;
   my $impl_ind   = ' ' x $ind;
 
+
   # C++ handles interfaces and base classes the same way, for inheritance
-  foreach my $base ( @{$bases} )
+  if ( $has_base )
   {
-    if ( $first )
+    foreach my $base ( @{$bases} )
     {
-      $impltxt .= "\n$impl_ind: public $base \t// base";
-    }
-    else
-    {
-      $impltxt .= "\n$impl_ind, public $base \t// base";
-    }
-
-    $first = 0;
-  }
-
-  foreach my $impl ( @{$impls} )
-  {
-    if ( $first )
-    {
-      $impltxt .= "\n$impl_ind: public $impl \t// interface";
-    }
-    else
-    {
-      $impltxt .= "\n$impl_ind, public $impl \t// interface";
-    }
-
-    $first = 0;
-  }
-
-
-#------------------------------------------------------------
-  print $out <<EOT;
-
-#ifndef $guard
-#define $guard
-
-#include <saga/util/shareable.hpp>
-#include <saga/util/logging.hpp>
-#include <saga/util/stack_tracer.hpp>
-
-EOT
-#------------------------------------------------------------
-
-  if ( $is_async )
-  {
-#------------------------------------------------------------
-  print $out <<EOT;
-#include <saga/api/async/task.hpp>
-EOT
-#------------------------------------------------------------
-  }
-
-#------------------------------------------------------------
-  print $out <<EOT;
-#include <saga/impl/$pname/$iname.hpp>
-
-namespace saga
-{
-  namespace $pname
-  { $comm
-    class $iname$impltxt
-    {
-      private:
-        saga::util::shared_ptr <saga::impl::${pname}::$iname> impl_;
-
-      public:
-EOT
-#------------------------------------------------------------
-
-  # ctor/dtor methods
-  {
-    print $out "        //--------------------------\n";
-    print $out "        // construction/destruction \n";
-    print $out "        //--------------------------\n\n";
-
-    my $m_first = 1;
-    foreach my $method ( @{$iface->{'def'}{'methods'}} )
-    {
-      if ( $method->{'type'} eq 'ctor' ||
-           $method->{'type'} eq 'dtor' )
+      if ( $first )
       {
-        my $mtxt = _format_method_sync_api_hpp ($ind, $method);
-
-        # no empty line before first method
-        if ( $m_first )
-        {
-          $mtxt =~ s/^\s*\n//io;
-        }
-
-        $m_first = 0;
-        print $out "$mtxt\n";
+        $impltxt .= sprintf "\n$impl_ind: public %-20s // base", $base;
       }
+      else
+      {
+        $impltxt .= sprintf "\n$impl_ind, public %-20s // base", $base;
+      }
+
+      $first = 0;
     }
   }
+
+  if ( $has_iface )
+  {
+    foreach my $impl ( @{$impls} )
+    {
+      if ( $first )
+      {
+        $impltxt .= sprintf "\n$impl_ind: public %-20s // interface", $impl;
+      }
+      else
+      {
+        $impltxt .= sprintf "\n$impl_ind, public %-20s // interface", $impl;
+      }
+
+      $first = 0;
+    }
+  }
+
+  unless ( $has_base || $has_iface )
+  {
+    $impltxt .= "\n$impl_ind: public virtual base::pimpl // pimpl base";
+  }
+
+  print $out generator_helper::format_guard_start (0, $guard);
+
+  print $out generator_helper::format_include  (0, "saga/util/shareable.hpp");
+  print $out generator_helper::format_include  (0, "saga/util/logging.hpp");
+  print $out generator_helper::format_include  (0, "saga/util/stack_tracer.hpp");
+  print $out "\n";
+  print $out generator_helper::format_include  (0, "saga/api/async/task.hpp") if ( $is_async );
+  print $out generator_helper::format_include  (0, "saga/impl/$pname/$cname.hpp");
+
+  unless ( $has_base || $has_iface )
+  {
+    print $out generator_helper::format_include  (0, "saga/base/pimpl.hpp");
+  }
+
+  print $out "\n\n";
+  print $out generator_helper::format_ns_start (0, "saga::$pname");
+  print $out generator_helper::format_comment  (4, $class->{'comm'});
+
+  print $out "    class $cname$impltxt\n";
+  print $out "    {\n";
+  print $out _format_private_typedefs ($ind, "saga::impl::$pname\::$class->{name}");
+  print $out _format_private_ctors    ($ind, $class);
+  print $out _format_protected_ctors  ($ind, $class);
+  print $out _format_public_ctors     ($ind, $class);
 
 
   # sync methods
+  print $out "      public:\n";
   print $out "        //-------------------------\n";
   print $out "        // api method definitions  \n";
   print $out "        //-------------------------\n\n";
 
-  foreach my $method ( @{$iface->{'def'}{'methods'}} )
+  foreach my $method ( @{$class->{'def'}{'methods'}} )
   {
     if ( $method->{'type'} eq 'sync' )
     {
-      my $stxt .= _format_method_sync_api_hpp ($ind, $method);
-      print $out "$stxt";
+      print $out _format_method_sync_api_hpp ($ind, $method, $is_async);
 
       if ( $is_async )
       {
-        $method->{'comm'} = '';
-        my $atxt .= _format_method_async_api_hpp ($ind, $method);
-        print $out "\n$atxt";
+        print $out "\n";
+        print $out _format_method_async_api_hpp ($ind, $method);
+        print $out "\n";
       }
+
+      print $out "\n";
     }
-    print $out "\n\n";
   }
 
-  print $out "\n";
-  
-#------------------------------------------------------------
-  print $out <<EOT;
-    };
+  print $out "      }\n\n";
+  print $out generator_helper::format_ns_end    (4, "saga::$pname");
+  print $out generator_helper::format_guard_end (0, $guard);
 
-  } // namespace $pname
-
-} // namespace saga
-
-#endif // $guard
-
-EOT
-#------------------------------------------------------------
-    
   $out->close;
 
   return $i_hdr;
@@ -298,34 +228,30 @@ EOT
 ########################################################################
 
 ########################################################################
-sub _format_method_sync_api_hpp ($$)
+sub _format_method_sync_api_hpp ($$;$)
 {
-  my $ind   = shift;
-  my $m     = shift;
-  my $out   = "";
-  my $IND   = ' ' x $ind;
+  my $ind      = shift;
+  my $m        = shift;
+  my $is_async = shift || 0;
 
-  my $mname  = $m->{'name'};
-  my $mtype  = $m->{'type'};
-  my $mbody  = $m->{'body'};
-  my $minit  = $m->{'init'};
-  my $rtype  = $m->{'rtype'};
-  my $msign  = $m->{'sign'};
-  my $oparam = $m->{'rpar'};
+  my $out      = "";
+  my $IND      = ' ' x $ind;
+
+  my $mname    = $m->{'name'};
+  my $mtype    = $m->{'type'};
+  my $mbody    = $m->{'body'};
+  my $minit    = $m->{'init'};
+  my $rtype    = $m->{'rtype'};
+  my $msign    = $m->{'sign'};
+  my $oparam   = $m->{'rpar'};
 
 
-  my $comm   = generator_helper::format_comment ($ind, $m->{'comm'}); 
+  # print "----------------------------------\n" if ( $mname eq "get_all_exceptions");
+  # print " --- $mname\n"                        if ( $mname eq "get_all_exceptions");
+  # print Dumper \$m                             if ( $mname eq "get_all_exceptions");
+  # print "----------------------------------\n" if ( $mname eq "get_all_exceptions");
 
-  if ( $comm )
-  {
-    $out .= $comm;
-  }
-
-  print " --- $mname\n";
-
-  # print "----------------------------------\n" if ( $mname eq "get_test_obj");
-  # print Dumper \$m                             if ( $mname eq "get_test_obj");
-  # print "----------------------------------\n" if ( $mname eq "get_test_obj");
+  $out .= generator_helper::format_m_comment ($ind, $m);
 
   my $tname = $m->{'temp'} || "";
   my $slen  = 0;
@@ -338,15 +264,25 @@ sub _format_method_sync_api_hpp ($$)
   my $tmp  = "";
   my $body = "";
   
-  if ( $mtype eq 'ctor' ||
-       $mtype eq 'dtor' )
+  if ( $mtype eq 'ctor' )
   {
-    $tmp = sprintf ("$IND%-20s ", $mname);
+    $tmp = sprintf ("$IND%-10s ", $mname);
+  }
+  elsif ( $mtype eq 'dtor' )
+  {
+    $tmp = sprintf ("$IND~%-10s ", $mname);
   }
   else
   {
-    $tmp = sprintf ("$IND%-20s  %-20s ", $rtype, $mname);
-    $body = "return ($mname <saga::async::Sync> ($msign).get_result <$rtype> ());";
+    $tmp = sprintf ("$IND%-10s  %s  ", $rtype, $mname);
+    if ( $is_async )
+    {
+      $body = "return ($mname <saga::async::Sync> ($msign).get_result <$rtype> ());";
+    }
+    else
+    {
+      $body = "return ( impl_->$mname ($msign) );";
+    }
   }
 
   $out .= "$tmp";
@@ -369,12 +305,7 @@ sub _format_method_async_api_hpp ($$)
   my $IND   = ' ' x $ind;
 
   my $mname  = $m->{'name'};
-  my $comm   = generator_helper::format_comment ($ind, $m->{'comm'}); 
-
-  if ( $comm )
-  {
-    $out .= "$comm";
-  }
+  # comment was printed for sync version already...
 
   # print "----------------------------------\n" if ( $mname eq "get_test_obj");
   # print Dumper \$m                             if ( $mname eq "get_test_obj");
@@ -387,7 +318,7 @@ sub _format_method_async_api_hpp ($$)
 
   if ( $tname )
   {
-    warn "horribly template overload!" . Dumper \$m;
+    # FIXME: warn "horribly template overload!" . Dumper \$m;
     # add the async flag to the template
     my $tmp = sprintf ("$IND" . "template <typename ASYNC,\n$IND          typename %-5s> ", $tname);
     $out .= $tmp;
@@ -402,7 +333,7 @@ sub _format_method_async_api_hpp ($$)
   # return type for async calls is always saga::task.
   $out .= "";
 
-  my $tmp  = sprintf ("$IND%-20s  %-20s ", 'saga::task', $mname);
+  my $tmp  = sprintf ("$IND%-10s  %s  ", 'saga::task', $mname);
   my $IND2 = ' ' x length ($tmp);
 
 
@@ -429,7 +360,9 @@ sub _format_method_async_api_hpp ($$)
 ########################################################################
 #
 # each CONSTRUCTOR needs to be replaced with a C++ c'tor, and an ctor(impl)
-# needs to be added for the API layer
+# needs to be added for the API layer. 
+#
+# FIXME: also need copy ctor and assignment
 #
 sub _fix_api_ctors ($$)
 {
@@ -448,10 +381,19 @@ sub _fix_api_ctors ($$)
     my @wo_session_pars = ();
     my @new_methods     = ();
 
+
+    my $is_iface   = _class_is_iface  ($entry);
+    my $is_class   = ! $is_iface;
+    my $has_base   = _class_has_base  ($entry);
+    my $has_iface  = _class_has_iface ($entry);
+
     foreach my $method ( @{$methods} )
     {
       if ( $method->{'name'} eq 'CONSTRUCTOR' )
       {
+        # this is a public ctor
+        $method->{'vis'} = 'public';
+
         # get list of params
         my $parstr    = "";
         my $first_par = 1;
@@ -481,10 +423,16 @@ sub _fix_api_ctors ($$)
         # print Dumper \$method;
         # print "\n";
         $method->{'name'} = $ename;
-        $method->{'init'} = "impl_ (new saga::impl::${pname}::${ename});";
-        $method->{'body'} = "(void) impl_->constructor ($parstr);";
+        $method->{'body'} = "(void) get_impl ()->constructor ($parstr);";
         $method->{'comm'} = "// ctor with session\n" . $method->{'comm'};
         chomp ($method->{'comm'});
+
+        $method->{'init'} = sprintf ("%-20s (impl_t::create ().get_shared_ptr <impl::pimpl> ())", 
+                                     'pimpl');
+
+        foreach my $base ( @{$entry->{'base'}} ) { $method->{'init'} .=  sprintf "\n%-20s (pimpl::NO_IMPL)", $base; }
+        foreach my $impl ( @{$entry->{'impl'}} ) { $method->{'init'} .=  sprintf "\n%-20s (pimpl::NO_IMPL)", $impl; }
+
 
         push (@new_methods, $method);
 
@@ -498,8 +446,13 @@ sub _fix_api_ctors ($$)
                                              "// use default session\n";
              $wo_session_ctor->{'body'}   .= $method->{'body'};
 
+
           push (@new_methods, $wo_session_ctor);
         }
+      }
+      elsif ( $method->{'name'} eq 'DESTRUCTOR' )
+      {
+        # simply skip it
       }
       else
       {
@@ -507,15 +460,31 @@ sub _fix_api_ctors ($$)
       }
     }
 
+
     my $sp = "saga::util::shared_ptr ";
 
     # add a void ctor
+    my $mvis  = 'private';
+    my $mcomm = '// impl->constructor needs to be called later on';
+
+    if ( $has_base || $has_iface )
+    {
+      $mvis = 'public';
+    }
+
+    if ( $is_iface )
+    {
+      $mvis  = 'protected';
+      $mcomm = '// interfaces cannot be created';
+    }
+
     my %vctor = ('name'    => $ename,
                  'comm'    => '// void constructor',
                  'type'    => 'ctor',
+                 'vis'     => $mvis,
                  'precomm' => '',
-                 'init'    => 'impl_ (NULL)',
-                 'body'    => ' ',
+                 'init'    => sprintf ("%-20s (NULL)", "pimpl"),
+                 'body'    => $mcomm,
                  'detail'  => undef,
                  'sig'     => 'void',
                  'sigd'    => 'void',
@@ -523,83 +492,106 @@ sub _fix_api_ctors ($$)
                  'sign'    => '',
                  'params'  => []);
 
+    foreach my $base ( @{$entry->{'base'}} ) { $vctor{'init'} .=  sprintf "\n%-20s (pimpl::NO_IMPL)", $base; }
+    foreach my $impl ( @{$entry->{'impl'}} ) { $vctor{'init'} .=  sprintf "\n%-20s (pimpl::NO_IMPL)", $impl; }
+
     push (@new_methods, \%vctor);
 
 
-    # add an impl ctor
-    my %ictor = ('name'    => $ename,
-                 'comm'    => '// impl constructor',
-                 'type'    => 'ctor',
-                 'precomm' => '',
-                 'detail'  => undef,
-                 'sig'     => "$sp<saga::impl::${pname}::${ename}> impl",
-                 'sigd'    => "$sp<saga::impl::${pname}::${ename}> impl",
-                 'sigt'    => "$sp<saga::impl::${pname}::${ename}>",
-                 'sign'    => 'impl',
-                 'init'    => "impl_ (impl)",
-                 'body'    => ' ',
-                 'params'  => [ { 'mode'    => 'in',
-                                  'name'    => 'impl',
-                                  'default' => undef,
-                                  'type'    => "$sp<saga::impl::${pname}::${ename}>"} ] );
-    push (@new_methods, \%ictor);
-
-    $cdef->{'methods'} = \@new_methods;
-
-    print " === $pname\n";
-  }
-}
-  
-  
-
-########################################################################
-#
-# we don't need no dtors...
-#
-sub _fix_api_dtors ($$)
-{
-  my $pname = shift;
-  my $entry = shift;
-
-  if ( $entry->{'type'} eq 'interface' ||
-       $entry->{'type'} eq 'class'     )
-  {
-    my $cdef      = $entry->{'def'};
-    my $methods   = $cdef->{'methods'};
-    my @replaced  = ();
-
-    foreach my $method ( @{$methods} )
+    if ( $has_base || $has_iface )
     {
-      if ( $method->{'name'} ne 'DESTRUCTOR' )
-      {
-        push (@replaced, $method);
-      }
-      else
-      {
-        # instead of the d'tor, we add a close call
-        my %mclose = ('name'    => 'close',
-                      'comm'    => '// close impl',
-                      'precomm' => '',
-                      'detail'  => undef,
-                      'init'    => undef,
-                      'type'    => 'sync',
-                      'rtype'   => 'void',
-                      'sig'     => 'void',
-                      'sigd'    => 'void',
-                      'sigt'    => 'void',
-                      'sign'    => '',
-                      'body'    => "impl_ = NULL;",
-                      'params'  => [ ]
-                     );
-        push (@replaced, \%mclose);
-      }
+      # add an impl ctor, if one needs to be passed down
+      my %ictor = ('name'    => $ename,
+                   'comm'    => '// impl ctor',
+                   'type'    => 'ctor',
+                   'vis'     => 'private',
+                   'precomm' => '',
+                   'detail'  => undef,
+                   'sig'     => "$sp<impl_t> impl",
+                   'sigd'    => "$sp<impl_t> impl",
+                   'sigt'    => "$sp<impl_t>",
+                   'sign'    => 'impl',
+                   'init'    => sprintf ("%-20s (impl)", 'pimpl'),
+                   'body'    => '// interfaces do not call impl->constructor again',
+                   'params'  => [ { 'mode'    => 'in',
+                                    'name'    => 'impl',
+                                    'default' => undef,
+                                    'type'    => "$sp<impl_t>"} ] );
+
+      foreach my $base ( @{$entry->{'base'}} ) { $ictor{'init'} .=  sprintf "\n%-20s (pimpl::NO_IMPL)", $base; }
+      foreach my $impl ( @{$entry->{'impl'}} ) { $ictor{'init'} .=  sprintf "\n%-20s (pimpl::NO_IMPL)", $impl; }
+
+      push (@new_methods, \%ictor);
+
+      # and a simple public dtor
+      my %idtor = ('name'    => $ename,
+                   'comm'    => '// dtor decrements impl ref counter',
+                   'precomm' => '',
+                   'detail'  => undef,
+                   'init'    => undef,
+                   'type'    => 'dtor',
+                   'rtype'   => '',
+                   'sig'     => 'void',
+                   'sigd'    => 'void',
+                   'sigt'    => 'void',
+                   'sign'    => '',
+                   'vis'     => 'public',
+                   'body'    => ' ',
+                   'params'  => [ ]
+                 );
+
+      push (@new_methods, \%idtor);
+    }
+    else
+    {
+      # otherwise a no-impl ctor...
+      my %ictor = ('name'    => $ename,
+                   'comm'    => '// no-impl ctor, passes noimpl flag on to pimpl',
+                   'type'    => 'ctor',
+                   'vis'     => 'protected',
+                   'precomm' => '',
+                   'detail'  => undef,
+                   'sig'     => "base::noimpl_enum noimpl",
+                   'sigd'    => "base::noimpl_enum noimpl",
+                   'sigt'    => "base::noimpl_enum",
+                   'sign'    => 'noimpl',
+                   'init'    => sprintf ("%-20s  (noimpl)", "pimpl"),
+                   'body'    => ' ',
+                   'params'  => [ { 'mode'    => 'in',
+                                    'name'    => 'noimpl',
+                                    'default' => undef,
+                                    'type'    => "base::noimpl_enum"} ] );
+
+      push (@new_methods, \%ictor);
+
+
+      # and a simple protected dtor
+      my %idtor = ('name'    => $ename,
+                   'comm'    => '// decrements impl ref counter',
+                   'precomm' => '',
+                   'detail'  => undef,
+                   'init'    => undef,
+                   'type'    => 'dtor',
+                   'rtype'   => '',
+                   'sig'     => 'void',
+                   'sigd'    => 'void',
+                   'sigt'    => 'void',
+                   'sign'    => '',
+                   'vis'     => 'protected',
+                   'body'    => ' ',
+                   'params'  => [ ]
+                 );
+
+      push (@new_methods, \%idtor);
     }
 
-    $cdef->{'methods'} = \@replaced;
+    # print Dumper \@new_methods;
+
+    $cdef->{'methods'} = \@new_methods;
   }
 }
   
-
+  
 ######################################################################
 #
 #
@@ -627,6 +619,22 @@ sub _format_method_sig ($$;$)
     my $first_par = 1; # noi indent for first param
     my $oparam    = $m->{'rpar'} || "";
 
+    my $len = 2;
+
+    foreach my $param ( @{$m->{'params'}} )
+    {
+      my $ptype = $param->{'type'};
+      my $pname = $param->{'name'};
+
+      unless ( $pname eq $oparam )
+      {
+        if ( length ($ptype) > $len )
+        {
+          $len = length ($ptype);
+        }
+      }
+    }
+
     foreach my $param ( @{$m->{'params'}} )
     {
       my $pname = $param->{'name'};
@@ -645,9 +653,8 @@ sub _format_method_sig ($$;$)
         #   $pref = "*";
         # }
 
-
         $out       .= ",\n$ind "  unless ( $first_par );
-        $out       .= sprintf ("%-15s $pref %s", $ptype, $pname);
+        $out       .= sprintf ("%-${len}s $pref %s", $ptype, $pname);
         $first_par  = 0;
       }
     }
@@ -713,6 +720,225 @@ sub _format_method_body ($$;$)
   return $out;
 }
   
+
+######################################################################
+#
+#
+#
+sub _format_private_typedefs($$)
+{
+  my $ind    = shift;
+  my $itype  = shift;
+
+  my $out   = "";
+  my $todo  = 0;
+
+  $out .= "      private:\n";
+  $out .= "        // some helpful typedefs\n";
+  $out .= "        typedef $itype impl_t\n";
+  $out .= "\n";
+
+  return $out;
+}
+
+
+######################################################################
+#
+#
+#
+sub _format_private_ctors($$)
+{
+  my $ind   = shift;
+  my $class = shift;
+
+  my $out   = "";
+  my $todo  = 0;
+
+  foreach my $method ( @{$class->{'def'}{'methods'}} )
+  {
+    if ( $method->{'type'} eq 'ctor' ||
+         $method->{'type'} eq 'dtor' )
+    {
+      print Dumper \$method unless defined $method->{'vis'};
+      if ( $method->{'vis'} eq 'private' )
+      {
+        $todo++;
+      }
+    }
+  }
+
+  if ( $todo )
+  {
+    $out .= "      private:\n";
+    $out .= "        //--------------------------\n";
+    $out .= "        // construction/destruction \n";
+    $out .= "        //--------------------------\n\n";
+
+    foreach my $method ( @{$class->{'def'}{'methods'}} )
+    {
+      if ( $method->{'type'} eq 'ctor' ||
+           $method->{'type'} eq 'dtor' )
+      {
+        if ( $method->{'vis'} eq 'private' )
+        {
+          $out .= _format_method_sync_api_hpp ($ind, $method);
+          $out .= "\n";
+        }
+      }
+    }
+  }
+
+  $out .= "\n";
+
+  return $out;
+}
+
+
+######################################################################
+#
+#
+#
+sub _format_protected_ctors($$)
+{
+  my $ind   = shift;
+  my $class = shift;
+
+  my $out   = "";
+  my $todo  = 0;
+
+  foreach my $method ( @{$class->{'def'}{'methods'}} )
+  {
+    if ( $method->{'type'} eq 'ctor' ||
+         $method->{'type'} eq 'dtor' )
+    {
+      if ( $method->{'vis'} eq 'protected' )
+      {
+        $todo++;
+      }
+    }
+  }
+
+  if ( $todo )
+  {
+    $out .= "      protected:\n";
+    $out .= "        //--------------------------\n";
+    $out .= "        // construction/destruction \n";
+    $out .= "        //--------------------------\n\n";
+
+    foreach my $method ( @{$class->{'def'}{'methods'}} )
+    {
+      print Dumper \$method unless defined $method->{'type'};
+
+      if ( $method->{'type'} eq 'ctor' ||
+           $method->{'type'} eq 'dtor' )
+      {
+        if ( $method->{'vis'} eq 'protected' )
+        {
+          $out .= _format_method_sync_api_hpp ($ind, $method);
+          $out .= "\n";
+        }
+      }
+    }
+  }
+
+  $out .= "\n";
+
+  return $out;
+}
+
+######################################################################
+#
+#
+#
+sub _format_public_ctors($$)
+{
+  my $ind   = shift;
+  my $class = shift;
+
+  my $out   = "";
+  my $todo  = 0;
+
+  foreach my $method ( @{$class->{'def'}{'methods'}} )
+  {
+    if ( $method->{'type'} eq 'ctor' ||
+         $method->{'type'} eq 'dtor' )
+    {
+      if ( $method->{'vis'} eq 'public' )
+      {
+        $todo++;
+      }
+    }
+  }
+
+  if ( $todo )
+  {
+    $out .= "      public:\n";
+    $out .= "        //--------------------------\n";
+    $out .= "        // construction/destruction \n";
+    $out .= "        //--------------------------\n\n";
+
+    foreach my $method ( @{$class->{'def'}{'methods'}} )
+    {
+      if ( $method->{'type'} eq 'ctor' ||
+           $method->{'type'} eq 'dtor' )
+      {
+        if ( $method->{'vis'} eq 'public' )
+        {
+          $out .= _format_method_sync_api_hpp ($ind, $method);
+          $out .= "\n";
+        }
+      }
+    }
+  }
+
+  $out .= "\n";
+
+  return $out;
+}
+
+######################################################################
+#
+#
+#
+sub _class_is_iface ($)
+{
+  my $class = shift;
+
+  if ( $class->{'type'} eq 'interface' )
+  {
+    return 1;
+  }
+
+  return 0;
+}
+
+
+######################################################################
+#
+#
+#
+sub _class_has_iface ($)
+{
+  my $class = shift;
+
+  return 0 unless defined ($class);
+  return 0 unless exists  ($class->{'impl'});
+  return scalar ( @{$class->{'impl'}} );
+}
+
+
+######################################################################
+#
+#
+#
+sub _class_has_base ($)
+{
+  my $class = shift;
+
+  return 0 unless defined ($class);
+  return 0 unless exists  ($class->{'base'});
+  return scalar ( @{$class->{'base'}} );
+}
 
 1;
 

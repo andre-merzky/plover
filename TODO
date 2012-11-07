@@ -1,5 +1,5 @@
 
-    # vim: set tw=64 nocindent
+  # vim: set tw=64 nocindent
 
   - keep parts of the instance_data read_only, so that one
     adaptor cannot temper with instance data, and spoil init for
@@ -7,9 +7,18 @@
     pointer, job id, etc) should be mutable.  Define those, also
     for advert publishing.
 
+    - in fact, adaptor level instance data should be attached to the instance
+      data, but so that each adaptor maintains its own set 
+     
+      my $adaptor_idata = $idata{adaptor_id};
+
   - different sets of instance data:
     instance_data, adaptor_instance_data, suite_instance_data
     (why limit to a adaptor suite?)
+    
+    - not sure if suite is needed if one can register idata as described
+      above.
+
 
   - provide adaptor programmers with status check and monitoring
     threads automatically, and take care of thread resource
@@ -21,34 +30,32 @@
   - allow an adaptor to statically bind, i.e. to bypass adaptor
     selection on following calls.  That improves performance
     for, for example, the message API, where the same channel
-    has to be used anyway
+    has to be used anyway.
 
   - have a hook in adaptor which gets called before/after any
     method call to the adaptor, e.g. to refresh state, caches,
-    etc.  Possibly, also allow for hooks and shared 'instance'
-    data for complete adaptor suites (see ini for aws adaptors)
-    - ???
+    etc.  
+    - isn't this premature optimization?!
 
-  - also have hooks in the packages, to do, for example, simple
+  - have hooks in packages, to do, for example, simple
     parameter checks, state checks, after-call-postprocessing,  etc.
 
   - allow for CPI and adaptor classes which do NOT have
     a session (buffer, context, ...)
 
-  - sometimes, all adaptors which do _not_ throw win.  For
+  - sometimes, all adaptors which do _not_ throw, should win.  For
     example, on service discovery, but also if a session tries
     to get it's default contexts (set type to any, and call
     set_defaults())
 
   - ini thingies
-    simplify, prune functionality
+    simplify, prune functionality, less locations
 
-  - Sometimes, SAGA class implementation get used with adaptors.
+  - Sometimes, SAGA class implementations get used within adaptors.
     For example, a context may get used by other adaptors in the
     same suite.  Find a way to make it simple to get that
-    implementation, or to add 'friend'ly methods to the saga
-    class (latter is best if, e.g., "inherited from friend
-    'cpi'" is sufficient).
+    implementation.  Possibly support adding shared_ptr to those 
+    instances to the adaptor_idata...
 
   - provide means to do adaptor loop detection.  For example,
     allow to use SAGA for file staging from within the job
@@ -59,55 +66,91 @@
   - add some utilities, like for wrapping a SAGA file into a 
     std::iostream
     - goes together with adaptor writers guide
-    - needs to be documented along with the SPI
+    - needs to be documented along with the CPI
+
+  - generate complete C bindings
+
+  - generate complete Python bindings, support python adaptors
+
+  - generate complete shell bindings, use parameter names as 
+    flags, model after C binding functions
 
   - attributes interface should act like a string map
     job_description jd;
     std::map <std::string, std:string> attributes;
     jd["Executable"] = "/bin/date";
+    but should maintain readonly, vector semantics (allow 
+    auto-convert for vecs)
 
   - empty class ctors should do nothing, and in particular
-    should not do remote ops.  Its braindead that a application
-    class, which has a set of saga objects as mempers, needst to
+    should not do remote ops.  Its brain-dead that a application
+    class, which has a set of saga objects as members, needs to
     either initialize _all_ of them at creation time, via member
     initialization, or needs to wait for the default
-    initialization, only to assignt and initialize them later
+    initialization, only to assign and initialize them later
     again.  Sure, application can use pointers - but that kind
     of defeats our whole pimpl idea, doesn't it?  So, we need
     some mechanism to delay instantiation.  That _may_ go along
     well with async object creation btw.
 
-    saga_file_factory.create_file <Async> (url);
+      saga_file_factory.create_file <Async> (url);
 
-    saga::file::file f (false);
-    f.init <Async> (url);
-    f.close ();
+    would then be rendered as
+
+      saga::file::file f (false);
+      f.init <Async> (url);
+      ...
+      f.close ();
 
   - saga-a has predefined names for attributes.  Such names should 
     also exist for predefined metrics.
+
+  - the distinction between attributes and metrics should go: simply allow to
+    watch attributes.  If they are static, no harm done.  If they are optional,
+    no harm done.  But much easier to use...
 
   - flags can simply be public const int members of the respective 
     classes.  We use int's anyway, no need to keep enums around in 
     the parent namespace then.
 
+  - encapsulate adaptor selection.
+    possibly not worth it, but at least structure code well
 
- - encapsulate adaptor selection
-   probably too complex, and not worth it
+  - adaptor priority types:
+    - preprocess  : param checking, auditing
+    - default     : remote ops
+    - fallback    : monitor polling on attribs, async calls
+    - postprocess : sanity checks, auditing
+    to be invoked in that order.  No further priorities within these types, if
+    possible.
 
+  - ssh+pbs://
+    such schema should be implementable as transport/exe+filter.  The filter
+    adaptor converts the semantics into command line calls, which are executed
+    as jobs by the transport/exec adaptor.  For example, an ssh, globus, pbs and
+    condor adaptor should allow the following combinations (with fork obviously):
+
+      pbs://      -> fork+pbs://
+      condor://   -> fork+condor://
+      ssh://      -> ssh+shell://
+      globus://   -> globus+shell://
+      ssh+pbs://
+      ssh+condor://
+      globus+pbs://
+      globus+condor://
 
   - saga::util is public visible / usable, and should be part of
     the language bindings
 
-  - classes should inherit from a 'shareable', which keeps a weak 
-    pointer of the class if the class is ever used for a shared ptr.
-    No other shared_ptr can then ever claim that class, and the class
-    gets a shared_from_this().
+  - impl classes should inherit from a 'shareable', which keeps a weak 
+    pointer of the class if the class is ever used for a shared ptr.   
+    Don't allow non-shared ptr use
 
   - a task adaptor should be able to manage a thread pool, and call 
     into the sync adaptors (again via the engine?)
 
-  - a task container adaptor should be able to group asks in a 
-    container, and again to call back to bulk adaptors (via the engine?).
+  - a task container adaptor should be able to group tasks in a 
+    container, and again to call back to bulk adaptors (via the engine).
     task_container adaptors need to be called one after the other.  
     task::instance_data need to keep track of what adaptor runs what 
     task, etc
@@ -117,25 +160,20 @@
     - trial/error: call one, on error call next, on success return (file.copy)
     - collect:     call all, collect results (service discovery)
     - all:         call one after the other, operating on the same functor
-                   (think task_container)
-    - make these modes exchangable, and allow each call to specify what is
+                   (task_container)
+    - make these modes exchangeable, and allow each call to specify what is
       needed
     - collect: split collect-mode functor into [n] async bound functors, 
-      and call templetized collector class to combine results
+      and call templatized collector class to combine results
 
       result_combiner <service_description> (vector <vector <service_description> > sds)
 
-  - everything should be async:
-    - impl provides only async funcs - the api can make sync versions out of
-      those.
-    - if the adaptor provides async funcs, fine.  If it provides sync ones, the
-      impl or functor or ... wraps them into threads (some task adaptor does
-      that, right?).
+  - impl provides only task funcs - the api can make non-task versions out of
+    those.
 
-  - for all nontempletized classes: only setters/getters/inspectors are inlined
+  - for all non-templatized classes: only setters/getters/inspectors are inlined
     into header files - everything else (spanning more than one simple assign
-    snd return statement) goes into the cpp files.
-
+    and return statement) goes into the cpp files.
 
   - below API level, we express call modes as flags, in order to avoid
     templatization throughout the impl and cpi layers.  An exception might
@@ -150,20 +188,12 @@
     'apply last' etc.
 
     That would make a threading async adaptor trivial - it just spawns a thread,
-    and switches the cc's call_mode to sync before handin it off to the
+    and switches the cc's call_mode to sync before handing it off to the
     thread...
 
+  - check rule of three
 
-
-
-
-
-
-
-
-
-
-
-
-
+  - should object be interface or really be base class?  is interface right
+    now, so cannot be constructued directly.  That means that one also cannot
+    have containers of (arbitrary derived) object instances...
 

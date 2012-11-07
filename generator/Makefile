@@ -7,7 +7,8 @@ include $(SAGA_ROOT)/make/saga.application.mk
 all:: gen 
 
 gen:
-	@./generate_saga.pl *.tex
+	@./generate_saga.pl saga_core_*.tex
+	@dot -Tpng -O saga.dot
 
 test1:: distclean
 	@./generate_saga.pl   saga_core_object.tex

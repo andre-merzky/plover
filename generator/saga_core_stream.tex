@@ -96,11 +96,11 @@
     }
  
  
-    class stream_server  : implements   saga::object
-                           implements   saga::async
-                           implements   saga::monitorable
-                           implements   saga::permissions
-                        // from object  saga::error_handler
+    class stream_server  : implements   saga::core::object
+                           implements   saga::core::async
+                           implements   saga::core::monitorable
+                           implements   saga::core::permissions
+                        // from object  saga::core::error_handler
     {
       CONSTRUCTOR       (in    session         s,
                          in    url             url,
@@ -127,11 +127,11 @@
     }
  
  
-    class stream : extends      saga::object
-                   implements   saga::async
-                   implements   saga::attributes
-                   implements   saga::monitorable
-                // from object  saga::error_handler
+    class stream : implements   saga::core::object
+                   implements   saga::core::async
+                   implements   saga::core::attributes
+                   implements   saga::core::monitorable
+                // from object  saga::core::error_handler
     {
       // constructor / destructor
       CONSTRUCTOR  (in    session          s,
@@ -460,11 +460,11 @@
     - serve
       Purpose:  wait for incoming client connections
       Format:   serve                (in  float   timeout,
-                                      out stream  client);
+                                      out stream  stream);
       Inputs:   timeout:              number of seconds to wait
                                       for a client
       InOuts:   -
-      Outputs:  client:               new Connected stream object
+      Outputs:  stream:               new Connected stream object
       PreCond:  -
       PostCond: - the returned client is in 'Open' state.
                 - the session of the returned client is that of 
@@ -519,7 +519,7 @@
     - close
       Purpose:  closes a stream server
       Format:   close                (in float timeout)
-      Inputs:   timeout               seconds to wait
+      Inputs:   timeout:              seconds to wait
       InOuts:   -
       Outputs:  -
       PreCond:  - 
@@ -706,7 +706,7 @@
     - close
       Purpose:  closes an active connection
       Format:   close                (in float timeout)
-      Inputs:   timeout               seconds to wait
+      Inputs:   timeout:              seconds to wait
       InOuts:   -
       Outputs:  -
       PreCond:  -

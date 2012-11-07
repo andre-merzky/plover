@@ -244,9 +244,9 @@
     }
  
  
-    class job_description : implements   saga::object
-                            implements   saga::attributes
-                         // from object: saga::error_handler
+    class job_description : implements   saga::core::object
+                            implements   saga::core::attributes
+                         // from object: saga::core::error_handler
     {
       CONSTRUCTOR          (out job_description obj);
       DESTRUCTOR           (in  job_description obj);
@@ -525,9 +525,9 @@
     }
  
  
-    class job_service : implements   saga::object
-                        implements   saga::async
-                     // from object  saga::error_handler
+    class job_service : implements   saga::core::object
+                        implements   saga::core::async
+                     // from object  saga::core::error_handler
     {
       CONSTRUCTOR          (in  session         s,
                             in  url             rm = "",
@@ -549,13 +549,13 @@
     }
  
  
-    class job : extends      saga::task
-                implements   saga::async
-                implements   saga::attributes
-                implements   saga::permissions
-             // from task    saga::object
-             // from task    saga::monitorable
-             // from object  saga::error_handler
+    class job : extends      saga::core::task
+                implements   saga::core::async
+                implements   saga::core::attributes
+                implements   saga::core::permissions
+             // from task    saga::core::object
+             // from task    saga::core::monitorable
+             // from object  saga::core::error_handler
     {
       // no CONSTRUCTOR
       DESTRUCTOR           (in  job             obj);
@@ -716,15 +716,15 @@
     }
  
  
-    class job_self : extends     saga::job
-                     implements  saga::steerable
-                  // from job    saga::async
-                  // from job    saga::attributes
-                  // from job    saga::task
-                  // from job    saga::object
-                  // from job    saga::monitorable
-                  // from job    saga::permissions
-                  // from job    saga::error_handler
+    class job_self : extends     saga::job::job
+                     implements  saga::core::steerable
+                  // from job    saga::core::async
+                  // from job    saga::core::attributes
+                  // from job    saga::core::task
+                  // from job    saga::core::object
+                  // from job    saga::core::monitorable
+                  // from job    saga::core::permissions
+                  // from job    saga::core::error_handler
     {
       // no CONSTRUCTOR
       DESTRUCTOR           (in  job_self        obj);

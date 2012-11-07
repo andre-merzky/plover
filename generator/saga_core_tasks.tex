@@ -329,9 +329,9 @@
     }
  
  
-    class task : implements   saga::object
-                 implements   saga::monitorable
-              // from object  saga::error_handler
+    class task : implements   saga::core::object
+                 implements   saga::core::monitorable
+              // from object  saga::core::error_handler
     {
       // no constructor
       DESTRUCTOR       (in  task            obj);
@@ -362,9 +362,9 @@
     }
  
  
-    class task_container : implements   saga::object
-                           implements   saga::monitorable
-                        // from object  saga::error_handler
+    class task_container : implements   saga::core::object
+                           implements   saga::core::monitorable
+                        // from object  saga::core::error_handler
     {
       CONSTRUCTOR      (out task_container  obj);
       DESTRUCTOR       (in  task_container  obj);
@@ -378,7 +378,7 @@
       cancel            (in  float           timeout =  0.0);
       wait              (in  wait_mode       mode    =  All,
                          in  float           timeout = -1.0,
-                         out task            finished);
+                         out task            t);
  
       // inspection
       size              (out int             n);
@@ -538,11 +538,11 @@
     - wait
       Purpose:  Wait for the task to finish.
       Format:   wait                 (in  float   timeout,
-                                      out boolean done);
+                                      out boolean finished);
       Inputs:   timeout:              seconds to wait
       InOuts:   -
       Outputs:  done:                 indicating if the task
-                                      is done running
+                                      is in final state
       PreCond:  - task is not in 'New' state.
       PostCond: - if no timeout occurs, task is in a final 
                   state.
@@ -737,10 +737,10 @@
  \begin{myspec}
     - CONSTRUCTOR
       Purpose:  create a task_container
-      Format:   CONSTRUCTOR          (out task_container tc);
+      Format:   CONSTRUCTOR          (out task_container obj);
       Inputs:   -
       InOuts:   -
-      Outputs:  tc:                   newly created container
+      Outputs:  obj:                  newly created container
       PreCond:  -
       PostCond: -
       Perms:    -
@@ -754,8 +754,8 @@
  
     - DESTRUCTOR
       Purpose:  destroy a task_container
-      Format:   DESTRUCTOR           (in task_container tc);
-      Inputs:   tc:                   container to destroy
+      Format:   DESTRUCTOR           (in task_container obj);
+      Inputs:   obj:                  container to destroy
       InOuts:   -
       Outputs:  -
       PreCond:  -
@@ -851,11 +851,11 @@
       Purpose:  Wait for one or more of the tasks to finish.
       Format:   wait                 (in  wait_mode mode = All,
                                       in  float  timeout = -1.0,
-                                      out task   done);
+                                      out task   t);
       Inputs:   mode:                 wait for All or Any task
                 timeout:              seconds to wait
       InOuts:   -
-      Outputs:  done:                 finished task
+      Outputs:  t:                    finished task
       PreCond:  -
       PostCond: - if no timeout occurs, All/Any tasks in the 
                   container are in a final state.

@@ -112,11 +112,11 @@
     }
  
  
-    class logical_file : extends        saga::ns_entry
-                         implements     saga::attributes
-                      // from ns_entry  saga::object
-                      // from ns_entry  saga::async
-                      // from object    saga::error_handler
+    class logical_file : extends        saga::namespace::ns_entry
+                         implements     saga::core::attributes
+                      // from ns_entry  saga::core::object
+                      // from ns_entry  saga::core::async
+                      // from object    saga::core::error_handler
     {
       CONSTRUCTOR     (in  session             s,
                        in  url                 name,
@@ -142,12 +142,12 @@
     }
  
  
-    class logical_directory : extends            saga::ns_directory
-                              implements         saga::attributes
-                           // from ns_directory  saga::ns_entry
-                           // from ns_entry      saga::object
-                           // from ns_entry      saga::async
-                           // from object        saga::error_handler
+    class logical_directory : extends            saga::namespace::ns_directory
+                              implements         saga::core::attributes
+                           // from ns_directory  saga::namespace::ns_entry
+                           // from ns_entry      saga::core::object
+                           // from ns_entry      saga::core::async
+                           // from object        saga::core::error_handler
     {
  
       CONSTRUCTOR     (in  session             s,

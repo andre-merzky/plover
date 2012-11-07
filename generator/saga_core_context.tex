@@ -99,9 +99,9 @@
  \begin{myspec}
   package saga.core
   {
-    class context : implements   saga::object
-                    implements   saga::attributes
-                 // from object  saga::error_handler
+    class context : implements   saga::core::object
+                    implements   saga::core::attributes
+                 // from object  saga::core::error_handler
     {
       CONSTRUCTOR      (in  string       type = "",
                         out context      obj);

@@ -12,8 +12,8 @@
  \begin{myspec}
   package saga.core
   {
-    class session : implements   saga::object
-                 // from object  saga::error_handler
+    class session : implements   saga::core::object
+                 // from object  saga::core::error_handler
     {
       CONSTRUCTOR        (in  bool             default = true,
                           out session          obj);

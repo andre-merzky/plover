@@ -50,8 +50,8 @@
  \begin{myspec}
   package saga.core
   {
-    class url : implements   saga::object
-             // from object  saga::error_handler
+    class url : implements   saga::core::object
+             // from object  saga::core::error_handler
     {
       CONSTRUCTOR   (in  string     url       ,
                      out buffer     obj       );
@@ -103,7 +103,7 @@
                                       out url    obj);
       Inputs:   url:                  initial URL to be used
       InOuts:   -
-      Outputs:  url:                  the newly created url
+      Outputs:  obj:                  the newly created url
       PreCond:  -
       PostCond: -
       Perms:    -

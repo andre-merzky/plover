@@ -167,8 +167,8 @@
  \begin{myspec}
   package saga.core
   {
-    class buffer : implements   saga::object
-                // from object  saga::error_handler
+    class buffer : implements   saga::core::object
+                // from object  saga::core::error_handler
     {
       CONSTRUCTOR (in  array<byte>  data,
                    in  int          size,
@@ -203,7 +203,7 @@
       Inputs:   data:                 data to be used
                 size:                 size of data to be used
       InOuts:   -
-      Outputs:  buffer:               the newly created buffer
+      Outputs:  obj:                  the newly created buffer
       PreCond:  - size >= 0
       PostCond: - the buffer memory is managed by the
                   application.
@@ -225,7 +225,7 @@
                                       out buffer      obj);
       Inputs:   size:                 size of data buffer
       InOuts:   -
-      Outputs:  buffer:               the newly created buffer
+      Outputs:  obj:                  the newly created buffer
       PreCond:  -
       PostCond: - the buffer memory is managed by the
                   implementation.
@@ -324,7 +324,7 @@
       Format:   get_size           (out int   size);
       Inputs:   -
       InOuts:   -
-      Outputs:  size               value of size
+      Outputs:  size:              value of size
       PreCond:  -
       PostCond: -
       Perms:    -
@@ -345,7 +345,7 @@
     - close
       Purpose:  closes the object
       Format:   close              (in  float timeout = 0.0);
-      Inputs:   timeout             seconds to wait
+      Inputs:   timeout:            seconds to wait
       InOuts:   -
       Outputs:  -
       Perms:    -

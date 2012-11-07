@@ -326,10 +326,10 @@
     }
  
  
-    class ns_entry : implements   saga::object,
-                     implements   saga::async
-                     implements   saga::permissions
-                  // from object  saga::error_handler
+    class ns_entry : implements   saga::core::object
+                     implements   saga::core::async
+                     implements   saga::core::permissions
+                  // from object  saga::core::error_handler
     {
       CONSTRUCTOR        (in  session        s,
                           in  url            name,
@@ -370,11 +370,11 @@
     }
  
  
-    class ns_directory : extends        saga::ns_entry
-                         // from ns_entry  saga::object
-                         // from ns_entry  saga::async
-                         // from ns_entry  saga::permissions
-                         // from object    saga::error_handler
+    class ns_directory : extends           saga::namespace::ns_entry
+                         // from ns_entry  saga::core::object
+                         // from ns_entry  saga::core::async
+                         // from ns_entry  saga::core::permissions
+                         // from object    saga::core::error_handler
     {
       CONSTRUCTOR        (in  session        s,
                           in  url            name,
@@ -669,7 +669,7 @@
       Format:   get_url            (out  url       url);
       Inputs:   -
       InOuts:   -
-      Outputs:  url                 url pointing to the entry
+      Outputs:  url:                url pointing to the entry
       PreCond:  -
       PostCond: -
       Perms:    -
@@ -687,7 +687,7 @@
       Format:   get_cwd            (out url       cwd);
       Inputs:   -
       InOuts:   -
-      Outputs:  cwd                 current working directory
+      Outputs:  cwd:                current working directory
       PreCond:  -
       PostCond: -
       Perms:    -
@@ -706,7 +706,7 @@
       Format:   get_name           (out  url       name);
       Inputs:   -
       InOuts:   -
-      Outputs:  name                last part of path element
+      Outputs:  name:               last part of path element
       PreCond:  -
       PostCond: -
       Perms:    -
@@ -1097,7 +1097,7 @@
     - close
       Purpose:  closes the object
       Format:   close              (in  float timeout = 0.0);
-      Inputs:   timeout             seconds to wait
+      Inputs:   timeout:            seconds to wait
       InOuts:   -
       Outputs:  -
       PreCond:  -

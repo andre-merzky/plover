@@ -157,9 +157,9 @@
     }
  
  
-    class iovec : extends saga::buffer
-               // from buffer saga::object
-               // from object saga::error_handler
+    class iovec : extends     saga::core::buffer
+               // from buffer saga::core::object
+               // from object saga::core::error_handler
     {
       CONSTRUCTOR (in array<byte>          data   = "",
                    in    int               size   = 0,
@@ -177,11 +177,11 @@
       get_len_out (out   int               len_out);
     }
  
-    class file : extends        saga::namespace::ns_entry,
-              // from ns_entry  saga::object
-              // from ns_entry  saga::async
-              // from ns_entry  saga::permissions
-              // from object    saga::error_handler
+    class file : extends        saga::namespace::ns_entry
+              // from ns_entry  saga::core::object
+              // from ns_entry  saga::core::async
+              // from ns_entry  saga::core::permissions
+              // from object    saga::core::error_handler
     {
       CONSTRUCTOR (in    session           s,
                    in    url               name,
@@ -235,10 +235,10 @@
  
     class directory : extends            saga::namespace::ns_directory
                    // from ns_directory  saga::namespace::ns_entry
-                   // from ns_entry      saga::object
-                   // from ns_entry      saga::async
-                   // from ns_entry      saga::permissions
-                   // from object        saga::error_handler
+                   // from ns_entry      saga::core::object
+                   // from ns_entry      saga::core::async
+                   // from ns_entry      saga::core::permissions
+                   // from object        saga::core::error_handler
     {
       CONSTRUCTOR (in    session           s,
                    in    url               name,
@@ -362,7 +362,7 @@
                 len_in:               number of bytes to read
                                       or write on read_v/write_v
       InOuts:   -
-      Outputs:  buffer:               the newly created iovec 
+      Outputs:  obj:                  the newly created iovec 
       PreCond:  -
       PostCond: -
       Perms:    - 

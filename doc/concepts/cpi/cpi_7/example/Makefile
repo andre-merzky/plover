@@ -5,6 +5,8 @@ SAGA_BIN     += cpi_7
 
 include $(SAGA_ROOT)/make/saga.mk
 
+$(warning pwd: $(SAGA_PWD))
+
 SAGA_CXXFLAGS += -I$(SAGA_PWD)/../
 
 SAGA_LDFLAGS  += -L$(SAGA_PWD)/../saga/api/filesystem/  -lsaga_api_filesystem

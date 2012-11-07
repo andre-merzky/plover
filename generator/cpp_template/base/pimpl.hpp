@@ -44,9 +44,8 @@ namespace saga
   // class in the facade's inheritance tree, the pointer is retrieved again from 
   // the pimpl base class, and dynamic_cast'ed back into its appropriate type.
   //
-  // This pimpl base class is not an actual part of the API!  One could trick
-  // around to forbid users to directly create instances, but that is left out for
-  // clarity.
+  // This pimpl base class is not an actual part of the API, and instances
+  // cannot be created (protected c'tor).
   // 
   class pimpl 
   {
@@ -101,7 +100,7 @@ namespace saga
   
   
     public:
-      // ~pimpl does not really delete the impl pointer, but, as that is
+      // ~pimpl does not really delete the impl pointer content, but, as that is
       // a shared ptr, will decrease its reference count.
       virtual ~pimpl (void)
       {

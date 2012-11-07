@@ -15,8 +15,13 @@ $VERSION     = 1.00;
 %EXPORT_TAGS = ();
 
 use Data::Dumper;
+use Storable qw(dclone);
 
 ########################################################################
+#
+# This package containes a parser which parses a string containing an IDL
+# document into a tree structure which represents the very same docment.  
+#
 sub parse_idl ($)
 {
   my $txt      = shift;
@@ -32,7 +37,6 @@ sub parse_idl ($)
   {
     if ( $package =~ /^\s*$/io )
     {
-      print " === next\n";
       next PACKAGE;
     }
 
@@ -106,7 +110,7 @@ sub parse_idl ($)
         # parse inheritance qualifiers
         # along the way, try to find info about async inheritance, either in the
         # qualifiers or in the comments
-        if ( $equal =~ /\bfrom\s+\S*\s+saga::async\b/io )
+        if ( $equal =~ /\b(implements|from)\s+\S*\s+saga::core::async\b/io )
         {
           $elem{'async'} = 1;
         }
@@ -477,156 +481,135 @@ sub parse_idl ($)
       }
 
 
-      # we haqve the idl package now fully parsed.  The remainder of the file will
+      # we have the idl package now fully parsed.  The remainder of the file will
       # contain specification details, which belong to the last parsed package.
       # We need to infer the respective elements from the subsection though, which
       # are now replaced in the IDL with lines like
       # 
       # SPEC DETAILS : Enum: state
       # 
+      # From here on we thus parse line by line, as the remainder of the text
+      # should be rather uniform but (latex-wise) unstructured.  Whenver we find
+      # an empty line, we dump the so far found details into the idl struct.
+      # We add an empty line to $dtxt, to make sure that the last found details
+      # are dumped.
+      $dtxt      .= "\n";
 
-      my $expect = "detail"; # line type we expect next
-      my $etype  = "";       # entry type for details
-      my $ename  = "";       # entry name for details
+      my $etype  = ""; # entry type for details
+      my $ename  = ""; # entry name for details
       # note that pname is still known here, and points to the last parsed package
 
       # keep detail vars around
-      my $mname  = "";
-      my $mpurp  = "";
-      my $mform  = "";
-      my $min    = "";
-      my $mout   = "";
-      my $minout = "";
-      my $mpre   = "";
-      my $mpost  = "";
-      my $mperm  = "";
-      my $mthrow = "";
-      my $mnotes = "";
-      my $mtxt   = ""; # simply keep complete text, formatted as is
+      my $mname   = "";
+      my $extra   = "";
 
-      my $extra_comm   = "";
+      my $key     = "";
+      my $val     = "";
 
-      # From here on we start parsing lline by line, as the remainder of the text
-      # should be rather uniform
-      my $line = "";
+      my $line    = "";
 
-      LINE:
-      while ( $dtxt =~ /^([^\n]*)\n(.*)$/iosg )
+      my %tmp     = ();
+
+      while ( $dtxt =~ /^(.*?)\n(.*)$/iosg )
       {
         $line = $1 || "";
         $dtxt = $2 || "";
 
-        # waiting for details to start, we can either really find a detail
-        # starting, or a new header
-        if ( $expect eq "detail" )
+        if ( $line =~ /^\s*SPEC\s+DETAILS\s*:\s*(\S+)\s+:\s+(\S+)\s*$/o )
         {
-          # ignore empty lines right now
-          if ( $line =~ /^\s*$/io )
-          {
-            next LINE;
-          }
-
-          # accept new headers (new element details follow)
-          if ( $line =~ /^SPEC DETAILS : (\S+) : (\S+)$/io )
-          {
-            $etype = lc($1);
-            $ename = lc($2);
-
-            # print "scan details for $pname $etype $ename\n";
-
-            $expect = "detail";
-            next LINE;
-          }
-          
-
-          if ( $line  =~ /^\s+\-\s+(\S+)\s*$/io )
-          {
-            # found starting detail.
-            $mname  = $1;
-            $mtxt  .= "$line\n";
-
-            # but we complain if we did not see a header first
-            if ( "$ename-$etype" eq "-" )
-            {
-              die "expected header, but found detail: $line\n";
-            }
-            
-            # now wait for its contents
-            $expect = "content";
-            next LINE;
-          }
-
-          # we sometimes see additonal comment lines
-          # warn "expected detail or header, not '$line'\n";
-          $extra_comm .= "$line\n";
-          next LINE;
+          # new element
+          $etype = $1;
+          $ename = $2;
         }
-
-
-        # waiting for more 'content', and only finish on new line
-        if ( $expect eq "content" )
+        elsif ( ! $mname && $line =~ /^\s*-\s+(\S+?)\s*$/o )
         {
-          if ( $line =~ /^\s*$/io )
+          # we expect ' - <method_name>'
+          $mname = $1;
+        }
+        elsif ( $line =~ /^\s*([A-Z]\S*)\s*:\s*(.*?)\s*$/o )
+        {
+          $key = $1;
+          $val = $2;
+
+          if ( $val ne '-' )
           {
-            if ( $mtxt !~ /^\s*$/io )
+            $tmp{$key} = $val;
+          }
+        }
+        elsif ( $line =~ /^\s*(\S.*?)\s*$/o )
+        {
+          my $tmp = $1;
+
+          if ( $mname )
+          {
+            # continuation of some detail
+            $tmp{$key} .= "\n$tmp";
+          }
+          else
+          {
+            $extra .= $tmp;
+          }
+        }
+        elsif ( $line =~ /^\s*$/o )
+        {
+          # do we have anything to dump?
+          if ( $mname )
+          {
+            my $match_found = 0;
+
+            # dump previously found detail information into ids tree
+            if ( exists ($idl{$pname})                           && 
+                 exists ($idl{$pname}{$ename})                   &&
+                 exists ($idl{$pname}{$ename}{'def'})            &&
+                 exists ($idl{$pname}{$ename}{'def'}{'methods'}) )
             {
-              # if we found any detail earlier on, now we need to store it
-              # away, along with any extra_comm we saw.  So we search the def
-              # hash for the matching method name
-
-              # print "dump detail for $mname ($etype $ename) in $pname\n";
-
-              my $match_found = 0;
-
-              if ( exists ($idl{$pname})                           && 
-                   exists ($idl{$pname}{$ename})                   &&
-                   exists ($idl{$pname}{$ename}{'def'})            &&
-                   exists ($idl{$pname}{$ename}{'def'}{'methods'}) )
+              foreach my $method ( @{$idl{$pname}{$ename}{'def'}{'methods'}} )
               {
-                foreach my $method ( @{$idl{$pname}{$ename}{'def'}{'methods'}} )
+                if ( $method->{'name'} eq $mname )
                 {
-                  if ( $method->{'name'} eq $mname )
-                  {
-                    $match_found = 1;
-                
-                    # print "storing detail in $pname :: $ename :: $mname\n";
-                    # FIXME: comment out detail for dumper readibility
-                    $method->{'detail'} = ""; # , $mtxt;
-                    $method->{'precom'} = $extra_comm;
+                  $match_found = 1;
+              
+                  # print "storing detail in $pname :: $ename :: $mname\n";
+                  # FIXME: comment out detail for dumper readibility
+                  $method->{'precom'} = $extra;
+                  $method->{'detail'} = dclone (\%tmp);
 
-                  }
-                }
-              }
+                  # we attach some of the detail information to other method
+                  # elements
+                  # FIXME: continue here
 
-              if ( ! $match_found )
-              {
-                # we only warn on method names which contain a '*' - those need to
-                # be handled though! FIXME
-                if ( $mname !~ /\*/io )
-                {
-                  die "no such method '$mname' for $pname :: $ename\n";
-                }
-                else
-                {
-                  warn "No such method '$mname' for $pname :: $ename\n";
+                  # done dumping -- don't carry old values along
+                  %tmp   = ();
+                  $mname = "";
+                  $extra = "";
                 }
               }
             }
 
-            # empty line: wait for new detail (or header)
-            $mtxt       = "";
-            $extra_comm = "";
-            $expect     = "detail";
-            next LINE;
+            if ( ! $match_found )
+            {
+              # we only warn on method names which contain a '*' - those need to
+              # be handled though! FIXME
+              if ( $mname !~ /\*/io )
+              {
+                die "no such method '$mname' for $pname :: $ename\n";
+              }
+              else
+              {
+                warn "No such method '$mname' for $pname :: $ename\n";
+              }
+            }
           }
-
-          $mtxt  .= "$line\n";
-          $expect = "content";
-          next LINE;
+          else
+          {
+            # ignore empty line if there is nothing to dump...
+          }
         }
-
-        # if we did not see a 'next LINE', we failed...
-        die "error: parsing for '$expect', but found '$line'\n";
+        else
+        {
+          # I don't think this can happen...
+          die "error: parsing error on details in line '$line'\n";
+        }
       }
     }
     else
