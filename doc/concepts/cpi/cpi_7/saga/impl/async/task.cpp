@@ -46,9 +46,9 @@ namespace saga
       {
         SAGA_UTIL_STACKTRACE ();
 
-        typedef saga::async::state                          res_t;
-        typedef saga::impl::async::task                     api_t;
-        typedef saga::impl::async::task_cpi                 cpi_t;
+        typedef saga::async::state                       res_t;
+        typedef saga::impl::async::task                  api_t;
+        typedef saga::impl::async::task_cpi              cpi_t;
         typedef saga::impl::func_0 <api_t, cpi_t, res_t> func_t;
 
         saga::util::shared_ptr <func_t> func (new func_t ("get_state", &cpi_t::get_state));
@@ -75,9 +75,12 @@ namespace saga
 
         return (t_cc_->get_func ()->get_result ());
 
-        // typedef saga::util::shared_ptr <result_base>        res_t;
-        // typedef saga::impl::async::task                     api_t;
-        // typedef saga::impl::async::task_cpi                 cpi_t;
+
+        // FIXME?
+        //
+        // typedef saga::util::shared_ptr <result_base>     res_t;
+        // typedef saga::impl::async::task                  api_t;
+        // typedef saga::impl::async::task_cpi              cpi_t;
         // typedef saga::impl::func_0 <api_t, cpi_t, res_t> func_t;
 
         // saga::util::shared_ptr <func_t> func (new func_t ("get_result", &cpi_t::get_result));

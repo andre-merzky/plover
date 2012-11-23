@@ -6,8 +6,10 @@
 #include <saga/util/scoped_lock.hpp>
 
 #define SAGA_UTIL_LOGGING_SEVERITY_DEFAULT saga::util::logging::Warning;
+#define SAGA_UTIL_LOGGING_SEVERITY_DEFAULT saga::util::logging::Noise;
 #define SAGA_UTIL_LOGGING_TAGS_DEFAULT     "+must,-mustnot,may" // FIXME: should be empty by default
-#define SAGA_UTIL_LOGGING_TARGET_DEFAULT   "./saga_simple.%p.%t.log"
+#define SAGA_UTIL_LOGGING_TAGS_DEFAULT     "*"
+#define SAGA_UTIL_LOGGING_TARGET_DEFAULT   "/tmp/saga_simple.%p.%t.log"
 
 namespace saga
 {
@@ -147,7 +149,6 @@ namespace saga
       }
 
       delete nostream_;
-
     }
 
 
@@ -175,7 +176,9 @@ namespace saga
         {
           // need to open a new stream for this thread.  
           // TODO: needs locking
-          if ( "stdout"    == spec_ ||
+          if ( "stdio"     == spec_ ||
+               "std"       == spec_ ||
+               "stdout"    == spec_ ||
                "std::cout" == spec_ ||
                "cout"      == spec_ ||
                "out"       == spec_ )
@@ -183,7 +186,9 @@ namespace saga
             std::cerr << "log stream uses cout" << std::endl;
             streams_[tid] = &std::cout;
           }
-          else if ( "stderr"    == spec_ ||
+          else if ( "stdio"     == spec_ ||
+                    "std"       == spec_ ||
+                    "stderr"    == spec_ ||
                     "std::cerr" == spec_ ||
                     "cerr"      == spec_ ||
                     "err"       == spec_ )

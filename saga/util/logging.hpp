@@ -45,9 +45,9 @@ namespace saga
     //   notice           the sky is blue today.
     //   warning          the sky looks like rain!
     //   error            the sky is green, oops!
-    //   critical         sky shows signs of high winds
+    //   critical         sky is falling down!
     //   alert            tornado alert
-    //   emergency        tornado incoming
+    //   emergency        tornado arrived, no shelter - what now?
     //
     // Tags are set for each log message as follows (pseudo code):
     //
@@ -58,7 +58,7 @@ namespace saga
     //   !adaptor,!file   only show if both tags are set
     //   adaptor,core     show if either tag is set
     //   adaptor,^job     show if adaptor is set and job is unset
-    //   ^core,file       show if file is set, cor is unset
+    //   ^core,file       show if file is set, core is unset
     //
     // The tag '*' will prompt *all* messages to show, disregarding the tag
     // filters.
@@ -157,12 +157,12 @@ namespace saga
 
     typedef saga::util::singleton <saga::util::logging> the_logger;
 
-    // fortcut for logging to the_logger
+    // logging to the_logger singleton
     void log (saga::util::logging::severity s,   // severity level of message
               std::string                   t,   // tags for message
               std::string                   m);
 
-    // shortcut for getting a log stream from the_loger
+    // log stream of the_logger singleton
     std::ostream & logstr (saga::util::logging::severity s,   // severity level of message
                            std::string                   t);  // tags for message
 

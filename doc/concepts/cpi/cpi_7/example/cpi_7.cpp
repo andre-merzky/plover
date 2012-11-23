@@ -9,12 +9,14 @@ int main ()
 {
   saga::util::stack_tracer::enabled = true;
 
+  saga::util::logstr (saga::util::logging::Warning, "") <<  "log";
+
   SAGA_UTIL_STACKTRACE ();
 
   try
   {
     // file open, sync
-    if ( 1 )
+    if ( 0 )
     {
       LOGSTR (INFO, "main out") << "-sync dir ops "  << std::endl;
     
@@ -50,6 +52,8 @@ int main ()
       {
         std::cout << "_" << std::flush;
         saga::async::task t = f1.get_size <saga::async::Async> ();
+        t.run ();
+        sleep (1);
         tasks.push_back (t);
       }
       std::cout << std::endl;
@@ -59,6 +63,7 @@ int main ()
         std::cout << "-" << std::flush;
         tasks[i].wait ();
         size_t size = tasks[i].get_result <size_t> ();
+        std::cout << size << " ";
       }
       std::cout << std::endl;
 
