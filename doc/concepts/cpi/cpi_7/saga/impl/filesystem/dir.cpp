@@ -1,4 +1,6 @@
 
+#include <unistd.h> // for ::usleep
+
 #include <saga/api/async/task.hpp>
 #include <saga/cpi/filesystem/dir.hpp>
 #include <saga/impl/filesystem/dir.hpp>

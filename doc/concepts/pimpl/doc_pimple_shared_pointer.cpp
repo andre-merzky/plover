@@ -6,7 +6,7 @@
 //
 // This is the same example as shown in doc_pimple_multiple_inheritance.cpp, but
 // instead of a PIMPL (Pointer to IMPLementation) we keep a SharedPIMPL (Shared
-// Pointer to implementation).  which alleviates many of the memory management
+// Pointer to implementation), thus alleviating many of the memory management
 // and thread safety issues of the pure PIMPL approach.
 //
 
@@ -24,7 +24,7 @@
 //
 namespace impl
 {
-  ////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
   //
   // impl::pimpl is a virtually (pun!) empty class, which serves as polymorphism
   // anchor for all derived impl classes.  That way we can reflect the (here
@@ -38,9 +38,9 @@ namespace impl
   class pimpl : public saga::util::shareable
   {
     private:
-      // the impl::pimpl class needs to be polymorphic for the up/down casting of
-      // its (and its descendent's) pointers to work (via dynamic_cast).  So, we add
-      // one virtual function, but hide it.
+      // the impl::pimpl class needs to be polymorphic for the up/down casting
+      // of its (and its descendent's) pointers to work (via dynamic_cast).  
+      // So, we add one virtual function, but hide it.
       virtual void polymorph_ (void) 
       {
       }
@@ -65,7 +65,7 @@ namespace impl
   };
 
 
-  ////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
   // other impl classes *must*, directly or indirectly, inherit impl::pimpl as
   // 'virtual public base class', to profit from its polymorphism properties.
   class object  : public virtual impl::pimpl 
@@ -77,7 +77,7 @@ namespace impl
   };
 
 
-  ////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
   class attribs : public virtual impl::pimpl 
   {
     public:
@@ -87,7 +87,7 @@ namespace impl
   };
 
 
-  ////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
   // in order to keep the pimpl hierarchy consistent, we continue to  
   // use 'virtual public' inheritance.  That is not strictly necessary 
   // (I think).
@@ -174,7 +174,9 @@ class pimpl
     pimpl (impl::pimpl * impl) 
       : impl_ (impl) 
     {
-      std::cout << " facade  pimpl   c'tor (impl) - " << impl_.get_ptype_demangled () << std::endl; 
+      std::cout << " facade  pimpl   c'tor (impl) - " 
+                << impl_.get_ptype_demangled () 
+                << std::endl; 
       impl_test ();  // impl should be valid
     }
 
@@ -229,8 +231,8 @@ class pimpl
       }
 
       // otherwise return the thus casted pointer.
-      // Note that we hand out a second pointer to the same impl instance,
-      // with the obvious potential for problems for consistency (double delete, 
+      // Note that we hand out a second pointer to the same impl instance, with
+      // the obvious potential for problems for consistency (double delete,
       // access after delete, etc)
       return (ret);
     }
@@ -374,7 +376,7 @@ int main (int argc, char** argv)
   {
     std::cout << " 1 --------------------------------" << std::endl;
 
-    //////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     // impl tests
     {
       std::cout << " 2 --------------------------------" << std::endl;
@@ -401,10 +403,10 @@ int main (int argc, char** argv)
 
       std::cout << " 4 --------------------------------" << std::endl;
     }
-    //////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
 
 
-    //////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     // facade tests for object
     {
       std::cout << " 5 --------------------------------" << std::endl;
@@ -421,10 +423,10 @@ int main (int argc, char** argv)
 
       std::cout << " 6 --------------------------------" << std::endl;
     }
-    //////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     
   
-    //////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     // facade tests for context
     {
       std::cout << " 7 --------------------------------" << std::endl;
@@ -451,7 +453,7 @@ int main (int argc, char** argv)
 
       std::cout << " 8 --------------------------------" << std::endl;
     }
-    //////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
   } 
   catch ( const std::string & e )
   {

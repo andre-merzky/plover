@@ -53,7 +53,7 @@ int main ()
         std::cout << "_" << std::flush;
         saga::async::task t = f1.get_size <saga::async::Async> ();
         t.run ();
-        sleep (1);
+        // sleep (1);
         tasks.push_back (t);
       }
       std::cout << std::endl;

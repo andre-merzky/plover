@@ -11,7 +11,7 @@
 
 #include <saga/impl/async/task.hpp>
 
-#define TASK_DELAY 5
+#define TASK_DELAY 1
 
 namespace saga
 {

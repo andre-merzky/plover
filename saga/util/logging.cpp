@@ -1,13 +1,15 @@
 
-#include <stdlib.h>    // for ::getenv()
+#include <stdlib.h>      // for ::getenv()
+#include <unistd.h>      // for ::getpid()
+#include <sys/types.h>   // for ::getpid() / pid_t
 
 #include <saga/util/utils.hpp>
 #include <saga/util/logging.hpp>
 #include <saga/util/scoped_lock.hpp>
 
-#define SAGA_UTIL_LOGGING_SEVERITY_DEFAULT saga::util::logging::Warning;
+// #define SAGA_UTIL_LOGGING_SEVERITY_DEFAULT saga::util::logging::Warning;
 #define SAGA_UTIL_LOGGING_SEVERITY_DEFAULT saga::util::logging::Noise;
-#define SAGA_UTIL_LOGGING_TAGS_DEFAULT     "+must,-mustnot,may" // FIXME: should be empty by default
+// #define SAGA_UTIL_LOGGING_TAGS_DEFAULT     "+must,-mustnot,may" // FIXME: should be empty by default
 #define SAGA_UTIL_LOGGING_TAGS_DEFAULT     "*"
 #define SAGA_UTIL_LOGGING_TARGET_DEFAULT   "/tmp/saga_simple.%p.%t.log"
 
@@ -210,7 +212,7 @@ namespace saga
             pos = spec.find ("\%p");
             if ( std::string::npos != pos )
             {
-              spec.replace (pos, 2, saga::util::itoa (getpid ()));
+              spec.replace (pos, 2, saga::util::itoa (::getpid ()));
             }
 
             streams_[tid] = new std::fstream (spec.c_str (), std::ios_base::out);

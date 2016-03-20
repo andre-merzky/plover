@@ -53,7 +53,7 @@
 //
 namespace impl
 {
-  ////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
   //
   // impl::pimpl is a virtually (pun!) empty class, which serves as polymorphism
   // anchor for all derived impl classes.  That way we can reflect the (here
@@ -67,9 +67,9 @@ namespace impl
   class pimpl : public saga::util::shareable
   {
     private:
-      // the impl::pimpl class needs to be polymorphic for the up/down casting of
-      // its (and its decendent's) pointers to work (via dynamic_cast).  So, we add
-      // one virtual function, but hide it.
+      // the impl::pimpl class needs to be polymorphic for the up/down casting 
+      // of its (and its decendent's) pointers to work (via dynamic_cast).  
+      // So, we add one virtual function, but hide it.
       virtual void polymorph_ (void) 
       {
       }
@@ -94,7 +94,7 @@ namespace impl
   };
 
 
-  ////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
   // other impl classes *must*, directly or indirectly, inherit impl::pimpl as
   // 'virtual public base class', to profit from its polymorphism properties.
   class object  : public virtual impl::pimpl 
@@ -106,7 +106,7 @@ namespace impl
   };
 
 
-  ////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
   class attribs_base : public virtual impl::pimpl 
   {
     public:
@@ -116,7 +116,7 @@ namespace impl
   };
 
 
-  ////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
   class attribs : public virtual impl::attribs_base
   {
     public:
@@ -126,7 +126,7 @@ namespace impl
   };
 
 
-  ////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////
   // in order to keep the pimpl hierarchy consistent, we continue to  
   // use 'virtual public' inheriatance.  That is not strictly neccessary 
   // (I think).
@@ -190,9 +190,9 @@ class pimpl
     // we don't want to expose the c'tors of this class on API level - the end
     // user should not need to explicitely create any pimpl instance.
 
-    // the first c'tor is explicitely *not* getting an impl pointer: in the case 
-    // of multiple inheritance, only one of the classes on any level of the 
-    // class hierarchy will pass down the impl pointer - all others will invoke 
+    // the first c'tor is explicitely *not* getting an impl pointer: in the case
+    // of multiple inheritance, only one of the classes on any level of the
+    // class hierarchy will pass down the impl pointer - all others will invoke
     // this c'tor for their base class.
     pimpl (_noimpl_enum) 
       : impl_ (NULL) // ?? FIXME
@@ -232,7 +232,8 @@ class pimpl
       if ( NULL != impl_ ) 
       {
         std::cout << " facade  pimpl d'tor - " 
-                  << saga::util::demangle (typeid (*impl_).name ()) <<  std::endl;
+                  << saga::util::demangle (typeid (*impl_).name ()) 
+                  << std::endl;
         delete (impl_);
         impl_ = NULL;
       }
@@ -273,7 +274,7 @@ class pimpl
 
       // otherwise return the thus casted pointer.
       // Note that we hand out a second pointer to the same impl instance,
-      // with the obvious potential for problems for consistency (double delete, 
+      // with the obvious potential for problems for consistency (double delete,
       // access after delete, etc)
       return (ret);
     }
@@ -311,10 +312,10 @@ class pimpl
     void impl_test (void) 
     {
       std::cout << " pimpl test" << std::endl; 
-      if ( is_a <impl::pimpl>   () )   get_impl <impl::pimpl>   ()->impl_test    ();
-      if ( is_a <impl::object>  () )   get_impl <impl::object>  ()->object_test  ();
-      if ( is_a <impl::attribs> () )   get_impl <impl::attribs> ()->attribs_test ();
-      if ( is_a <impl::context> () )   get_impl <impl::context> ()->context_test ();
+      if ( is_a <impl::pimpl>   () ) get_impl <impl::pimpl>   ()->impl_test    ();
+      if ( is_a <impl::object>  () ) get_impl <impl::object>  ()->object_test  ();
+      if ( is_a <impl::attribs> () ) get_impl <impl::attribs> ()->attribs_test ();
+      if ( is_a <impl::context> () ) get_impl <impl::context> ()->context_test ();
       std::cout << " pimpl test" << std::endl; 
     }
 };
@@ -474,7 +475,7 @@ int main (int argc, char** argv)
   {
     std::cout << " 1 --------------------------------" << std::endl;
 
-    //////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     // impl tests
     {
       std::cout << " 2 --------------------------------" << std::endl;
@@ -501,10 +502,10 @@ int main (int argc, char** argv)
 
       std::cout << " 4 --------------------------------" << std::endl;
     }
-    //////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
 
 
-    //////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     // facade tests for object
     {
       std::cout << " 5 --------------------------------" << std::endl;
@@ -521,10 +522,10 @@ int main (int argc, char** argv)
 
       std::cout << " 6 --------------------------------" << std::endl;
     }
-    //////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     
   
-    //////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
     // facade tests for context
     {
       std::cout << " 7 --------------------------------" << std::endl;
@@ -551,7 +552,7 @@ int main (int argc, char** argv)
 
       std::cout << " 8 --------------------------------" << std::endl;
     }
-    //////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
   } 
   catch ( const std::string & e )
   {

@@ -47,6 +47,21 @@ namespace saga
 
         ~enums (void)
         {
+          for ( k  = key_map_.begin (); 
+                k != key_map_.end   ();
+                k++ )
+          {
+            k->clear()
+          }
+          key_map_.clear()
+
+          for ( v  = val_map_.begin (); 
+                v != val_map_.end   ();
+                v++ )
+          {
+            v->clear()
+          }
+          val_map_.clear()
         }
 
 
